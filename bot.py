@@ -97,6 +97,7 @@ async def programar_pregunta():
         target += timedelta(days=1)
 
     delay = (target - now).total_seconds()
+    logger.info("Pregunta programada para %s (en %.2f segundos)", target.isoformat(), delay)
     await asyncio.sleep(delay)
     await preguntar_fichaje(application.bot.create_context())
 
