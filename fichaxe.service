@@ -1,0 +1,16 @@
+[Unit]
+Description=Bot Telegram fichaje USC
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/ruta/.env
+WorkingDirectory=/ruta
+ExecStart=/usr/bin/python3 /ruta/bot.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/ruta/fichaje.log
+StandardError=append:/ruta/fichaje.log
+
+[Install]
+WantedBy=multi-user.target
