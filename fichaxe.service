@@ -4,13 +4,14 @@ After=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=/ruta/.env
-WorkingDirectory=/ruta
-ExecStart=/usr/bin/python3 /ruta/bot.py
+Environment="BOT_PATH=/route/to/your/bot"
+EnvironmentFile=%h/.env
+WorkingDirectory=${BOT_PATH}
+ExecStart=/usr/bin/python3 ${BOT_PATH}/bot.py
 Restart=always
 RestartSec=10
-StandardOutput=append:/ruta/fichaje.log
-StandardError=append:/ruta/fichaje.log
+StandardOutput=append:${BOT_PATH}/fichaje.log
+StandardError=append:${BOT_PATH}/fichaje.log
 
 [Install]
 WantedBy=multi-user.target
