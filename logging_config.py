@@ -20,7 +20,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
         logger.propagate = False
         logger._fichaxe_configured = True  # type: ignore[attr-defined]
 
