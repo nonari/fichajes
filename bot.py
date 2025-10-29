@@ -295,11 +295,10 @@ async def main():
     if pendiente:
         if pendiente > ahora:
             programar_cierre(app, pendiente)
-            if ahora >= hora_pregunta:
-                mensaje_reinicio = (
-                    "♻️ Bot reiniciado. El cierre ya estaba programado para las "
-                    f"{pendiente.strftime('%H:%M')} y se respetará."
-                )
+            mensaje_reinicio = (
+                "♻️ Bot reiniciado. El cierre ya estaba programado para las "
+                f"{pendiente.strftime('%H:%M')} y se respetará."
+            )
         else:
             logger.info("Se encontró una programación de salida caducada. Se limpia el fichero.")
             finalizar_programacion()
