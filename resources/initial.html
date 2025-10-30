@@ -1,0 +1,460 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--<html lang="gl">-->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="gl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+
+        <title>Rexistro horario PAS - ARH - Marcaxes diarias</title>
+
+        <link rel="stylesheet" href="/pas/bootstrap/css/bootstrap.min.css" />
+
+        <link rel="stylesheet" href="/pas/sistema/css/styles.css" />
+
+
+
+        <meta charset="UTF-8" />
+
+
+			<link rel="stylesheet" type="text/css" media="all" href="/pas/comun/css/comun.css" />
+
+    </head>
+    <body>
+        <header class="navbar navbar-default">
+            <div class="container">
+                <nav>
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                                aria-expanded="false">
+                            <span class="sr-only">Trocar navegación</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span
+                                class="icon-bar"></span>
+                        </button>
+                        <a class="navbar-brand" href="/pas/accionPanel/marcaxes">Rexistro horario PAS - ARH</a>
+
+                    </div>
+
+                    <div class="collapse navbar-collapse" id="navbar">
+                        <ul class="nav navbar-nav">
+                            <li><a href="/pas/accionPanel/marcaxes">Marcaxes</a></li>
+                            <li><a href="/pas/accionPanel/solicitudes-pas">Solicitudes</a></li>
+                            <li><a href="/pas/accionPanel/informacion-pas">Información</a></li>
+                            <li><a href="/pas/accionPanel/notificacions">Configuración</a></li>
+                        </ul>
+
+                            <ul class="nav navbar-nav navbar-right">
+                                <li class="dropdown">
+                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                        <span class="glyphicon glyphicon-user"></span>
+                                        <span class="caret"></span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li class="dropdown-header"><h6>GERMAN PALOMARES (german.palomares@usc.es)</h6></li>
+                                        <li class="dropdown-header">Idiomas</li>
+                                        <li class="active"><a href="/pas/?setUserLocaleTo=gl">Galego</a></li>
+                                        <li><a href="/pas/?setUserLocaleTo=es">Español</a></li>
+                                        <li><a href="#">Perfil</a></li>
+
+                                        <li><a href="/pas/j_spring_security_logout">Saír</a></li>
+
+
+                                    </ul>
+                                </li>
+                            </ul>
+
+                    </div>
+                    <!-- /.navbar-collapse -->
+                </nav>
+            </div>
+            <!-- /.container-fluid -->
+        </header>
+
+        <!-- Contido -->
+        <div class="container">
+            <div class="col-md-9">
+
+
+                <main>
+
+		 <div class="row course-header">
+			<div class="col-xs-8 col-md-10">
+				<h2>Marcaxes diarias</h2>
+				<p>Marcaxes do día: 09/08/1991</p>
+			</div>
+		 	<div class="col-xs-4 col-md-2 no-padding-left">
+				<a href="#" id="novaMarcaxe" class="margin-top-20px margin-left-5px btn btn-info navbar-default pull-right"
+				 	title="Nova marcaxe">Nova marcaxe</a>
+			</div>
+		</div>
+
+
+			<div class="cabeceira">
+	<div class="row ">
+		<div class="col-xs-12 col-sm-2">
+			<p class="h5">Documento</p>
+			<p>12345678Z</p>
+		</div>
+		<div class="col-xs-12 col-sm-4">
+			<p class="h5">Nome e apelidos</p>
+			<p>GERMAN PALOMARES</p>
+		</div>
+		<div class="col-xs-12 col-sm-6">
+			<p class="h5" >Relación laboral</p>
+			<p>
+			 	<p>CURRANTE</p>
+			</p>
+		</div>
+	</div>
+</div>
+
+		<div id="mensaxeWarning" class="alert alert-warning top30 alert-info" role="alert">
+	    	<button type="button" class="close"><span aria-hidden="true">&times;</span></button>
+	   		<span>Lembre que para todas as cuestións relativas ao cumprimento do rexistro horario debe comunicarse co seu responsable directo que aparece na sección de <a target="_blank" href="/pas/datosBasicos">Información - Datos Básicos</a>. As comunicacións co Centro de Atención a Usuarios deben limitarse a incidencias técnicas.</span>
+		</div>
+
+			<legend>Tempo rexistrado</legend>
+			<div class="row">
+	          	<div class="col-md-6">
+						<p class="h5">Tempo total</p>
+						<p>00 h 00 m 00 s</p>
+				</div>
+				<div class="col-md-6">
+						<p class="h5">Tempo efectivo</p>
+						<p>00 h 00 m 00 s</p>
+				</div>
+
+	        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div id="erroLocalizacionDeshabilitada" class="alert alert-danger boxerr" role="alert" style="display: none;">
+                    <button type="button" class="close"><span aria-hidden="true">&times;</span></button>
+                    <span>Erro na marcaxe: localización non habilitada no dispositivo.</span>
+                </div>
+                <div id="erroInterno" class="alert alert-danger boxerr" role="alert" style="display: none;">
+                    <button type="button" class="close"><span aria-hidden="true">&times;</span></button>
+                    <span>Erro na marcaxe.</span>
+                </div>
+            </div>
+        </div>
+		<div id="taboaMarcaxesPropios">
+			<table class="table table-hover" id="taboaMarcaxesPropios">
+				<thead>
+					<tr>
+						<th class="col-md-3">Entrada</th>
+						<th class="col-md-3">Saída</th>
+						<th class="col-md-6">Tempo entre marcaxes</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>09:02</td>
+
+						<td>-</td>
+
+						<td>-</td>
+					</tr>
+				</tbody>
+
+			</table>
+		</div>
+	<div class="modal fade" id="modal-confirmar-marcaxe" tabindex="-1" role="dialog">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal"
+						aria-label="Close">
+						<span aria-hidden="true">×</span>
+					</button>
+					<h4 class="modal-title" id="myModalLabel">Nova marcaxe</h4>
+				</div>
+				<div class="modal-body">
+					<div class="row">
+						<div class="col-md-12 form-group">
+							<span>Realizouse unha marcaxe recientemente. Desexa realizar unha nova marcaxe?</span>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary"
+						id="botonRexistrarMarcaxe">Nova marcaxe</button>
+					<button id="botonCancelarMarcaxe" type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	</main>
+            </div>
+
+
+            <div class="col-md-3" >
+                <nav class="bd-sidebar">
+                    <div class="bd-toc-item">
+
+
+
+	    <style>
+	        nav.bd-sidebar div.bd-toc-item a.bd-toc-link + ul li a {
+	            padding-left: 2em !important;
+	        }
+	    </style>
+
+				<a class="bd-toc-link">
+	                <h5>Marcaxes</h5>
+	            </a>
+                <ul class="nav bd-sidenav">
+                    <li><a href="/pas/marcaxesDiarias">Marcaxes diarias</a></li>
+	           		<li><a href="/pas/persoa/marcaxes">Marcaxes propias</a></li>
+
+	            </ul>
+
+
+        </div>
+
+                    <!--<div th:if="${datosVista.panelActivo.panel!=null &amp;&amp; datosVista.panelActivo.panel.accions.size() > 0}" class="bd-toc-item">
+                        <a class="bd-toc-link">
+                            <h5 th:text="#{cadea.templates.sistema.layouts.outrasAccions}">Outras accións</h5>
+                        </a>
+                        <ul class="nav bd-sidenav">
+                            <li th:each="accion : ${datosVista.panelActivo.panel.accions}"><a href="#" th:href="@{/accionPanel/{codigo}(codigo=${accion.codigo})}" th:text="${accion.nome}">Editar grupos da aplicaciÃ³n</a></li>
+                        </ul>
+                    </div>
+
+                    <div th:if="${datosVista.modulo.modulos.size()>0}" class="bd-toc-item">
+                        <a class="bd-toc-link">
+                            <h5 th:text="#{cadea.templates.sistema.layouts.modulos}">Módulos</h5>
+                        </a>
+                        <ul class="nav bd-sidenav">
+                            <li th:each="modulo :  ${datosVista.modulo.modulos}" class="active"><a href="#" th:href="@{/accionPanel/{codigo}(codigo=${modulo.accionInicial.codigo})}" th:text="${modulo.nome}">Sistema</a></li>
+                        </ul>
+                    </div> -->
+                </nav>
+            </div>
+
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; Universidade de Santiago de Compostela, versión 1.57.0. Para a resolución de dúbidas e problemas	con esta aplicación, contacte co <a href="https://www.usc.gal/cau">CAU</a> da USC.</p>
+                <a href="https://www.usc.es/atic"> <img src="/pas/sistema/images/footer-logo.png"
+                                                        alt="Universidade de Santiago de Compostela"/>
+                </a>
+            </div>
+        </footer>
+        <script type="text/javascript" src="/pas/jquery/js/jquery-1.12.4.min.js"></script>
+        <script type="text/javascript" src="/pas/bootstrap/js/bootstrap.min.js"></script>
+
+		<script type="text/javascript">
+		/*<![CDATA[*/
+        var fileTotalMaxSize =  10485760;
+        /*]]>*/
+
+		$(function() {
+			var camposConMensaxe = {};
+			$('.help-block.fielderrloc').each(function() {
+				camposConMensaxe['campo-' + $(this).data("errorfield").replace(/\[/g, "_").replace(/\]/g, "_")] = true;
+			});
+			$('.fielderr').each(function() {
+				if (camposConMensaxe['campo-' + $(this).data("errorfield").replace(/\[/g, "_").replace(/\]/g, "_")] == true)
+					$(this).remove();
+				else
+					$(this).show();
+			});
+
+			/*INIT: Soporte js para control de lonxitude de arquivos.*/
+			$('.jsArquivo').on("change", function(e) {
+				showFileErro(this);
+			});
+
+			$('form').submit(function(e) {
+				if (!window.FileReader)
+					return;
+
+				$('jsFileTotalLengthError').hide();
+				var erro = false;
+				var auxTotalSize = 0;
+				$(this).find('.jsArquivo').each(function() {
+                    if (!this.files[0]) return;
+					auxTotalSize += this.files[0].size;
+					if (showFileErro(this))
+						erro = true;
+				});
+				if (auxTotalSize >= fileTotalMaxSize) {
+					$(".jsFileTotalLengthError").show();
+					erro = true;
+				}
+				if (erro)
+					e.preventDefault();
+			});
+			/*FIN: Soporte js para control de lonxitude de arquivos.*/
+		});
+
+		function showFileErro(fileInput) {
+			var divfileInput = $(fileInput).parents("div .fileinput").first();
+			divfileInput.parent().removeClass("has-error");
+			divfileInput.next('.fileLengthError').hide();
+
+			if (!fileInput.files[0])
+				return false;
+			var size = fileInput.files[0].size;
+
+			var fileMaxSize = $(fileInput).data('filemaxsize');
+
+			if (size >= fileMaxSize) {
+				divfileInput.next('.fileLengthError:first').show();
+				divfileInput.parent().addClass("has-error");
+				return true;
+			} else
+				return false;
+		}
+
+	</script>
+		<script type="text/javascript">
+		$(function() {
+			$(" .jsOrdear").click(function() {
+				var formulario = $(this).parents('form');
+				var criterio = $(this).data("orde");
+				if (criterio == formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.criterioOrde"]').val()) {
+					var sentido = formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.sentidoOrde"]').val();
+					sentido == "ASC" ? sentido = "DESC" : sentido = "ASC";
+					formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.sentidoOrde"]').val(sentido);
+				} else {
+					formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.criterioOrde"]').val(criterio);
+				}
+				formulario.submit();
+			});
+
+			$(" .jsPaxina").click(function() {
+				var formulario = $(this).parents('form');
+				formulario.find('input:hidden[name="criteriosPaxinacionFormDto.paxina"]').val($(this).data("paxina"));
+				formulario.submit();
+			});
+
+			$(" .jsExportar").click(function() {
+				var formulario = $(this).parents('form');
+				formulario.find('input:hidden[name="exportar"]').val("true");
+				formulario.submit();
+			});
+		});
+	</script>
+		<script type="text/javascript" src="/pas/comun/js/comun.js"></script>
+		<script type="text/javascript">
+			/*<![CDATA[*/
+				var urlMarcaxe="/pas/marcaxe/marcaxe";
+				var urlMarcaxeRecente="/pas/marcaxe/marcaxe-recente";
+				var localizacionDispositivo = "OPCIONAL";
+
+				$(document).ready(function() {
+    				$("#novaMarcaxe").click(function(e) {
+    					if(!e.detail || e.detail == 1) {
+	    		            $(this).attr("disabled", "disabled");
+	    		            e.stopImmediatePropagation();
+	    		            e.preventDefault();
+	    					//Se ten marcaxe recente, abrir modal
+	    					realizarMarcaxeComprobandoRecente();
+    					}
+    	            });
+
+    				$("#botonRexistrarMarcaxe").one( "click", function() {
+             			realizarMarcaxe();
+    	            });
+
+    				$("#botonCancelarMarcaxe").one( "click", function() {
+    					$("#novaMarcaxe").removeAttr("disabled");
+    	            });
+
+					$("#erroLocalizacionDeshabilitada > button.close").click(function() {
+						$("#erroLocalizacionDeshabilitada").css("display", "none");
+					});
+					$("#erroInterno > button.close").click(function() {
+						$("#erroInterno").css("display", "none");
+					});
+				});
+
+				function realizarMarcaxe(){
+					if (localizacionDispositivo == "NON") {
+    					marcaxe(null);
+    				} else if (localizacionDispositivo == "OPCIONAL") {
+    					geolocation(true);
+    				} else { // OBRIGATORIA
+    					geolocation(false);
+    				}
+				}
+
+				function marcaxe(coordenadas) {
+					var dataMarcaxe = {};
+    				dataMarcaxe.coordenadas = coordenadas;
+					var settings = {
+			            type: 'POST',
+			            url: urlMarcaxe,
+			            data: dataMarcaxe
+			        }
+			        $.ajax(settings).done(function(result) {
+			        	location.reload();
+			        }).fail(function(xhr, ajaxOptions, thrownError) {
+    					console.warn(thrownError);
+    					$("#erroInterno").css("display", "block");
+    				});
+				}
+
+    			function geolocation(opcional) {
+    				var geolocationOptions = {
+    					enableHighAccuracy: true,
+    					timeout: 6000,
+    					maximumAge: 0
+    				};
+
+    				if (navigator.geolocation) {
+    					navigator.geolocation.getCurrentPosition(function(position) {
+                            coordenadas = position.coords.latitude+","+position.coords.longitude;
+                            marcaxe(coordenadas);
+        				}, function(error) {
+        					console.warn("Erro (" + error.code + '): ' + error.message);
+        					if (opcional) {
+        						marcaxe(null);
+        					} else {
+        						console.warn("Erro na marcaxe: localización non habilitada.");
+        						$("#erroLocalizacionDeshabilitada").css("display", "block");
+        					}
+        				}, geolocationOptions);
+    				} else {
+    					if (opcional) {
+    						marcaxe(null);
+    					} else {
+    						console.warn("Erro na marcaxe: localización non habilitada.");
+    						$("#erroLocalizacionDeshabilitada").css("display", "block");
+    					}
+    				}
+    			}
+
+				function realizarMarcaxeComprobandoRecente() {
+					var settings = {
+			            type: 'POST',
+			            url: urlMarcaxeRecente
+			        }
+			        $.ajax(settings).done(function(result) {
+			        	if (result == 'success') {
+             				$('#modal-confirmar-marcaxe').modal('show');
+             			} else {
+             				realizarMarcaxe();
+             			}
+			        }).fail(function(xhr, ajaxOptions, thrownError) {
+    					console.warn(thrownError);
+    					$("#erroInterno").css("display", "block");
+    				});
+				}
+				$( "#mensaxeWarning > button.close" ).click(function() {
+					$("#mensaxeWarning").css("display", "none");
+				});
+
+		 	/*]]>*/
+		</script>
+
+
+
+    </body>
+</html>
