@@ -34,6 +34,10 @@ scheduled_exit_time: Optional[datetime] = None
 
 PREGUNTA_FECHA_KEY = "pregunta_fecha"
 AWAITING_RESPONSE_KEY = "awaiting_respuesta"
+REMINDER_JOB_KEY = "recordatorio_pregunta_job"
+REMINDER_ATTEMPTS_KEY = "recordatorio_pregunta_intentos"
+MAX_REMINDERS = 3
+REMINDER_INTERVAL = timedelta(minutes=5)
 
 
 def ahora_madrid() -> datetime:
@@ -94,6 +98,14 @@ def finalizar_programacion(clear_file: bool = True) -> None:
         limpiar_fichero_programacion()
 
 
+def cancelar_recordatorio(app) -> None:
+    job = app.bot_data.pop(REMINDER_JOB_KEY, None)
+    if job:
+        job.schedule_removal()
+
+    app.bot_data.pop(REMINDER_ATTEMPTS_KEY, None)
+
+
 def hay_programacion_pendiente() -> bool:
     return scheduled_exit_time is not None
 
@@ -147,18 +159,54 @@ async def preguntar_fichaje(context: ContextTypes.DEFAULT_TYPE):
 
     if hay_programacion_pendiente():
         logger.info("Se omite la pregunta diaria porque ya hay un cierre programado.")
+        cancelar_recordatorio(context.application)
         return
 
     if hoy.weekday() >= 5 or es_festivo_galicia(hoy):
         logger.info("No se pregunta en %s (fin de semana o festivo)", hoy)
+        cancelar_recordatorio(context.application)
         return
 
     logger.info("Enviando solicitud de fichaje para %s", hoy.isoformat())
     context.application.bot_data[PREGUNTA_FECHA_KEY] = hoy
     context.application.bot_data[AWAITING_RESPONSE_KEY] = True
+    cancelar_recordatorio(context.application)
     await context.bot.send_message(
         chat_id=CHAT_ID,
         text="📅 Buenos días! ¿Quieres fichar hoy?",
+        reply_markup=ReplyKeyboardMarkup(
+            [["Sí", "No"]], one_time_keyboard=True, resize_keyboard=True
+        ),
+    )
+
+    context.application.bot_data[REMINDER_ATTEMPTS_KEY] = 0
+    reminder_job = context.job_queue.run_repeating(
+        enviar_recordatorio_pregunta,
+        interval=REMINDER_INTERVAL.total_seconds(),
+        first=REMINDER_INTERVAL.total_seconds(),
+        name="recordatorio_pregunta",
+    )
+    context.application.bot_data[REMINDER_JOB_KEY] = reminder_job
+
+
+async def enviar_recordatorio_pregunta(context: ContextTypes.DEFAULT_TYPE):
+    if not context.application.bot_data.get(AWAITING_RESPONSE_KEY):
+        cancelar_recordatorio(context.application)
+        return
+
+    intentos = context.application.bot_data.get(REMINDER_ATTEMPTS_KEY, 0) + 1
+
+    if intentos > MAX_REMINDERS:
+        logger.info("Se alcanzó el máximo de recordatorios. Se detienen los avisos.")
+        cancelar_recordatorio(context.application)
+        context.application.bot_data[AWAITING_RESPONSE_KEY] = False
+        return
+
+    context.application.bot_data[REMINDER_ATTEMPTS_KEY] = intentos
+    logger.info("Enviando recordatorio %s/%s de fichaje", intentos, MAX_REMINDERS)
+    await context.bot.send_message(
+        chat_id=CHAT_ID,
+        text="⏰ Recordatorio: ¿Quieres fichar hoy? Responde 'Sí' o 'No'.",
         reply_markup=ReplyKeyboardMarkup(
             [["Sí", "No"]], one_time_keyboard=True, resize_keyboard=True
         ),
@@ -186,6 +234,7 @@ async def procesar_respuesta(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             context.application.bot_data[AWAITING_RESPONSE_KEY] = False
             context.application.bot_data[PREGUNTA_FECHA_KEY] = hoy
+            cancelar_recordatorio(context.application)
             return
 
         await update.message.reply_text("🔄 Intentando fichaje de entrada...")
@@ -205,12 +254,14 @@ async def procesar_respuesta(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         context.application.bot_data[AWAITING_RESPONSE_KEY] = False
         context.application.bot_data[PREGUNTA_FECHA_KEY] = hoy
+        cancelar_recordatorio(context.application)
         return
 
     if respuesta == "no":
         await update.message.reply_text("🚫 No se fichará hoy.")
         context.application.bot_data[AWAITING_RESPONSE_KEY] = False
         context.application.bot_data[PREGUNTA_FECHA_KEY] = hoy
+        cancelar_recordatorio(context.application)
         return
 
     if respuesta in {"marcar", "/marcar", "cancelar", "/cancelar"}:
