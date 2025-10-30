@@ -96,7 +96,7 @@ def fichar(accion: str) -> FichajeResultado:
 
         # --- CLIC EN NOVA MARCAXE ---
         nova_btn = driver.find_element(By.ID, "novaMarcaxe")
-        # driver.execute_script("arguments[0].click();", nova_btn)
+        driver.execute_script("arguments[0].click();", nova_btn)
         logger.info("Clic en 'novaMarcaxe' ejecutado")
         time.sleep(5)
 
@@ -153,10 +153,3 @@ def fichar(accion: str) -> FichajeResultado:
 
     finally:
         driver.quit()
-
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-    resultado = fichar("entrada")
-    print(f"Resultado: {resultado.success}, Acción: {resultado.action}, Mensaje: {resultado.message}")
