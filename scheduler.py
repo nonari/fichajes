@@ -4,14 +4,13 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 from uuid import uuid4
 
 from telegram.ext import Application, ContextTypes, Job
 
-from config import get_config
-from logging_config import get_logger
 from core import MADRID_TZ, ahora_madrid, ejecutar_fichaje_async
+from logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -42,14 +41,10 @@ class ScheduledMark:
 
 
 class SchedulerManager:
-    def __init__(self) -> None:
+    def __init__(self, chat_id: str) -> None:
         self._scheduled: Dict[str, ScheduledMark] = {}
         self._jobs: Dict[str, Job] = {}
-        self._chat_id: Optional[str] = None
-
-    def configure(self) -> None:
-        config = get_config()
-        self._chat_id = config.telegram_chat_id
+        self._chat_id = chat_id
 
     @staticmethod
     def create_mark(action: str, when: datetime) -> ScheduledMark:
@@ -139,8 +134,7 @@ class SchedulerManager:
             restored.append(mark)
         if restored:
             logger.info("Se restauraron %s marcajes pendientes", len(restored))
-        else:
-            self._persist()
+
         return restored
 
     async def execute_job(self, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -163,22 +157,18 @@ class SchedulerManager:
         logger.info("Ejecutando marcaje programado %s (%s)", identifier, mark.action)
         resultado = await ejecutar_fichaje_async(mark.action, context)
 
-        chat_id = self._chat_id or get_config().telegram_chat_id
         prefix = "🚪" if mark.action == "entrada" else "🏁"
         await context.bot.send_message(
-            chat_id=chat_id,
+            chat_id=self._chat_id,
             text=f"{prefix} Marcaje programado de {mark.action} ejecutado.",
         )
-        await context.bot.send_message(chat_id=chat_id, text=resultado.message)
+        await context.bot.send_message(chat_id=self._chat_id, text=resultado.message)
 
         if mark.action == "entrada" and resultado.success:
             auto_when = ahora_madrid() + timedelta(hours=7)
             auto_mark = self.create_mark("salida", auto_when)
             self.add_mark(context.application, auto_mark)
             await context.bot.send_message(
-                chat_id=chat_id,
+                chat_id=self._chat_id,
                 text=f"🕐 Salida automática programada para las {auto_when.strftime('%H:%M')}.",
             )
-
-
-scheduler_manager = SchedulerManager()

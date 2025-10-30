@@ -18,7 +18,6 @@ from logging_config import get_logger
 @dataclass
 class FichajeResultado:
     """Representa el resultado de un intento de fichaje."""
-
     success: bool
     action: str
     message: str

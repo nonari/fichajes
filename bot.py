@@ -29,7 +29,7 @@ from core import MADRID_TZ, ahora_madrid
 from fichador import obtener_marcajes_hoy
 from holidays_local import es_festivo_galicia
 from logging_config import get_logger
-from scheduler import scheduler_manager
+from scheduler import scheduler_manager, SchedulerManager
 
 logger = get_logger(__name__)
 
@@ -105,7 +105,8 @@ async def enviar_recordatorio_pregunta(context: ContextTypes.DEFAULT_TYPE):
 
 
 async def main():
-    scheduler_manager.configure()
+    appconfig = get_config()
+    scheduler_manager = SchedulerManager(appconfig.telegram_chat_id)
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))

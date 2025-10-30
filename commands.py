@@ -59,7 +59,7 @@ async def procesar_respuesta(update: Update, context: ContextTypes.DEFAULT_TYPE)
     respuesta = update.message.text.lower().strip()
     hoy = ahora_madrid().date()
 
-    if respuesta in {"sí", "si"}:
+    if respuesta in {"sí", "si"} and context.application.bot_data[AWAITING_RESPONSE_KEY]:
         if scheduler_manager.has_pending():
             await update.message.reply_text(
                 "⚠️ Ya existen marcajes programados. Cancélalos con /cancelar si deseas reiniciar."
@@ -94,7 +94,7 @@ async def procesar_respuesta(update: Update, context: ContextTypes.DEFAULT_TYPE)
         cancelar_recordatorio(context.application)
         return
 
-    if respuesta == "no":
+    if respuesta == "no" and context.application.bot_data[AWAITING_RESPONSE_KEY]:
         await update.message.reply_text("🚫 No se fichará hoy.")
         context.application.bot_data[AWAITING_RESPONSE_KEY] = False
         context.application.bot_data[PREGUNTA_FECHA_KEY] = hoy
