@@ -29,7 +29,7 @@ from core import MADRID_TZ, ahora_madrid
 from fichador import obtener_marcajes_hoy
 from holidays_local import es_festivo_galicia
 from logging_config import get_logger
-from scheduler import scheduler_manager, SchedulerManager
+from scheduler import SchedulerManager
 
 logger = get_logger(__name__)
 
@@ -40,15 +40,10 @@ CHAT_ID = config.telegram_chat_id
 MAX_REMINDERS = 3
 REMINDER_INTERVAL = timedelta(minutes=5)
 
-
-def hay_programacion_pendiente() -> bool:
-    return scheduler_manager.has_pending()
-
-
 async def preguntar_fichaje(context: ContextTypes.DEFAULT_TYPE):
     hoy = ahora_madrid().date()
-
-    if hay_programacion_pendiente():
+    scheduler_manager: SchedulerManager = context.application.scheduler_manager
+    if scheduler_manager.has_pending():
         logger.info("Se omite la pregunta diaria porque ya hay marcajes programados.")
         cancelar_recordatorio(context.application)
         return
@@ -108,7 +103,7 @@ async def main():
     appconfig = get_config()
     scheduler_manager = SchedulerManager(appconfig.telegram_chat_id)
     app = ApplicationBuilder().token(TOKEN).build()
-
+    app.scheduler_manager = scheduler_manager
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("marcar", comando_marcar))
     app.add_handler(CommandHandler("cancelar", comando_cancelar))
@@ -128,7 +123,7 @@ async def main():
     hora_pregunta = ahora.replace(hour=9, minute=0, second=0, microsecond=0)
 
     if (
-        not hay_programacion_pendiente()
+        not scheduler_manager.has_pending()
         and ahora >= hora_pregunta
         and ahora.weekday() < 5
         and not es_festivo_galicia(ahora.date())

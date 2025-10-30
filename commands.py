@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes
 
 from core import MADRID_TZ, ahora_madrid, ejecutar_fichaje_async
 from fichador import obtener_marcajes_hoy
-from scheduler import scheduler_manager
+from scheduler import SchedulerManager
 
 PREGUNTA_FECHA_KEY = "pregunta_fecha"
 AWAITING_RESPONSE_KEY = "awaiting_respuesta"
@@ -40,7 +40,6 @@ def parsear_hora_minuto(valor: str) -> Optional[dtime]:
 
     return dtime(hour=hora, minute=minuto)
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -59,6 +58,7 @@ async def procesar_respuesta(update: Update, context: ContextTypes.DEFAULT_TYPE)
     respuesta = update.message.text.lower().strip()
     hoy = ahora_madrid().date()
 
+    scheduler_manager: SchedulerManager = context.application.scheduler_manager
     if respuesta in {"sí", "si"} and context.application.bot_data[AWAITING_RESPONSE_KEY]:
         if scheduler_manager.has_pending():
             await update.message.reply_text(
@@ -140,7 +140,7 @@ async def comando_marcar(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "La hora indicada ya ha pasado hoy. Indica una hora futura."
             )
             return
-
+    scheduler_manager: SchedulerManager = context.application.scheduler_manager
     if momento_programado:
         try:
             scheduler_manager.schedule(context.application, accion, momento_programado)
@@ -188,6 +188,7 @@ async def comando_cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
 
+    scheduler_manager: SchedulerManager = context.application.scheduler_manager
     if not scheduler_manager.has_pending():
         await update.message.reply_text("No hay marcajes programados actualmente.")
         return
@@ -220,7 +221,7 @@ async def comando_marcajes(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def comando_pendientes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
-
+    scheduler_manager: SchedulerManager = context.application.scheduler_manager
     pendientes = scheduler_manager.list_pending()
     if not pendientes:
         await update.message.reply_text("No hay marcajes programados en el scheduler.")
