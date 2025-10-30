@@ -110,6 +110,23 @@ def hay_programacion_pendiente() -> bool:
     return scheduled_exit_time is not None
 
 
+def parsear_hora_minuto(valor: str) -> Optional[dtime]:
+    partes = valor.strip().split(":")
+    if len(partes) != 2:
+        return None
+
+    try:
+        hora = int(partes[0])
+        minuto = int(partes[1])
+    except ValueError:
+        return None
+
+    if not (0 <= hora < 24 and 0 <= minuto < 60):
+        return None
+
+    return dtime(hour=hora, minute=minuto)
+
+
 def programar_cierre(app, hora: datetime) -> None:
     global exit_job, scheduled_exit_time
 
@@ -150,7 +167,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Bot de fichaje USC listo.\n"
         "Preguntaré cada día laborable a las 09:00 (hora de Madrid).\n"
-        "Comandos disponibles: /marcar entrada|salida y /cancelar."
+        "Comandos disponibles: /marcar entrada|salida [HH:MM] y /cancelar."
     )
 
 
@@ -276,12 +293,38 @@ async def comando_marcar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not context.args:
-        await update.message.reply_text("Uso: /marcar entrada|salida")
+        await update.message.reply_text("Uso: /marcar entrada|salida [HH:MM]")
         return
 
     accion = context.args[0].lower().strip()
     if accion not in {"entrada", "salida"}:
         await update.message.reply_text("Acción no reconocida. Usa 'entrada' o 'salida'.")
+        return
+
+    if accion == "salida" and len(context.args) >= 2:
+        hora_arg = context.args[1]
+        hora_programada = parsear_hora_minuto(hora_arg)
+        if hora_programada is None:
+            await update.message.reply_text(
+                "Formato de hora inválido. Usa HH:MM en formato 24 horas."
+            )
+            return
+
+        ahora = ahora_madrid()
+        momento_programado = datetime.combine(ahora.date(), hora_programada).replace(
+            tzinfo=MADRID_TZ
+        )
+
+        if momento_programado <= ahora:
+            await update.message.reply_text(
+                "La hora indicada ya ha pasado hoy. Indica una hora futura."
+            )
+            return
+
+        programar_cierre(context.application, momento_programado)
+        await update.message.reply_text(
+            f"🗓️ Salida programada para las {momento_programado.strftime('%H:%M')}."
+        )
         return
 
     resultado = await ejecutar_fichaje_async(accion, context)
