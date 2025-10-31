@@ -53,5 +53,5 @@ def get_config() -> AppConfig:
     global _config
     if _config is None:
         _config = load_config()
-        logger.info("Configuración cargada desde %s", CONFIG_FILE)
+        logger.info("Configuration loaded from %s", CONFIG_FILE)
     return _config

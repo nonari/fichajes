@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from telegram.ext import Application, ContextTypes, Job
 
-from core import MADRID_TZ, ahora_madrid, ejecutar_fichaje_async
+from utils import MADRID_TZ, execute_check_in_async, get_madrid_now
 from logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -61,10 +61,10 @@ class SchedulerManager:
         self._scheduled[mark.identifier] = mark
         self._jobs[mark.identifier] = job
         self._persist()
-        logger.info("Marcaje programado: %s a las %s", mark.action, mark.when.isoformat())
+        logger.info("Scheduled mark: %s at %s", mark.action, mark.when.isoformat())
 
     def schedule(self, app: Application, action: str, when: datetime) -> ScheduledMark:
-        if when <= ahora_madrid():
+        if when <= get_madrid_now():
             raise ValueError("La hora indicada ya ha pasado")
         mark = self.create_mark(action, when)
         self.add_mark(app, mark)
@@ -80,7 +80,7 @@ class SchedulerManager:
         for job in self._jobs.values():
             job.schedule_removal()
         if self._scheduled:
-            logger.info("Se cancelan %s marcajes programados", len(self._scheduled))
+            logger.info("Cancelling %s scheduled marks", len(self._scheduled))
         self._jobs.clear()
         self._scheduled.clear()
         self._persist()
@@ -111,21 +111,21 @@ class SchedulerManager:
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            logger.warning("Formato inválido en %s. Se ignorará el contenido.", SCHEDULE_FILE)
+            logger.warning("Invalid format in %s. Content will be ignored.", SCHEDULE_FILE)
             SCHEDULE_FILE.write_text("[]", encoding="utf-8")
             return []
 
         restored: List[ScheduledMark] = []
-        now = ahora_madrid()
+        now = get_madrid_now()
         for item in data:
             try:
                 mark = ScheduledMark.from_dict(item)
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Entrada inválida en programación: %s", exc)
+                logger.warning("Invalid entry in scheduling data: %s", exc)
                 continue
             if mark.when <= now:
                 logger.info(
-                    "Marcaje programado caducado (%s a las %s). Se descarta.",
+                    "Expired scheduled mark (%s at %s). Discarding.",
                     mark.action,
                     mark.when.isoformat(),
                 )
@@ -133,7 +133,7 @@ class SchedulerManager:
             self.add_mark(app, mark)
             restored.append(mark)
         if restored:
-            logger.info("Se restauraron %s marcajes pendientes", len(restored))
+            logger.info("Restored %s pending marks", len(restored))
 
         return restored
 
@@ -141,7 +141,7 @@ class SchedulerManager:
         job_data = context.job.data if context.job else {}
         identifier = job_data.get("id") if job_data else None
         if not identifier:
-            logger.error("Trabajo de marcaje sin identificador")
+            logger.error("Scheduled job without identifier")
             return
 
         mark = self._scheduled.pop(identifier, None)
@@ -151,11 +151,11 @@ class SchedulerManager:
         self._persist()
 
         if not mark:
-            logger.warning("Marcaje %s no encontrado al ejecutar el job", identifier)
+            logger.warning("Scheduled mark %s not found when executing the job", identifier)
             return
 
-        logger.info("Ejecutando marcaje programado %s (%s)", identifier, mark.action)
-        resultado = await ejecutar_fichaje_async(mark.action, context)
+        logger.info("Executing scheduled mark %s (%s)", identifier, mark.action)
+        resultado = await execute_check_in_async(mark.action, context)
 
         prefix = "🚪" if mark.action == "entrada" else "🏁"
         await context.bot.send_message(
@@ -165,7 +165,7 @@ class SchedulerManager:
         await context.bot.send_message(chat_id=self._chat_id, text=resultado.message)
 
         if mark.action == "entrada" and resultado.success:
-            auto_when = ahora_madrid() + timedelta(hours=7)
+            auto_when = get_madrid_now() + timedelta(hours=7)
             auto_mark = self.create_mark("salida", auto_when)
             self.add_mark(context.application, auto_mark)
             await context.bot.send_message(
