@@ -7,13 +7,11 @@ SERVICE_NAME="fichaxe.service"
 # 1. Detect or accept BOT_PATH
 # ──────────────────────────────────────────────
 BOT_PATH="${1:-$(pwd)}"  # use argument or current directory
-ENV_FILE="${BOT_PATH}/.env"
 PYTHON_PATH="${BOT_PATH}/.venv/bin/python3"
 LOG_FILE="${BOT_PATH}/fichaje.log"
 
 echo "📦 Installing ${SERVICE_NAME}"
 echo "➡️ BOT_PATH=${BOT_PATH}"
-echo "➡️ ENV_FILE=${ENV_FILE}"
 
 # Check that bot.py exists
 if [ ! -f "${BOT_PATH}/bot.py" ]; then
@@ -39,7 +37,6 @@ After=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=${ENV_FILE}
 WorkingDirectory=${BOT_PATH}
 ExecStart=${PYTHON_PATH} ${BOT_PATH}/bot.py
 Restart=always

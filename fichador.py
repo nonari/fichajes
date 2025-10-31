@@ -1,4 +1,3 @@
-import os
 import time
 from asyncio import InvalidStateError
 from dataclasses import dataclass
@@ -12,20 +11,43 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
+from config import get_config
 from logging_config import get_logger
 
 
 @dataclass
 class FichajeResultado:
     """Representa el resultado de un intento de fichaje."""
-
     success: bool
     action: str
     message: str
 
+
 LOGIN_URL: Final[str] = "https://fichaxe.usc.gal/pas/marcaxesDiarias"
 
 logger = get_logger(__name__)
+
+
+def _crear_driver() -> webdriver.Chrome:
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+
+def _iniciar_sesion(driver: webdriver.Chrome, wait: WebDriverWait, user: str, password: str) -> None:
+    driver.get(LOGIN_URL)
+    logger.info("Página de login cargada")
+
+    user_input = wait.until(EC.presence_of_element_located((By.ID, "username-input")))
+    pass_input = driver.find_element(By.ID, "password")
+    user_input.send_keys(user)
+    pass_input.send_keys(password)
+    driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+    logger.info("Credenciales introducidas")
+
+    wait.until(EC.presence_of_element_located((By.ID, "novaMarcaxe")))
 
 
 def fichar(accion: str) -> FichajeResultado:
@@ -37,31 +59,19 @@ def fichar(accion: str) -> FichajeResultado:
 
     logger.info("Iniciando proceso de fichaje de %s", accion)
 
-    user = os.getenv("USC_USER")
-    password = os.getenv("USC_PASS")
+    config = get_config()
+    user = config.usc_user
+    password = config.usc_pass
 
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    if not user or not password:
+        raise ValueError("Las credenciales de USC no están configuradas correctamente")
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver = _crear_driver()
     wait = WebDriverWait(driver, 20)
 
     try:
-        # --- LOGIN ---
-        driver.get(LOGIN_URL)
-        logger.info("Página de login cargada")
+        _iniciar_sesion(driver, wait, user, password)
 
-        user_input = wait.until(EC.presence_of_element_located((By.ID, "username-input")))
-        pass_input = driver.find_element(By.ID, "password")
-        user_input.send_keys(user)
-        pass_input.send_keys(password)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        logger.info("Credenciales introducidas")
-
-        # --- PÁGINA PRINCIPAL ---
-        wait.until(EC.presence_of_element_located((By.ID, "novaMarcaxe")))
         tabla = driver.find_element(By.ID, "taboaMarcaxesPropios")
         filas = tabla.find_elements(By.TAG_NAME, "tr")
 
@@ -147,9 +157,50 @@ def fichar(accion: str) -> FichajeResultado:
             "⚠️ No se confirmó el fichaje de salida (puede que ya estuviese registrado).",
         )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.exception("Error durante el proceso de fichaje")
         return FichajeResultado(False, accion, f"❌ Error en fichaje: {e}")
 
+    finally:
+        driver.quit()
+
+
+def obtener_marcajes_hoy() -> list[dict[str, str]]:
+    """Devuelve la lista de marcajes registrados hoy (entrada/salida)."""
+
+    config = get_config()
+    user = config.usc_user
+    password = config.usc_pass
+
+    if not user or not password:
+        raise ValueError("Las credenciales de USC no están configuradas correctamente")
+
+    driver = _crear_driver()
+    wait = WebDriverWait(driver, 20)
+
+    try:
+        _iniciar_sesion(driver, wait, user, password)
+        wait.until(EC.presence_of_element_located((By.ID, "taboaMarcaxesPropios")))
+        tabla = driver.find_element(By.ID, "taboaMarcaxesPropios")
+        filas = tabla.find_elements(By.CSS_SELECTOR, "tbody tr")
+
+        marcajes: list[dict[str, str]] = []
+        for fila in filas:
+            celdas = fila.find_elements(By.TAG_NAME, "td")
+            if len(celdas) < 2:
+                continue
+            entrada = celdas[0].text.strip()
+            salida = celdas[1].text.strip()
+            if not entrada and not salida:
+                continue
+            marcajes.append({
+                "entrada": entrada or "-",
+                "salida": salida or "-",
+            })
+
+        return marcajes
+    except Exception:  # noqa: BLE001
+        logger.exception("Error al consultar los marcajes del día")
+        raise
     finally:
         driver.quit()
