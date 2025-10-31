@@ -16,8 +16,9 @@ from logging_config import get_logger
 
 
 @dataclass
-class FichajeResultado:
-    """Representa el resultado de un intento de fichaje."""
+class CheckInResult:
+    """Represents the outcome of a check-in attempt."""
+
     success: bool
     action: str
     message: str
@@ -28,7 +29,7 @@ LOGIN_URL: Final[str] = "https://fichaxe.usc.gal/pas/marcaxesDiarias"
 logger = get_logger(__name__)
 
 
-def _crear_driver() -> webdriver.Chrome:
+def _create_driver() -> webdriver.Chrome:
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
@@ -36,28 +37,28 @@ def _crear_driver() -> webdriver.Chrome:
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
 
-def _iniciar_sesion(driver: webdriver.Chrome, wait: WebDriverWait, user: str, password: str) -> None:
+def _login(driver: webdriver.Chrome, wait: WebDriverWait, user: str, password: str) -> None:
     driver.get(LOGIN_URL)
-    logger.info("Página de login cargada")
+    logger.info("Login page loaded")
 
     user_input = wait.until(EC.presence_of_element_located((By.ID, "username-input")))
     pass_input = driver.find_element(By.ID, "password")
     user_input.send_keys(user)
     pass_input.send_keys(password)
     driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-    logger.info("Credenciales introducidas")
+    logger.info("Credentials submitted")
 
     wait.until(EC.presence_of_element_located((By.ID, "novaMarcaxe")))
 
 
-def fichar(accion: str) -> FichajeResultado:
-    """Realiza el fichaje indicado si procede y devuelve el resultado."""
+def perform_check_in(action: str) -> CheckInResult:
+    """Execute the requested check-in action if valid and return the outcome."""
 
-    accion = accion.lower().strip()
-    if accion not in {"entrada", "salida"}:
+    action = action.lower().strip()
+    if action not in {"entrada", "salida"}:
         raise ValueError("La acción de fichaje debe ser 'entrada' o 'salida'.")
 
-    logger.info("Iniciando proceso de fichaje de %s", accion)
+    logger.info("Starting check-in process for %s", action)
 
     config = get_config()
     user = config.usc_user
@@ -66,107 +67,107 @@ def fichar(accion: str) -> FichajeResultado:
     if not user or not password:
         raise ValueError("Las credenciales de USC no están configuradas correctamente")
 
-    driver = _crear_driver()
+    driver = _create_driver()
     wait = WebDriverWait(driver, 20)
 
     try:
-        _iniciar_sesion(driver, wait, user, password)
+        _login(driver, wait, user, password)
 
-        tabla = driver.find_element(By.ID, "taboaMarcaxesPropios")
-        filas = tabla.find_elements(By.TAG_NAME, "tr")
+        table = driver.find_element(By.ID, "taboaMarcaxesPropios")
+        rows = table.find_elements(By.TAG_NAME, "tr")
 
-        ultima_fila = filas[-1] if filas else None
-        celdas_antes = ultima_fila.find_elements(By.TAG_NAME, "td") if ultima_fila else []
-        entrada_antes = celdas_antes[0].text.strip() if len(celdas_antes) > 0 else "-"
-        salida_antes = celdas_antes[1].text.strip() if len(celdas_antes) > 1 else "-"
+        last_row = rows[-1] if rows else None
+        cells_before = last_row.find_elements(By.TAG_NAME, "td") if last_row else []
+        entry_before = cells_before[0].text.strip() if len(cells_before) > 0 else "-"
+        exit_before = cells_before[1].text.strip() if len(cells_before) > 1 else "-"
 
-        if entrada_antes == "-":
-            if salida_antes == "-":
-                accion_permitida = "entrada"
+        if entry_before == "-":
+            if exit_before == "-":
+                allowed_action = "entrada"
             else:
                 raise InvalidStateError()
         else:
-            if salida_antes == "-":
-                accion_permitida = "salida"
+            if exit_before == "-":
+                allowed_action = "salida"
             else:
-                accion_permitida = "entrada"
+                allowed_action = "entrada"
 
-        logger.info("Acción permitida actualmente en la web: %s", accion_permitida)
+        logger.info("Allowed action on the website: %s", allowed_action)
 
-        if accion != accion_permitida:
-            if accion_permitida == "salida":
-                mensaje = (
+        if action != allowed_action:
+            if allowed_action == "salida":
+                message = (
                     "⚠️ Ya existe una entrada pendiente de cerrar. Marca la salida antes de "
                     "registrar una nueva entrada."
                 )
             else:
-                mensaje = "⚠️ No hay una entrada pendiente para cerrar."
-            logger.warning("Acción '%s' no permitida en este momento", accion)
-            return FichajeResultado(False, accion, mensaje)
+                message = "⚠️ No hay una entrada pendiente para cerrar."
+            logger.warning("Action '%s' not permitted at this time", action)
+            return CheckInResult(False, action, message)
 
-        # --- CLIC EN NOVA MARCAXE ---
+        # --- CLICK EN NOVA MARCAXE ---
         nova_btn = driver.find_element(By.ID, "novaMarcaxe")
         driver.execute_script("arguments[0].click();", nova_btn)
-        logger.info("Clic en 'novaMarcaxe' ejecutado")
+        logger.info("Click on 'novaMarcaxe' executed")
         time.sleep(5)
 
-        # --- REFRESCAR Y VERIFICAR CAMBIO ---
+        # --- REFRESH AND VERIFY CHANGE ---
         driver.refresh()
         wait.until(EC.presence_of_element_located((By.ID, "taboaMarcaxesPropios")))
-        tabla = driver.find_element(By.ID, "taboaMarcaxesPropios")
-        filas_despues = tabla.find_elements(By.TAG_NAME, "tr")
-        ultima_fila_despues = filas_despues[-1] if filas_despues else None
-        celdas_despues = (
-            ultima_fila_despues.find_elements(By.TAG_NAME, "td") if ultima_fila_despues else []
+        table = driver.find_element(By.ID, "taboaMarcaxesPropios")
+        rows_after = table.find_elements(By.TAG_NAME, "tr")
+        last_row_after = rows_after[-1] if rows_after else None
+        cells_after = (
+            last_row_after.find_elements(By.TAG_NAME, "td") if last_row_after else []
         )
 
-        if accion == "entrada":
-            entrada_despues = celdas_despues[0].text.strip() if len(celdas_despues) > 0 else "-"
-            if entrada_despues and entrada_despues != entrada_antes:
-                logger.info("Entrada registrada a las %s", entrada_despues)
-                return FichajeResultado(
-                    True, accion, f"✅ Fichaje de entrada registrado a las {entrada_despues}"
+        if action == "entrada":
+            entry_after = cells_after[0].text.strip() if len(cells_after) > 0 else "-"
+            if entry_after and entry_after != entry_before:
+                logger.info("Entry registered at %s", entry_after)
+                return CheckInResult(
+                    True, action, f"✅ Fichaje de entrada registrado a las {entry_after}"
                 )
 
-            if len(filas_despues) > len(filas):
-                logger.info("Entrada detectada en nueva fila tras el fichaje")
-                return FichajeResultado(
+            if len(rows_after) > len(rows):
+                logger.info("Entry detected in new row after performing the check-in")
+                return CheckInResult(
                     True,
-                    accion,
-                    f"✅ Fichaje de entrada registrado a las {entrada_despues or 'hora desconocida'}",
+                    action,
+                    f"✅ Fichaje de entrada registrado a las {entry_after or 'hora desconocida'}",
                 )
 
-            logger.warning("No se detectó una hora de entrada tras intentar fichar.")
-            return FichajeResultado(
+            logger.warning("No entry time detected after attempting the check-in.")
+            return CheckInResult(
                 False,
-                accion,
+                action,
                 "⚠️ No se confirmó el fichaje de entrada (puede que ya estuviese registrado).",
             )
 
-        salida_despues = celdas_despues[1].text.strip() if len(celdas_despues) > 1 else "-"
-        if salida_despues != '-' and salida_despues != salida_antes:
-            logger.info("Salida registrada a las %s", salida_despues)
-            return FichajeResultado(
-                True, accion, f"✅ Fichaje de salida registrado a las {salida_despues}"
+        exit_after = cells_after[1].text.strip() if len(cells_after) > 1 else "-"
+        if exit_after != "-" and exit_after != exit_before:
+            logger.info("Exit registered at %s", exit_after)
+            return CheckInResult(
+                True, action, f"✅ Fichaje de salida registrado a las {exit_after}"
             )
 
-        logger.warning("No se detectó una hora de salida tras intentar fichar.")
-        return FichajeResultado(
+        logger.warning("No exit time detected after attempting the check-in.")
+        return CheckInResult(
             False,
-            accion,
+            action,
             "⚠️ No se confirmó el fichaje de salida (puede que ya estuviese registrado).",
         )
 
-    except Exception as e:  # noqa: BLE001
-        logger.exception("Error durante el proceso de fichaje")
-        return FichajeResultado(False, accion, f"❌ Error en fichaje: {e}")
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Error during the check-in process")
+        return CheckInResult(False, action, f"❌ Error en fichaje: {exc}")
 
     finally:
         driver.quit()
 
 
-def obtener_marcajes_hoy() -> list[dict[str, str]]:
-    """Devuelve la lista de marcajes registrados hoy (entrada/salida)."""
+def get_today_records() -> list[dict[str, str]]:
+    """Return the list of check-ins registered today (entry/exit)."""
 
     config = get_config()
     user = config.usc_user
@@ -175,32 +176,34 @@ def obtener_marcajes_hoy() -> list[dict[str, str]]:
     if not user or not password:
         raise ValueError("Las credenciales de USC no están configuradas correctamente")
 
-    driver = _crear_driver()
+    driver = _create_driver()
     wait = WebDriverWait(driver, 20)
 
     try:
-        _iniciar_sesion(driver, wait, user, password)
+        _login(driver, wait, user, password)
         wait.until(EC.presence_of_element_located((By.ID, "taboaMarcaxesPropios")))
-        tabla = driver.find_element(By.ID, "taboaMarcaxesPropios")
-        filas = tabla.find_elements(By.CSS_SELECTOR, "tbody tr")
+        table = driver.find_element(By.ID, "taboaMarcaxesPropios")
+        rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
 
-        marcajes: list[dict[str, str]] = []
-        for fila in filas:
-            celdas = fila.find_elements(By.TAG_NAME, "td")
-            if len(celdas) < 2:
+        records: list[dict[str, str]] = []
+        for row in rows:
+            cells = row.find_elements(By.TAG_NAME, "td")
+            if len(cells) < 2:
                 continue
-            entrada = celdas[0].text.strip()
-            salida = celdas[1].text.strip()
-            if not entrada and not salida:
+            entry_value = cells[0].text.strip()
+            exit_value = cells[1].text.strip()
+            if not entry_value and not exit_value:
                 continue
-            marcajes.append({
-                "entrada": entrada or "-",
-                "salida": salida or "-",
-            })
+            records.append(
+                {
+                    "entrada": entry_value or "-",
+                    "salida": exit_value or "-",
+                }
+            )
 
-        return marcajes
+        return records
     except Exception:  # noqa: BLE001
-        logger.exception("Error al consultar los marcajes del día")
+        logger.exception("Error while retrieving today's check-ins")
         raise
     finally:
         driver.quit()
