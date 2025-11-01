@@ -16,7 +16,7 @@ from commands import (
     REMINDER_ATTEMPTS_KEY,
     REMINDER_JOB_KEY,
     cancel,
-    mark,
+    mark as mark_command,
     process_response,
     show_pending,
     show_records,
@@ -112,7 +112,7 @@ async def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.scheduler_manager = scheduler_manager
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("marcar", mark))
+    app.add_handler(CommandHandler("marcar", mark_command))
     app.add_handler(CommandHandler("cancelar", cancel))
     app.add_handler(CommandHandler("marcajes", show_records))
     app.add_handler(CommandHandler("pendientes", show_pending))
