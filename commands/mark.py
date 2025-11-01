@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
 from scheduler import SchedulerManager
+from config import get_config
 from utils import (
     MADRID_TZ,
     execute_check_in_async,
@@ -17,6 +18,7 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
 
+    appconfig = get_config()
     if not context.args:
         await update.message.reply_text("Uso: /marcar entrada|salida [HH:MM]")
         return
@@ -37,7 +39,7 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         now = get_madrid_now()
-        scheduled_time = datetime.combine(now.date(), parsed_time).replace(tzinfo=MADRID_TZ)
+        scheduled_time = MADRID_TZ.localize(datetime.combine(now.date(), parsed_time))
         if scheduled_time <= now:
             await update.message.reply_text(
                 "La hora indicada ya ha pasado hoy. Indica una hora futura."
@@ -64,15 +66,21 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if action == "entrada":
         if result.success:
-            exit_time = get_madrid_now() + timedelta(hours=7)
-            try:
-                scheduler_manager.schedule(context.application, "salida", exit_time)
+            auto_delay = appconfig.auto_checkout_delay
+            if auto_delay:
+                exit_time = get_madrid_now() + auto_delay
+                try:
+                    scheduler_manager.schedule(context.application, "salida", exit_time)
+                    await update.message.reply_text(
+                        f"🕐 Salida programada para las {exit_time.strftime('%H:%M')}"
+                    )
+                except ValueError:
+                    await update.message.reply_text(
+                        "⚠️ No se programó la salida porque la hora calculada no es válida."
+                    )
+            else:
                 await update.message.reply_text(
-                    f"🕐 Salida programada para las {exit_time.strftime('%H:%M')}"
-                )
-            except ValueError:
-                await update.message.reply_text(
-                    "⚠️ No se programó la salida porque la hora calculada no es válida."
+                    "ℹ️ La salida automática está desactivada en la configuración."
                 )
         else:
             await update.message.reply_text(

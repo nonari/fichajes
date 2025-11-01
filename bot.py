@@ -1,6 +1,5 @@
 import asyncio
 import signal
-from datetime import timedelta, time as dtime
 
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import (
@@ -40,8 +39,9 @@ config = get_config()
 TOKEN = config.telegram_token
 CHAT_ID = config.telegram_chat_id
 
-MAX_REMINDERS = 3
-REMINDER_INTERVAL = timedelta(minutes=5)
+MAX_REMINDERS = config.max_reminders
+REMINDER_INTERVAL = config.reminder_interval
+QUESTION_TIME = config.daily_question_time
 
 
 async def ask_for_check_in(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -70,13 +70,14 @@ async def ask_for_check_in(context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
     context.application.bot_data[REMINDER_ATTEMPTS_KEY] = 0
-    reminder_job = context.job_queue.run_repeating(
-        send_check_in_reminder,
-        interval=REMINDER_INTERVAL.total_seconds(),
-        first=REMINDER_INTERVAL.total_seconds(),
-        name="recordatorio_pregunta",
-    )
-    context.application.bot_data[REMINDER_JOB_KEY] = reminder_job
+    if MAX_REMINDERS > 0:
+        reminder_job = context.job_queue.run_repeating(
+            send_check_in_reminder,
+            interval=REMINDER_INTERVAL.total_seconds(),
+            first=REMINDER_INTERVAL.total_seconds(),
+            name="recordatorio_pregunta",
+        )
+        context.application.bot_data[REMINDER_JOB_KEY] = reminder_job
 
 
 async def send_check_in_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -105,7 +106,9 @@ async def send_check_in_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def main():
     appconfig = get_config()
-    scheduler_manager = SchedulerManager(appconfig.telegram_chat_id)
+    scheduler_manager = SchedulerManager(
+        appconfig.telegram_chat_id, appconfig.auto_checkout_delay
+    )
     app = ApplicationBuilder().token(TOKEN).build()
     app.scheduler_manager = scheduler_manager
     app.add_handler(CommandHandler("start", start))
@@ -117,14 +120,19 @@ async def main():
 
     app.job_queue.run_daily(
         ask_for_check_in,
-        time=dtime(hour=9, minute=0, tzinfo=MADRID_TZ),
+        time=QUESTION_TIME.replace(tzinfo=MADRID_TZ),
         days=(0, 1, 2, 3, 4),
     )
 
     restaurados = scheduler_manager.load_from_disk(app)
 
     now = get_madrid_now()
-    question_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    question_time = now.replace(
+        hour=QUESTION_TIME.hour,
+        minute=QUESTION_TIME.minute,
+        second=0,
+        microsecond=0,
+    )
 
     if (
         not scheduler_manager.has_pending()

@@ -1,9 +1,8 @@
-from datetime import timedelta
-
 from telegram import Update
 from telegram.ext import ContextTypes
 
 from scheduler import SchedulerManager
+from config import get_config
 from utils import cancel_reminder, execute_check_in_async, get_madrid_now
 
 from .state import (
@@ -22,6 +21,7 @@ async def process_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     today = get_madrid_now().date()
 
     scheduler_manager: SchedulerManager = context.application.scheduler_manager
+    appconfig = get_config()
     if response in {"sí", "si"} and context.application.bot_data[AWAITING_RESPONSE_KEY]:
         if scheduler_manager.has_pending():
             await update.message.reply_text(
@@ -41,15 +41,21 @@ async def process_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text(result.message)
 
         if result.success:
-            exit_time = get_madrid_now() + timedelta(hours=7)
-            try:
-                scheduler_manager.schedule(context.application, "salida", exit_time)
+            auto_delay = appconfig.auto_checkout_delay
+            if auto_delay:
+                exit_time = get_madrid_now() + auto_delay
+                try:
+                    scheduler_manager.schedule(context.application, "salida", exit_time)
+                    await update.message.reply_text(
+                        f"🕐 Salida programada para las {exit_time.strftime('%H:%M')}"
+                    )
+                except ValueError:
+                    await update.message.reply_text(
+                        "⚠️ La hora calculada para la salida ya no es válida."
+                    )
+            else:
                 await update.message.reply_text(
-                    f"🕐 Salida programada para las {exit_time.strftime('%H:%M')}"
-                )
-            except ValueError:
-                await update.message.reply_text(
-                    "⚠️ La hora calculada para la salida ya no es válida."
+                    "ℹ️ La salida automática está desactivada en la configuración."
                 )
         else:
             await update.message.reply_text(
