@@ -78,8 +78,6 @@ class SchedulerManager:
         return sorted(self._scheduled.values(), key=lambda mark: mark.when)
 
     def cancel_all(self) -> None:
-        for job in self._jobs.values():
-            job.schedule_removal()
         if self._scheduled:
             logger.info("Cancelling %s scheduled marks", len(self._scheduled))
         self._jobs.clear()
@@ -90,8 +88,6 @@ class SchedulerManager:
         identifiers = [mark_id for mark_id, mark in self._scheduled.items() if mark.action == action]
         for identifier in identifiers:
             job = self._jobs.pop(identifier, None)
-            if job:
-                job.schedule_removal()
             self._scheduled.pop(identifier, None)
         if identifiers:
             self._persist()
@@ -147,8 +143,6 @@ class SchedulerManager:
 
         mark = self._scheduled.pop(identifier, None)
         job = self._jobs.pop(identifier, None)
-        if job:
-            job.schedule_removal()
         self._persist()
 
         if not mark:

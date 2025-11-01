@@ -87,10 +87,10 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 "🚫 No se programó la salida porque la entrada no se confirmó."
             )
         return
-
-    if result.success:
-        removed = scheduler_manager.cancel_by_action("salida")
-        if removed:
-            await update.message.reply_text(
-                "🗓️ Se cancelaron {} marcajes de salida programados.".format(removed)
-            )
+    else:
+        if result.success:
+            removed = scheduler_manager.cancel_by_action("salida")
+            if removed:
+                await update.message.reply_text(
+                    "🗓️ Se cancelaron {} marcajes de salida programados.".format(removed)
+                )
