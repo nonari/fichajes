@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from telegram.ext import Application, ContextTypes, Job
@@ -34,17 +34,18 @@ class ScheduledMark:
     def from_dict(cls, data: Dict[str, str]) -> "ScheduledMark":
         when = datetime.fromisoformat(data["when"])
         if when.tzinfo is None:
-            when = when.replace(tzinfo=MADRID_TZ)
+            when = MADRID_TZ.localize(when)
         else:
             when = when.astimezone(MADRID_TZ)
         return cls(identifier=data["id"], action=data["action"], when=when)
 
 
 class SchedulerManager:
-    def __init__(self, chat_id: str) -> None:
+    def __init__(self, chat_id: str, auto_checkout_delay: Optional[timedelta]) -> None:
         self._scheduled: Dict[str, ScheduledMark] = {}
         self._jobs: Dict[str, Job] = {}
         self._chat_id = chat_id
+        self._auto_checkout_delay = auto_checkout_delay
 
     @staticmethod
     def create_mark(action: str, when: datetime) -> ScheduledMark:
@@ -164,8 +165,8 @@ class SchedulerManager:
         )
         await context.bot.send_message(chat_id=self._chat_id, text=resultado.message)
 
-        if mark.action == "entrada" and resultado.success:
-            auto_when = get_madrid_now() + timedelta(hours=7)
+        if mark.action == "entrada" and resultado.success and self._auto_checkout_delay:
+            auto_when = get_madrid_now() + self._auto_checkout_delay
             auto_mark = self.create_mark("salida", auto_when)
             self.add_mark(context.application, auto_mark)
             await context.bot.send_message(

@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 from datetime import date, datetime, time as dtime
 from typing import Optional, Final
-from zoneinfo import ZoneInfo
+
+import pytz
 
 from holidays.countries.spain import Spain
 from telegram.ext import ContextTypes
@@ -11,7 +12,7 @@ from telegram.ext import ContextTypes
 from fichador import perform_check_in
 from logging_config import get_logger
 
-MADRID_TZ: Final[ZoneInfo] = ZoneInfo("Europe/Madrid")
+MADRID_TZ: Final = pytz.timezone("Europe/Madrid")
 
 logger = get_logger(__name__)
 
