@@ -52,6 +52,11 @@ async def ask_for_check_in(context: ContextTypes.DEFAULT_TYPE) -> None:
         cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
         return
 
+    if today.weekday() >= 5 or is_galicia_holiday(today):
+        logger.info("Skipping question on %s (weekend or holiday)", today)
+        cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
+        return
+
     logger.info("Sending check-in request for %s", today.isoformat())
     context.application.bot_data[QUESTION_DATE_KEY] = today
     context.application.bot_data[AWAITING_RESPONSE_KEY] = True
