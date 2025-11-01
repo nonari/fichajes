@@ -39,7 +39,7 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         now = get_madrid_now()
-        scheduled_time = MADRID_TZ.localize(datetime.combine(now.date(), parsed_time))
+        scheduled_time = datetime.combine(now.date(), parsed_time, tzinfo=MADRID_TZ)
         if scheduled_time <= now:
             await update.message.reply_text(
                 "La hora indicada ya ha pasado hoy. Indica una hora futura."
