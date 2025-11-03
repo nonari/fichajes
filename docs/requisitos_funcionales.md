@@ -105,8 +105,3 @@ El sistema cubre las interacciones entre un único usuario autorizado y el bot d
 - `auto_checkout_delay_minutes`: Minutos tras una entrada exitosa para programar la salida automática; `0` desactiva la función.
 - `max_reminders`: Número máximo de recordatorios tras la pregunta diaria.
 - `reminder_interval_minutes`: Intervalo entre recordatorios sucesivos.
-
-## 9. Requisitos futuros (no implementados)
-- Configuración multiusuario con gestión de múltiples chats.
-- Registro histórico de resultados de fichajes más allá del día en curso.
-- Panel web para supervisar marcajes y configurar horarios.
