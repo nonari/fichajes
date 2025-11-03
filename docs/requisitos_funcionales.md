@@ -39,7 +39,7 @@ El sistema cubre las interacciones entre un único usuario autorizado y el bot d
 1. Si el usuario responde `Sí` mientras la aplicación espera respuesta, el bot intenta registrar un fichaje de entrada inmediato en el portal de la USC.
 2. Antes de ejecutar la acción comprueba que no existan marcajes pendientes en el scheduler. En caso afirmativo informa al usuario y finaliza el flujo.
 3. Tras ejecutar el fichaje, el bot informa del resultado (éxito, alerta o error) utilizando el mensaje devuelto por el portal.
-4. Si la entrada se registra correctamente y la configuración define un retardo automático (`auto_checkout_delay`), el bot programa una salida automática para la hora calculada y notifica al usuario.
+4. Si la entrada se registra correctamente y la configuración define un retardo automático (`auto_checkout_delay`), el bot programa una salida automática para la hora calculada aplicando una variación aleatoria configurable (`auto_checkout_random_offset_minutes`) y notifica al usuario.
 5. Si la entrada falla, el bot comunica que no se programará la salida automática.
 
 ### RF-5. Respuesta negativa a la pregunta diaria
@@ -55,7 +55,7 @@ El sistema cubre las interacciones entre un único usuario autorizado y el bot d
 2. Si se indica una hora (`HH:MM`), el bot valida que el formato sea correcto y que corresponda a un momento futuro del mismo día.
 3. Los marcajes programados se almacenan en un scheduler persistente y se informan al usuario con la hora local.
 4. Un fichaje inmediato ejecuta la acción contra el portal y devuelve el mensaje del resultado.
-5. Tras una entrada exitosa, se aplica la misma lógica de programación de salida automática que en la respuesta afirmativa.
+5. Tras una entrada exitosa, se aplica la misma lógica de programación de salida automática con variación aleatoria que en la respuesta afirmativa.
 6. Tras una salida exitosa, se eliminan otras salidas programadas y se notifica cuántas se cancelaron.
 7. Si la validación falla o la acción no es reconocida, el bot envía un mensaje aclaratorio con el formato de uso esperado.
 
@@ -77,7 +77,7 @@ El sistema cubre las interacciones entre un único usuario autorizado y el bot d
 ### RF-11. Ejecución de marcajes programados
 1. Cada marcaje programado debe ejecutarse a la hora indicada a través del scheduler interno del bot.
 2. Al ejecutarse, el bot informa de la acción realizada y del resultado devuelto por el portal de fichaje.
-3. Si se ejecuta una entrada programada con éxito y existe `auto_checkout_delay`, se programa automáticamente una salida y se notifica.
+3. Si se ejecuta una entrada programada con éxito y existe `auto_checkout_delay`, se programa automáticamente una salida aplicando la variación aleatoria configurada y se notifica.
 4. Los marcajes ejecutados se eliminan del listado de pendientes y se persisten los cambios.
 
 ### RF-12. Persistencia y restauración del scheduler
@@ -103,5 +103,6 @@ El sistema cubre las interacciones entre un único usuario autorizado y el bot d
 - `usc_user` y `usc_pass`: Credenciales del portal de fichajes.
 - `daily_question_time`: Hora diaria para preguntar por el fichaje (formato `HH:MM`).
 - `auto_checkout_delay_minutes`: Minutos tras una entrada exitosa para programar la salida automática; `0` desactiva la función.
+- `auto_checkout_random_offset_minutes`: Desviación máxima (en minutos) a aplicar en +/- sobre la hora de salida automática.
 - `max_reminders`: Número máximo de recordatorios tras la pregunta diaria.
 - `reminder_interval_minutes`: Intervalo entre recordatorios sucesivos.

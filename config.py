@@ -21,6 +21,7 @@ class AppConfig:
     usc_pass: str
     daily_question_time: dtime
     auto_checkout_delay: Optional[timedelta]
+    auto_checkout_random_offset_minutes: int
     max_reminders: int
     reminder_interval: timedelta
 
@@ -86,6 +87,13 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         raise ValueError("El valor de 'auto_checkout_delay_minutes' no puede ser negativo")
     auto_checkout_delay = timedelta(minutes=checkout_minutes) if checkout_minutes else None
 
+    random_offset_raw = data.get("auto_checkout_random_offset_minutes", 3)
+    random_offset = _parse_int_field(random_offset_raw, "auto_checkout_random_offset_minutes")
+    if random_offset < 0:
+        raise ValueError(
+            "El valor de 'auto_checkout_random_offset_minutes' no puede ser negativo"
+        )
+
     max_reminders_raw = data.get("max_reminders", 3)
     max_reminders = _parse_int_field(max_reminders_raw, "max_reminders")
     if max_reminders < 0:
@@ -106,6 +114,7 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         usc_pass=str(data["usc_pass"]),
         daily_question_time=daily_question_time,
         auto_checkout_delay=auto_checkout_delay,
+        auto_checkout_random_offset_minutes=random_offset,
         max_reminders=max_reminders,
         reminder_interval=reminder_interval,
     )

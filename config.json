@@ -5,6 +5,7 @@
   "usc_pass": "tu_contraseña",
   "daily_question_time": "09:00",
   "auto_checkout_delay_minutes": 420,
+  "auto_checkout_random_offset_minutes": 3,
   "max_reminders": 3,
   "reminder_interval_minutes": 5
 }

@@ -107,7 +107,9 @@ async def send_check_in_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
 async def main():
     appconfig = get_config()
     scheduler_manager = SchedulerManager(
-        appconfig.telegram_chat_id, appconfig.auto_checkout_delay
+        appconfig.telegram_chat_id,
+        appconfig.auto_checkout_delay,
+        appconfig.auto_checkout_random_offset_minutes,
     )
     app = ApplicationBuilder().token(TOKEN).build()
     app.scheduler_manager = scheduler_manager

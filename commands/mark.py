@@ -68,15 +68,19 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if result.success:
             auto_delay = appconfig.auto_checkout_delay
             if auto_delay:
-                exit_time = get_madrid_now() + auto_delay
                 try:
-                    scheduler_manager.schedule(context.application, "salida", exit_time)
-                    await update.message.reply_text(
-                        f"🕐 Salida programada para las {exit_time.strftime('%H:%M')}"
+                    auto_mark = scheduler_manager.schedule_auto_checkout(
+                        context.application
                     )
                 except ValueError:
                     await update.message.reply_text(
                         "⚠️ No se programó la salida porque la hora calculada no es válida."
+                    )
+                else:
+                    await update.message.reply_text(
+                        "🕐 Salida programada para las {}".format(
+                            auto_mark.when.strftime("%H:%M")
+                        )
                     )
             else:
                 await update.message.reply_text(
