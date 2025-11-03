@@ -13,9 +13,9 @@ LOG_FILE="${BOT_PATH}/fichaje.log"
 echo "📦 Installing ${SERVICE_NAME}"
 echo "➡️ BOT_PATH=${BOT_PATH}"
 
-# Check that bot.py exists
-if [ ! -f "${BOT_PATH}/bot.py" ]; then
-    echo "❌ bot.py not found in ${BOT_PATH}"
+# Check that the package exists
+if [ ! -f "${BOT_PATH}/fichaxebot/bot.py" ]; then
+    echo "❌ fichaxebot/bot.py not found in ${BOT_PATH}"
     exit 1
 fi
 
@@ -38,7 +38,7 @@ After=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=${BOT_PATH}
-ExecStart=${PYTHON_PATH} ${BOT_PATH}/bot.py
+ExecStart=${PYTHON_PATH} -m fichaxebot.bot
 Restart=always
 RestartSec=10
 StandardOutput=append:${LOG_FILE}

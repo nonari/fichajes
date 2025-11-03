@@ -1,8 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from scheduler import SchedulerManager
-from utils import MADRID_TZ
+from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.utils import MADRID_TZ
 
 
 async def show_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

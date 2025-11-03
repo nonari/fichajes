@@ -11,8 +11,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-from config import get_config
-from logging_config import get_logger
+from fichaxebot.config import get_config
+from fichaxebot.logging_config import get_logger
 
 
 @dataclass
