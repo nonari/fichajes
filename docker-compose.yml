@@ -1,8 +1,7 @@
-version: "3.9"
-
 services:
   fichaxebot:
-    build: .
+    build:
+      dockerfile: Dockerfile
     environment:
       - FICHAXE_LOG_DIR=/logs
     volumes:
