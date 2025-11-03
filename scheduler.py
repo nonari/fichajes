@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from random import randint
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -41,11 +42,17 @@ class ScheduledMark:
 
 
 class SchedulerManager:
-    def __init__(self, chat_id: str, auto_checkout_delay: Optional[timedelta]) -> None:
+    def __init__(
+        self,
+        chat_id: str,
+        auto_checkout_delay: Optional[timedelta],
+        auto_checkout_random_offset_minutes: int,
+    ) -> None:
         self._scheduled: Dict[str, ScheduledMark] = {}
         self._jobs: Dict[str, Job] = {}
         self._chat_id = chat_id
         self._auto_checkout_delay = auto_checkout_delay
+        self._auto_checkout_random_offset = max(0, auto_checkout_random_offset_minutes)
 
     @staticmethod
     def create_mark(action: str, when: datetime) -> ScheduledMark:
@@ -70,6 +77,34 @@ class SchedulerManager:
         mark = self.create_mark(action, when)
         self.add_mark(app, mark)
         return mark
+
+    def _compute_auto_checkout_time(self) -> datetime:
+        if not self._auto_checkout_delay:
+            raise ValueError("La salida automática no está configurada")
+
+        now = get_madrid_now()
+        exit_time = now + self._auto_checkout_delay
+
+        if self._auto_checkout_random_offset:
+            offset = randint(
+                -self._auto_checkout_random_offset, self._auto_checkout_random_offset
+            )
+            if offset:
+                logger.info("Applying random offset of %s minutes to auto-checkout", offset)
+            exit_time += timedelta(minutes=offset)
+
+        if exit_time <= now:
+            logger.info(
+                "Computed auto-checkout time %s is not in the future. Adjusting by one minute.",
+                exit_time.isoformat(),
+            )
+            exit_time = now + timedelta(minutes=1)
+
+        return exit_time
+
+    def schedule_auto_checkout(self, app: Application) -> ScheduledMark:
+        exit_time = self._compute_auto_checkout_time()
+        return self.schedule(app, "salida", exit_time)
 
     def has_pending(self) -> bool:
         return bool(self._scheduled)
@@ -160,10 +195,17 @@ class SchedulerManager:
         await context.bot.send_message(chat_id=self._chat_id, text=resultado.message)
 
         if mark.action == "entrada" and resultado.success and self._auto_checkout_delay:
-            auto_when = get_madrid_now() + self._auto_checkout_delay
-            auto_mark = self.create_mark("salida", auto_when)
-            self.add_mark(context.application, auto_mark)
-            await context.bot.send_message(
-                chat_id=self._chat_id,
-                text=f"🕐 Salida automática programada para las {auto_when.strftime('%H:%M')}.",
-            )
+            try:
+                auto_mark = self.schedule_auto_checkout(context.application)
+            except ValueError:
+                await context.bot.send_message(
+                    chat_id=self._chat_id,
+                    text="⚠️ No se programó la salida porque la hora calculada ya no es válida.",
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id=self._chat_id,
+                    text="🕐 Salida automática programada para las {}.".format(
+                        auto_mark.when.strftime("%H:%M")
+                    ),
+                )
