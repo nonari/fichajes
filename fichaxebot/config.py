@@ -6,7 +6,7 @@ from datetime import time as dtime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from logging_config import get_logger
+from fichaxebot.logging_config import get_logger
 
 logger = get_logger(__name__)
 

@@ -1,6 +1,5 @@
 import asyncio
 import signal
-
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -10,7 +9,7 @@ from telegram.ext import (
     filters,
 )
 
-from commands import (
+from fichaxebot.commands import (
     AWAITING_RESPONSE_KEY,
     QUESTION_DATE_KEY,
     REMINDER_ATTEMPTS_KEY,
@@ -22,16 +21,16 @@ from commands import (
     show_records,
     start,
 )
-from config import get_config
-from utils import (
+from fichaxebot.config import get_config
+from fichaxebot.utils import (
     MADRID_TZ,
     cancel_reminder,
     get_madrid_now,
     is_galicia_holiday,
 )
-from fichador import get_today_records
-from logging_config import get_logger
-from scheduler import SchedulerManager
+from fichaxebot.fichador import get_today_records
+from fichaxebot.logging_config import get_logger
+from fichaxebot.scheduler import SchedulerManager
 
 logger = get_logger(__name__)
 
@@ -104,7 +103,7 @@ async def send_check_in_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-async def main():
+async def _run_bot() -> None:
     appconfig = get_config()
     scheduler_manager = SchedulerManager(
         appconfig.telegram_chat_id,
@@ -194,6 +193,9 @@ async def main():
     await app.stop()
     await app.shutdown()
 
+def main() -> None:
+    asyncio.run(_run_bot())
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

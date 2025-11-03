@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from scheduler import SchedulerManager
+from fichaxebot.scheduler import SchedulerManager
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

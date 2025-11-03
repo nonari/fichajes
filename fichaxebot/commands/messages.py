@@ -1,11 +1,11 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from scheduler import SchedulerManager
-from config import get_config
-from utils import cancel_reminder, execute_check_in_async, get_madrid_now
+from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.config import get_config
+from fichaxebot.utils import cancel_reminder, execute_check_in_async, get_madrid_now
 
-from .state import (
+from fichaxebot.commands.state import (
     AWAITING_RESPONSE_KEY,
     QUESTION_DATE_KEY,
     REMINDER_ATTEMPTS_KEY,

@@ -4,9 +4,9 @@ from typing import Optional
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from scheduler import SchedulerManager
-from config import get_config
-from utils import (
+from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.config import get_config
+from fichaxebot.utils import (
     MADRID_TZ,
     execute_check_in_async,
     get_madrid_now,

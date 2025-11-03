@@ -10,8 +10,8 @@ from uuid import uuid4
 
 from telegram.ext import Application, ContextTypes, Job
 
-from utils import MADRID_TZ, execute_check_in_async, get_madrid_now
-from logging_config import get_logger
+from fichaxebot.utils import MADRID_TZ, execute_check_in_async, get_madrid_now
+from fichaxebot.logging_config import get_logger
 
 logger = get_logger(__name__)
 
