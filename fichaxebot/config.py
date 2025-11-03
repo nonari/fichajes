@@ -10,7 +10,7 @@ from fichaxebot.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-CONFIG_FILE = Path("config.json")
+CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
 
 @dataclass
