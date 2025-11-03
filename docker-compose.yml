@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  fichaxebot:
+    build: .
+    environment:
+      - FICHAXE_LOG_DIR=/logs
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./logs:/logs
+    restart: unless-stopped
