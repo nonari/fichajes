@@ -65,6 +65,7 @@ class SchedulerManager:
             when=mark.when,
             name=f"marcaje_{mark.identifier}",
             data={"id": mark.identifier},
+            job_kwargs={"misfire_grace_time": None},
         )
         self._scheduled[mark.identifier] = mark
         self._jobs[mark.identifier] = job
