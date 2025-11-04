@@ -1,0 +1,10 @@
+services:
+  fichaxebot:
+    build:
+      dockerfile: Dockerfile
+    environment:
+      - FICHAXE_LOG_DIR=/logs
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./logs:/logs
+    restart: unless-stopped
