@@ -122,7 +122,7 @@ async def _run_bot() -> None:
     app.job_queue.run_daily(
         ask_for_check_in,
         time=QUESTION_TIME.replace(tzinfo=MADRID_TZ),
-        days=(0, 1, 2, 3, 4),
+        days=(1, 2, 3, 4, 5), # Sunday-Saturday numeration
     )
 
     restaurados = scheduler_manager.load_from_disk(app)
@@ -138,7 +138,7 @@ async def _run_bot() -> None:
     if (
         not scheduler_manager.has_pending()
         and now >= question_time
-        and now.weekday() < 5
+        and now.weekday() < 5 # Monday-Sunday numeration
         and not is_galicia_holiday(now.date())
     ):
         logger.info("🤖 Bot started after 9:00 without scheduled marks. Triggering question.")
