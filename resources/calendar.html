@@ -1,0 +1,597 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--<html lang="gl">-->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="gl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+
+        <title>Rexistro horario PAS - ARH - Calendario anual</title>
+
+        <link rel="stylesheet" href="/pas/bootstrap/css/bootstrap.min.css" />
+
+        <link rel="stylesheet" href="/pas/sistema/css/styles.css" />
+
+
+
+        <meta charset="UTF-8" />
+
+
+			<link rel="stylesheet"
+				href="/pas/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css" />
+			<link rel="stylesheet" type="text/css" media="all" href="/pas/comun/css/comun.css" />
+			<link rel="stylesheet" type="text/css" href="/pas/calendarioanual/css/bootstrap-year-calendar.min.css" />
+			<link rel="stylesheet" type="text/css" media="all" href="/pas/calendarioanual/css/calendario-anual.css" />
+
+    </head>
+    <body>
+        <header class="navbar navbar-default">
+            <div class="container">
+                <nav>
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                                aria-expanded="false">
+                            <span class="sr-only">Trocar navegación</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span
+                                class="icon-bar"></span>
+                        </button>
+                        <a class="navbar-brand" href="/pas/accionPanel/marcaxes">Rexistro horario PAS - ARH</a>
+
+                    </div>
+
+                    <div class="collapse navbar-collapse" id="navbar">
+                        <ul class="nav navbar-nav">
+                            <li><a href="/pas/accionPanel/marcaxes">Marcaxes</a></li>
+                            <li><a href="/pas/accionPanel/solicitudes-pas">Solicitudes</a></li>
+                            <li class="active"><a href="/pas/accionPanel/informacion-pas">Información</a></li>
+                            <li><a href="/pas/accionPanel/notificacions">Configuración</a></li>
+                        </ul>
+
+                            <ul class="nav navbar-nav navbar-right">
+                                <li class="dropdown">
+                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                        <span class="glyphicon glyphicon-user"></span>
+                                        <span class="caret"></span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li class="dropdown-header"><h6>GERMAN PALOMARES (g.palomares@usc.es)</h6></li>
+                                        <li class="dropdown-header">Idiomas</li>
+                                        <li class="active"><a href="/pas/?setUserLocaleTo=gl">Galego</a></li>
+                                        <li><a href="/pas/?setUserLocaleTo=es">Español</a></li>
+                                        <li><a href="#">Perfil</a></li>
+
+                                        <li><a href="/pas/j_spring_security_logout">Saír</a></li>
+
+
+                                    </ul>
+                                </li>
+                            </ul>
+
+                    </div>
+                    <!-- /.navbar-collapse -->
+                </nav>
+            </div>
+            <!-- /.container-fluid -->
+        </header>
+
+        <!-- Contido -->
+        <div class="container">
+            <div class="col-md-12">
+
+
+                <main>
+		<h2>Calendario anual</h2>
+
+
+		<form class="formularioCalendario" action="/pas/calendarioAnual" method="post">
+	 		<div class="row">
+	 			<div class="col-md-3" id="ano">
+
+					<div class="form-group">
+						<label class="control-label" for="ano">Ano</label>
+						<input type="text" class="form-control" placeholder="Ano" id="ano" name="ano" value="2025" />
+
+					</div>
+
+			</div>
+	 			<input class="form-control" type="hidden" id="idPersoa" name="idPersoa" value="12345"/>
+				<div class="col-md-9" id="autocompletableRelacionLaboral">
+
+		<div class="form-group">
+			<label class="control-label" for="autocompletable">Persoa</label>
+			<input type="text" class="form-control" placeholder="Persoa" autocomplete="off" id="autocompletable" name="autocompletable" value="GERMAN PALOMARES - 12345678Z"/>
+
+		</div>
+
+</div>
+ 			</div>
+ 			<div>
+	 			<button class="btn btn-primary" type="submit">Buscar</button>
+ 			</div>
+ 		</form>
+ 		<div id="mensaxeErro" class="alert alert-warning alert-danger top30 alert-info" role="alert" style="display: none;">
+    		<button type="button" class="close"><span aria-hidden="true">&times;</span></button>
+   			<p></p>
+		</div>
+
+			<div class="cabeceira">
+	<div class="row ">
+		<div class="col-xs-12 col-sm-4">
+			<p class="h5">Documento de identificación</p>
+			<p>12345678Z</p>
+		</div>
+		<div class="col-xs-12 col-sm-4">
+			<p class="h5">Nome completo</p>
+			<p>GERMAN PALOMARES</p>
+		</div>
+	</div>
+</div>
+			<div data-provide="calendar"></div>
+			<div class="lenda-container">
+				<label>Lenda</label>
+				<div class="row">
+					<div class="col-md-3">
+						<div class="lenda">
+							<div class="dia-non-laborable"></div>
+							<div class="titulo">Día non laborable</div>
+							<div class="titulo">
+								<input id="dias-non-laborables" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+						<div class="lenda">
+							<div class="quenda-primaria"></div>
+							<div class="titulo">Quenda primaria</div>
+							<div class="titulo">
+								<input id="dias-quenda-primaria" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+						<div class="lenda">
+							<div class="quenda-alternativa"></div>
+							<div class="titulo">Quenda alternativa</div>
+							<div class="titulo">
+								<input id="dias-quenda-alternativa" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-5">
+						<div class="lenda">
+							<div class="absentismo"></div>
+							<div class="titulo">Absentismo</div>
+							<div class="titulo">
+								<input id="dias-absentismo" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+						<div class="lenda">
+							<div class="vacacions"></div>
+							<div class="titulo">Vacacións, permisos ou licenzas aprobadas</div>
+							<div class="titulo">
+								<input id="dias-vacacions" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+						<div class="lenda">
+							<div class="vacacions-solicitada"></div>
+							<div class="titulo">Vacacións, permisos ou licenzas solicitadas</div>
+							<div class="titulo">
+								<input id="vacacions-solicitadas" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="lenda">
+							<div class="marcaxe-incorrecta"></div>
+							<div class="titulo">Marcaxe incorrecta</div>
+							<div class="titulo">
+								<input id="marcaxes-incorrectas" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+						<div class="lenda">
+							<div class="ausencia"></div>
+							<div class="titulo">Ausencia aprobada</div>
+							<div class="titulo">
+								<input id="dias-ausencias" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+						<div class="lenda">
+							<div class="ausencia-solicitada"></div>
+							<div class="titulo">Ausencia solicitada</div>
+							<div class="titulo">
+								<input id="ausencias-solicitadas" type="checkbox" checked="checked"></input>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+
+	</main>
+            </div>
+
+
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; Universidade de Santiago de Compostela, versión 1.57.0. Para a resolución de dúbidas e problemas	con esta aplicación, contacte co <a href="https://www.usc.gal/cau">CAU</a> da USC.</p>
+                <a href="https://www.usc.es/atic"> <img src="/pas/sistema/images/footer-logo.png"
+                                                        alt="Universidade de Santiago de Compostela"/>
+                </a>
+            </div>
+        </footer>
+        <script type="text/javascript" src="/pas/jquery/js/jquery-1.12.4.min.js"></script>
+        <script type="text/javascript" src="/pas/bootstrap/js/bootstrap.min.js"></script>
+
+		<script type="text/javascript">
+		/*<![CDATA[*/
+        var fileTotalMaxSize =  10485760;
+        /*]]>*/
+
+		$(function() {
+			var camposConMensaxe = {};
+			$('.help-block.fielderrloc').each(function() {
+				camposConMensaxe['campo-' + $(this).data("errorfield").replace(/\[/g, "_").replace(/\]/g, "_")] = true;
+			});
+			$('.fielderr').each(function() {
+				if (camposConMensaxe['campo-' + $(this).data("errorfield").replace(/\[/g, "_").replace(/\]/g, "_")] == true)
+					$(this).remove();
+				else
+					$(this).show();
+			});
+
+			/*INIT: Soporte js para control de lonxitude de arquivos.*/
+			$('.jsArquivo').on("change", function(e) {
+				showFileErro(this);
+			});
+
+			$('form').submit(function(e) {
+				if (!window.FileReader)
+					return;
+
+				$('jsFileTotalLengthError').hide();
+				var erro = false;
+				var auxTotalSize = 0;
+				$(this).find('.jsArquivo').each(function() {
+                    if (!this.files[0]) return;
+					auxTotalSize += this.files[0].size;
+					if (showFileErro(this))
+						erro = true;
+				});
+				if (auxTotalSize >= fileTotalMaxSize) {
+					$(".jsFileTotalLengthError").show();
+					erro = true;
+				}
+				if (erro)
+					e.preventDefault();
+			});
+			/*FIN: Soporte js para control de lonxitude de arquivos.*/
+		});
+
+		function showFileErro(fileInput) {
+			var divfileInput = $(fileInput).parents("div .fileinput").first();
+			divfileInput.parent().removeClass("has-error");
+			divfileInput.next('.fileLengthError').hide();
+
+			if (!fileInput.files[0])
+				return false;
+			var size = fileInput.files[0].size;
+
+			var fileMaxSize = $(fileInput).data('filemaxsize');
+
+			if (size >= fileMaxSize) {
+				divfileInput.next('.fileLengthError:first').show();
+				divfileInput.parent().addClass("has-error");
+				return true;
+			} else
+				return false;
+		}
+
+	</script>
+		<script type="text/javascript">
+		$(function() {
+			$(" .jsOrdear").click(function() {
+				var formulario = $(this).parents('form');
+				var criterio = $(this).data("orde");
+				if (criterio == formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.criterioOrde"]').val()) {
+					var sentido = formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.sentidoOrde"]').val();
+					sentido == "ASC" ? sentido = "DESC" : sentido = "ASC";
+					formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.sentidoOrde"]').val(sentido);
+				} else {
+					formulario.find(' input:hidden[name="criteriosPaxinacionFormDto.criterioOrde"]').val(criterio);
+				}
+				formulario.submit();
+			});
+
+			$(" .jsPaxina").click(function() {
+				var formulario = $(this).parents('form');
+				formulario.find('input:hidden[name="criteriosPaxinacionFormDto.paxina"]').val($(this).data("paxina"));
+				formulario.submit();
+			});
+
+			$(" .jsExportar").click(function() {
+				var formulario = $(this).parents('form');
+				formulario.find('input:hidden[name="exportar"]').val("true");
+				formulario.submit();
+			});
+		});
+	</script>
+        <script type="text/javascript">
+        $(function() {
+            $(" .jsBorrar").click(function() {
+                $("#jsConfirmacionAccion").remove();
+                var confirm = $(".jsBorrarTemplate").clone();
+                confirm.attr("id", "jsConfirmacionAccion")
+                confirm.find("form").attr("action", $(this).data("action"));
+                $(this).parents("tr").after(confirm);
+            });
+        });
+    </script>
+		<script type="text/javascript" src="/pas/moment/js/moment-with-locales.min.js"></script>
+		<script type="text/javascript" src="/pas/bootstrap-datetimepicker/js/bootstrap-datetimepicker.min.js"></script>
+        <script type="text/javascript" src="/pas/plantillas/js/jasny-bootstrap.min.js"></script>
+        <script type="text/javascript" src="/pas/plantillas/js/bootstrap3-typeahead.min.js"></script>
+		<script type="text/javascript" src="/pas/calendarioanual/js/bootstrap-year-calendar.min.js"></script>
+		<script type="text/javascript" src="/pas/calendarioanual/js/bootstrap-year-calendar.es.js"></script>
+		<script type="text/javascript" src="/pas/calendarioanual/js/bootstrap-year-calendar.gl.js"></script>
+		<script>
+		/*<![CDATA[*/
+		var erro = null;
+		var calendario = [];
+		var calendarioAuxiliar=[];
+		var locale = "gl";
+		var ano = "2025";
+		$(document).ready(function() {
+			$('#autocompletableRelacionLaboral input').typeahead({
+				source: function (query, process){
+					$.getJSON(
+						"\/pas\/relacionLaboralPersoaPasAutocompletableAno",
+						{
+							relacionLaboralTexto: query,
+							ano: $('#ano input').val()
+						},
+						function (data) {
+							return process(data);
+						});
+				},
+				afterSelect: function (data) {
+					$('#idPersoa').val(data.id);
+				},delay: 300
+			});
+
+			if(erro){
+				$("#mensaxeErro").css("display", "block");
+			}
+			$( "#mensaxeErro > button.close" ).click(function() {
+				$("#mensaxeErro").css("display", "none");
+			});
+
+			var i;
+			for(i=0;i<calendario.length;i++){
+				var dataInicio = new Date(calendario[i].startDate);
+				calendario[i].startDate = dataInicio.setDate(dataInicio.getDate() - 1);
+				calendario[i].endDate = new Date(calendario[i].endDate);
+			}
+
+		    $('.calendar').calendar({
+		        enableContextMenu: true,
+		        enableRangeSelection: true,
+		        language: locale,
+		        style:'custom',
+		        enableContextMenu: true,
+		        customDataSourceRenderer: function(element, date, events) {
+		            for (var i=0; i<events.length; i++) {
+		                if(events[i].tipo == 'DIA_AUSENCIA_APROBADA'
+		                		|| events[i].tipo == 'DIA_AUSENCIA_SOLICITADA') {
+		                	$(element).css('border-radius', '0');
+		                	$(element).css('background', events[i].color);
+		                	$(element).css('color', 'white');
+		                }
+
+		                if(events[i].tipo == 'DIA_VACACIONS_APROBADA'
+		                		|| events[i].tipo == 'DIA_VACACIONS_SOLICITADA') {
+		                	$(element).css('border-radius', '0');
+		                	$(element).css('background', events[i].color);
+		                	$(element).css('color', 'white');
+		                }
+		                if(events[i].tipo == 'DIA_AUSENCIA_COMPLETA_APROBADA'
+		                		|| events[i].tipo == 'DIA_AUSENCIA_COMPLETA_SOLICITADA') {
+		                	$(element).parent().css('background-color',events[i].color);
+		                	$(element).css('color', 'white');
+		                }
+
+		                if(events[i].tipo == 'DIA_VACACIONS_COMPLETA_APROBADA'
+		                		|| events[i].tipo == 'DIA_VACACIONS_COMPLETA_SOLICITADA') {
+		                	$(element).parent().css('background-color',events[i].color);
+		                	$(element).css('color', 'white');
+		                }
+
+		                if(events[i].tipo == 'MARCAXE_INCORRECTA') {
+		                	var amosar = true;
+		                	for(var p = 0 ; p < events.length ; p++) {
+		                		if(events[p].tipo == "DIA_NON_LABORABLE"
+		                				|| events[p].tipo == 'DIA_VACACIONS_COMPLETA_APROBADA'
+			                			|| events[p].tipo == 'DIA_AUSENCIA_COMPLETA_APROBADA'
+		                				|| events[p].tipo == 'DIA_ABSENTISMO'){
+		                			amosar = false;
+		                			break;
+		                		}
+		                	}
+		                	if(amosar){
+			                	$(element).css('border-radius', '0');
+			                	$(element).css('border-top', '3px solid ' + events[i].color);
+			                	$(element).css('padding-top', '2px');
+		                	}
+		                }
+
+		                if(events[i].tipo == "DIA_NON_LABORABLE" ) {
+		                	var existenMaisEventos = false;
+		                	for(var p = 0 ; p < events.length ; p++) {
+		                		if(events[p].tipo == 'DIA_VACACIONS_COMPLETA_APROBADA'
+			                			|| events[p].tipo == 'DIA_AUSENCIA_COMPLETA_APROBADA'
+			                			|| events[p].tipo == 'DIA_VACACIONS_COMPLETA_SOLICITADA'
+			                			|| events[p].tipo == 'DIA_AUSENCIA_COMPLETA_SOLICITADA'
+			                			|| events[p].tipo == 'DIA_AUSENCIA_SOLICITADA'
+			                			|| events[p].tipo == 'DIA_AUSENCIA_APROBADA'
+				                		|| events[p].tipo == 'DIA_VACACIONS_SOLICITADA'
+					                	|| events[p].tipo == 'DIA_VACACIONS_APROBADA'
+		                				|| events[p].tipo == 'DIA_ABSENTISMO'){
+		                			existenMaisEventos = true;
+		                			break;
+		                		}
+		                	}
+		                	if(existenMaisEventos){
+		                		$(element).css('color', 'white');
+		                	} else {
+		                		$(element).css('color', events[i].color);
+		                	}
+		                }
+
+		                if(events[i].tipo == 'QUENDA_PRIMARIA') {
+		                	$(element).css('border-radius', '0');
+		                	$(element).css('box-shadow', events[i].color +' 0px -4px 0px 0px inset');
+		                }
+
+		                if(events[i].tipo == 'QUENDA_ALTERNATIVA') {
+		                	$(element).css('border-radius', '0');
+		                	$(element).css('box-shadow', events[i].color +' 0px -4px 0px 0px inset');
+		                }
+
+		                if(events[i].tipo == 'DIA_ABSENTISMO') {
+		                	$(element).parent().css('background-color',events[i].color);
+		                	$(element).css('color', 'white');
+		                }
+		            }
+		        },
+		        mouseOnDay: function(e) {
+		            if(e.events.length > 0) {
+		                var content = '';
+
+		                for(var i in e.events) {
+		                	var amosar = true;
+		                	for(var p = 0 ; p < e.events.length ; p++) {
+		                		if(e.events[p].tipo == "DIA_NON_LABORABLE"
+		                				|| e.events[p].tipo == 'DIA_AUSENCIA_COMPLETA_APROBADA'
+		                				|| e.events[p].tipo == 'DIA_VACACIONS_COMPLETA_APROBADA'
+		                				|| e.events[p].tipo == 'DIA_ABSENTISMO'){
+		                			amosar = false;
+		                			break;
+		                		}
+		                	}
+		                	if(!amosar){
+		                		if( e.events[p].tipo == 'DIA_ABSENTISMO'){
+			                		content += '<div class="event-tooltip-content">'
+	                                    + '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + e.events[i].tipoAbsentismo + ')' + '</div>'
+	                                + '</div>';
+		                		} else {
+			                		content += '<div class="event-tooltip-content">'
+	                                    + '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + '</div>'
+	                                + '</div>';
+		                		}
+                                break;
+		                	} else {
+			                	var codigoQuenda = '';
+			                	if(e.events[i].codigoQuenda){
+				                    content += '<div class="event-tooltip-content">'
+				                    	+ '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + '-' + e.events[i].codigoQuenda + ')' + '</div>';
+				                    	+ '</div>';
+				                } else {
+				                    content += '<div class="event-tooltip-content">'
+	                                    + '<div class="event-name" style="color:' + e.events[i].color + '">' + e.events[i].name + '</div>'
+	                                + '</div>';
+				                }
+		                	}
+		                }
+
+		                $(e.element).popover({
+		                    trigger: 'manual',
+		                    container: 'body',
+		                    html:true,
+		                    content: content
+		                });
+
+		                $(e.element).popover('show');
+		            }
+		        },
+		        mouseOutDay: function(e) {
+		            if(e.events.length > 0) {
+		                $(e.element).popover('hide');
+		            }
+		        },
+		        dataSource: calendario
+		    });
+			//Ano do calendario
+		    $('.calendar').data('calendar').setYear(ano);
+		    //Mostrar ou eliminar os eventos en función da elección da lenda
+		    $( ".lenda-container input").click(function() {
+				var eventosMostrar=[];
+				$('.lenda-container input').each(function(){
+					if( $(this).prop('checked') ){
+						var tipo = obterTipoDiasPorId($(this).attr('id'));
+						if(typeof(tipo) === 'object'){
+							Array.prototype.push.apply(eventosMostrar, tipo);
+						} else {
+							eventosMostrar.push(tipo);
+						}
+					}
+				});
+		    	eventosMostrar = eliminaDuplicados(eventosMostrar);
+				calendarioAuxiliar = [];
+		    	for(i=0;i<calendario.length;i++){
+		    		if(eventosMostrar.includes(calendario[i].tipo)){
+		    			calendarioAuxiliar.push(calendario[i]);
+		    		}
+				}
+		    	$('.calendar').data('calendar').setDataSource(calendarioAuxiliar);
+	    	});
+		});
+		//Devolve o tipo de día segundo o id do check seleccionado
+		function obterTipoDiasPorId(id){
+			switch(id) {
+			  case 'dias-non-laborables':
+			    return 'DIA_NON_LABORABLE';
+			    break;
+			  case 'dias-quenda-primaria':
+				  return 'QUENDA_PRIMARIA';
+			    break;
+			  case 'dias-quenda-alternativa':
+				  return 'QUENDA_ALTERNATIVA';
+				    break;
+			  case 'dias-absentismo':
+				  return 'DIA_ABSENTISMO';
+				    break;
+			  case 'dias-vacacions':
+				  return ['DIA_VACACIONS_COMPLETA_APROBADA','DIA_VACACIONS_APROBADA'];
+				    break;
+			  case 'vacacions-solicitadas':
+				  return ['DIA_VACACIONS_COMPLETA_SOLICITADA','DIA_VACACIONS_SOLICITADA'];
+				    break;
+			  case 'marcaxes-incorrectas':
+				  return 'MARCAXE_INCORRECTA';
+				    break;
+			  case 'dias-ausencias':
+				  return ['DIA_AUSENCIA_COMPLETA_APROBADA','DIA_AUSENCIA_APROBADA'];
+				    break;
+			  case 'ausencias-solicitadas':
+		  		  return ['DIA_AUSENCIA_COMPLETA_SOLICITADA','DIA_AUSENCIA_SOLICITADA'];
+				    break;
+			  default:
+			    break;
+			}
+		}
+
+		//Elimina os elementos duplicados
+		function eliminaDuplicados(listaxe){
+			var senDuplicados = [];
+			$.each(listaxe, function(i, el){
+			    if($.inArray(el, senDuplicados) === -1) senDuplicados.push(el);
+			});
+			return senDuplicados;
+		}
+		/*]]>*/
+		</script>
+
+
+
+    </body>
+</html>
