@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Callable, Iterable, Optional
 
 from selenium.common.exceptions import JavascriptException, TimeoutException
@@ -22,8 +23,16 @@ class CalendarEntry:
 
     start: str
     end: str
-    kind: str
+    code: str
     label: str
+
+    def as_payload(self) -> list[str]:
+        """Return the compact representation sent to the WebApp."""
+
+        payload = [self.code, self.start, self.end]
+        if self.label:
+            payload.append(self.label)
+        return payload
 
 
 class CalendarFetchError(RuntimeError):
@@ -54,16 +63,36 @@ def _read_calendar_array(driver) -> list[dict[str, Any]]:
 def _map_kind(tipo: str) -> Optional[str]:
     normalized = tipo.upper()
     if "VACACION" in normalized:
-        return "vacaciones"
+        return "V"
     if "NON_LABORABLE" in normalized:
-        return "no_laboral"
+        return "N"
     return None
+
+
+def _normalize_date(value: Any) -> Optional[str]:
+    if not value:
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    # Most values already come as YYYY-MM-DD HH:MM:SS; trim the time portion first.
+    if len(text) >= 10 and text[4] == "-" and text[7] == "-":
+        return text[:10]
+
+    cleaned = text.replace("Z", "+00:00")
+
+    try:
+        return datetime.fromisoformat(cleaned).date().isoformat()
+    except ValueError:
+        return None
 
 
 def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[CalendarEntry]:
     for entry in raw_entries:
-        start = entry.get("startDate")
-        end = entry.get("endDate")
+        start = _normalize_date(entry.get("startDate"))
+        end = _normalize_date(entry.get("endDate"))
         tipo = entry.get("tipo", "")
         if not start or not end:
             continue
@@ -71,11 +100,11 @@ def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[Ca
         if not kind:
             continue
         label = str(entry.get("name") or "").strip()
-        yield CalendarEntry(start=start, end=end, kind=kind, label=label)
+        yield CalendarEntry(start=start, end=end, code=kind, label=label)
 
 
-def fetch_calendar_summary() -> list[dict[str, str]]:
-    """Return calendar entries relevant for the vacation viewer."""
+def fetch_calendar_summary() -> list[list[str]]:
+    """Return compact calendar entries relevant for the vacation viewer."""
 
     config = get_config()
     if not config.usc_user or not config.usc_pass:
@@ -106,4 +135,4 @@ def fetch_calendar_summary() -> list[dict[str, str]]:
 
     simplified.sort(key=lambda item: item.start)
     logger.info("Recovered %s calendar entries for the viewer", len(simplified))
-    return [entry.__dict__ for entry in simplified]
+    return [entry.as_payload() for entry in simplified]

@@ -121,8 +121,8 @@
     if (tg) tg.expand();
 
     const TYPE_COLORS = {
-      vacaciones: "#16a34a",
-      no_laboral: "#2563eb",
+      V: "#16a34a",
+      N: "#2563eb",
     };
 
     function addDays(dateString, days) {
@@ -137,13 +137,14 @@
       }
 
       return rawEntries
-        .map((entry) => ({
-          start: entry.start,
-          end: entry.end,
-          kind: entry.kind,
-          label: entry.label || "",
+        .filter((entry) => Array.isArray(entry) && entry.length >= 3)
+        .map(([code, start, end, label = ""]) => ({
+          code: typeof code === "string" ? code : "",
+          start: typeof start === "string" ? start : "",
+          end: typeof end === "string" ? end : "",
+          label: typeof label === "string" ? label : "",
         }))
-        .filter((entry) => entry.start && entry.end && entry.kind);
+        .filter((entry) => entry.code && entry.start && entry.end);
     }
 
     function readCalendarData() {
@@ -198,10 +199,10 @@
           start: entry.start,
           end: addDays(entry.end, 1),
           display: "background",
-          backgroundColor: TYPE_COLORS[entry.kind] || "#94a3b8",
+          backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
           extendedProps: {
             label: entry.label,
-            kind: entry.kind,
+            code: entry.code,
           },
         }));
 

@@ -7,7 +7,7 @@ from urllib.parse import quote
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
 from telegram.ext import ContextTypes
 
-from fichaxebot.calendar import CalendarFetchError, fetch_calendar_summary
+from fichaxebot.view_calendar import CalendarFetchError, fetch_calendar_summary
 from fichaxebot.config import get_config
 from fichaxebot.logging_config import get_logger
 
