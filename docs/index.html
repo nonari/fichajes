@@ -7,7 +7,6 @@
 
   <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
   <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
-
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
@@ -62,11 +61,11 @@
     }
 
     .legend-color.vacaciones {
-      background-color: #16a34a;
+      background-color: #16a34a; /* green */
     }
 
     .legend-color.no-laboral {
-      background-color: #2563eb;
+      background-color: #9333ea; /* purple */
     }
 
     .legend-color.weekend {
@@ -75,7 +74,7 @@
     }
 
     .weekend-cell {
-      background: linear-gradient(180deg, rgba(219, 234, 254, 0.35) 0%, rgba(219, 234, 254, 0.75) 100%);
+      background: linear-gradient(180deg, rgba(219, 234, 254, 0.25) 0%, rgba(219, 234, 254, 0.55) 100%);
     }
 
     .weekend-cell .fc-daygrid-day-number {
@@ -120,9 +119,10 @@
     const tg = window.Telegram ? window.Telegram.WebApp : null;
     if (tg) tg.expand();
 
+    // Updated color map
     const TYPE_COLORS = {
-      V: "#16a34a",
-      N: "#2563eb",
+      V: "#16a34a", // Vacaciones = green
+      N: "#9333ea", // No laborable = purple
     };
 
     function addDays(dateString, days) {
@@ -132,30 +132,20 @@
     }
 
     function normalizeEntries(rawEntries) {
-      if (!Array.isArray(rawEntries)) {
-        return [];
-      }
+      if (!Array.isArray(rawEntries)) return [];
 
       return rawEntries
         .filter((entry) => typeof entry === "string" && entry.length >= 11)
         .map((token) => {
           const code = token[0];
           const payload = token.slice(1);
-          if (!code || !payload) {
-            return null;
-          }
+          if (!code || !payload) return null;
 
           const [startPart, endPart] = payload.split(":", 2);
-          const start = typeof startPart === "string" ? startPart.slice(0, 10) : "";
-          const end = typeof endPart === "string" && endPart
-            ? endPart.slice(0, 10)
-            : start;
+          const start = startPart?.slice(0, 10);
+          const end = endPart?.slice(0, 10) || start;
 
-          return {
-            code,
-            start,
-            end,
-          };
+          return { code, start, end };
         })
         .filter((entry) => entry && TYPE_COLORS[entry.code] && entry.start && entry.end);
     }
@@ -168,7 +158,8 @@
       }
 
       try {
-        const parsed = JSON.parse(raw);
+        const decoded = decodeURIComponent(raw);
+        const parsed = JSON.parse(decoded);
         return { entries: normalizeEntries(parsed) };
       } catch (error) {
         console.error("Error parsing calendar data", error);
@@ -182,8 +173,10 @@
 
       const calendar = new FullCalendar.Calendar(calendarContainer, {
         initialView: "dayGridMonth",
+        initialDate: "2025-01-01",
         height: "auto",
         selectable: false,
+        firstDay: 1, // ✅ Start week on Monday
         headerToolbar: {
           start: "title",
           center: "",
@@ -197,9 +190,7 @@
       });
 
       const { entries, error } = readCalendarData();
-      if (error) {
-        statusElement.textContent = error;
-      }
+      if (error) statusElement.textContent = error;
 
       if (entries.length > 0) {
         const events = entries.map((entry) => ({
@@ -207,6 +198,7 @@
           end: addDays(entry.end, 1),
           display: "background",
           backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
+          opacity: 0.6, // ✅ softer overlay
         }));
 
         calendar.addEventSource(events);
