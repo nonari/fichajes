@@ -1,58 +1,212 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Telegram Calendar</title>
+  <title>Calendario anual USC</title>
 
-  <!-- ✅ FullCalendar global build (correct version) -->
   <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
   <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
 
-  <!-- ✅ Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
+    :root {
+      color-scheme: light;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background-color: #f8f9fa;
-      font-family: sans-serif;
+      background-color: #f5f7fb;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      color: #1f2933;
     }
+
+    #app {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2rem;
+    }
+
     #calendar {
-      max-width: 90%;
-      margin: 1rem auto;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+      padding: 1rem;
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.95rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #475569;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      display: inline-block;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15);
+    }
+
+    .legend-color.vacaciones {
+      background-color: #16a34a;
+    }
+
+    .legend-color.no-laboral {
+      background-color: #2563eb;
+    }
+
+    .legend-color.weekend {
+      background: linear-gradient(135deg, rgba(219, 234, 254, 0.8), rgba(191, 219, 254, 0.9));
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+    }
+
+    .weekend-cell {
+      background: linear-gradient(180deg, rgba(219, 234, 254, 0.35) 0%, rgba(219, 234, 254, 0.75) 100%);
+    }
+
+    .weekend-cell .fc-daygrid-day-number {
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+
+    .status-message {
+      text-align: center;
+      margin-top: 1rem;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
     }
   </style>
 </head>
 <body>
-  <div id="calendar"></div>
+  <div id="app">
+    <h1 class="visually-hidden">Calendario anual de vacaciones y días no laborables</h1>
+
+    <div class="legend" aria-hidden="true">
+      <span class="legend-item"><span class="legend-color vacaciones"></span>Vacaciones</span>
+      <span class="legend-item"><span class="legend-color no-laboral"></span>Día no laborable</span>
+      <span class="legend-item"><span class="legend-color weekend"></span>Fin de semana</span>
+    </div>
+
+    <div id="calendar" aria-label="Calendario anual"></div>
+    <div id="status" class="status-message" role="status" aria-live="polite"></div>
+  </div>
 
   <script>
     const tg = window.Telegram ? window.Telegram.WebApp : null;
     if (tg) tg.expand();
 
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log("✅ FullCalendar version:", FullCalendar.version);
+    const TYPE_COLORS = {
+      vacaciones: "#16a34a",
+      no_laboral: "#2563eb",
+    };
 
-      const el = document.getElementById("calendar");
-      const calendar = new FullCalendar.Calendar(el, {
+    function addDays(dateString, days) {
+      const date = new Date(`${dateString}T00:00:00`);
+      date.setDate(date.getDate() + days);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function normalizeEntries(rawEntries) {
+      if (!Array.isArray(rawEntries)) {
+        return [];
+      }
+
+      return rawEntries
+        .map((entry) => ({
+          start: entry.start,
+          end: entry.end,
+          kind: entry.kind,
+          label: entry.label || "",
+        }))
+        .filter((entry) => entry.start && entry.end && entry.kind);
+    }
+
+    function readCalendarData() {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get("data");
+      if (!raw) {
+        return { entries: [], error: "No se recibieron datos del calendario." };
+      }
+
+      try {
+        const parsed = JSON.parse(raw);
+        return { entries: normalizeEntries(parsed) };
+      } catch (error) {
+        console.error("Error parsing calendar data", error);
+        return { entries: [], error: "Los datos del calendario no tienen un formato válido." };
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const calendarContainer = document.getElementById("calendar");
+      const statusElement = document.getElementById("status");
+
+      const calendar = new FullCalendar.Calendar(calendarContainer, {
         initialView: "dayGridMonth",
-        selectable: true,
         height: "auto",
-        dateClick: (info) => {
-          if (tg) {
-            tg.sendData(info.dateStr);
-            tg.close();
-          } else {
-            alert("Selected date: " + info.dateStr);
+        selectable: false,
+        headerToolbar: {
+          start: "title",
+          center: "",
+          end: "prev,next,today",
+        },
+        dayCellDidMount: (info) => {
+          if (info.date.getDay() === 0 || info.date.getDay() === 6) {
+            info.el.classList.add("weekend-cell");
+          }
+        },
+        eventDidMount: (info) => {
+          const label = info.event.extendedProps?.label;
+          if (label) {
+            info.el.setAttribute("title", label);
           }
         },
       });
+
+      const { entries, error } = readCalendarData();
+      if (error) {
+        statusElement.textContent = error;
+      }
+
+      if (entries.length > 0) {
+        const events = entries.map((entry) => ({
+          start: entry.start,
+          end: addDays(entry.end, 1),
+          display: "background",
+          backgroundColor: TYPE_COLORS[entry.kind] || "#94a3b8",
+          extendedProps: {
+            label: entry.label,
+            kind: entry.kind,
+          },
+        }));
+
+        calendar.addEventSource(events);
+      }
 
       calendar.render();
       if (tg) tg.ready();

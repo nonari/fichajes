@@ -5,6 +5,7 @@ from fichaxebot.commands.state import (
     REMINDER_JOB_KEY,
 )
 from fichaxebot.commands.cancel import cancel
+from fichaxebot.commands.calendar import show_calendar
 from fichaxebot.commands.mark import mark
 from fichaxebot.commands.messages import process_response
 from fichaxebot.commands.pending import show_pending
@@ -17,6 +18,7 @@ __all__ = [
     "REMINDER_ATTEMPTS_KEY",
     "REMINDER_JOB_KEY",
     "cancel",
+    "show_calendar",
     "mark",
     "process_response",
     "show_pending",

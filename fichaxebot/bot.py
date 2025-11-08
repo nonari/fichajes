@@ -19,6 +19,7 @@ from fichaxebot.commands import (
     process_response,
     show_pending,
     show_records,
+    show_calendar,
     start,
 )
 from fichaxebot.config import get_config
@@ -117,6 +118,7 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("cancelar", cancel))
     app.add_handler(CommandHandler("marcajes", show_records))
     app.add_handler(CommandHandler("pendientes", show_pending))
+    app.add_handler(CommandHandler("calendario", show_calendar))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
 
     app.job_queue.run_daily(

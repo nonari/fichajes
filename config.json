@@ -3,6 +3,7 @@
   "telegram_chat_id": "XXXXXXXXXX",
   "usc_user": "",
   "usc_pass": "tu_contraseña",
+  "calendar_webapp_url": "https://tu-dominio.com/calendario.html",
   "daily_question_time": "09:00",
   "auto_checkout_delay_minutes": 420,
   "auto_checkout_random_offset_minutes": 3,

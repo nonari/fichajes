@@ -24,6 +24,7 @@ class AppConfig:
     auto_checkout_random_offset_minutes: int
     max_reminders: int
     reminder_interval: timedelta
+    calendar_webapp_url: str
 
 
 _config: Optional[AppConfig] = None
@@ -107,6 +108,8 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         raise ValueError("El valor de 'reminder_interval_minutes' debe ser mayor que cero")
     reminder_interval = timedelta(minutes=reminder_interval_minutes)
 
+    calendar_webapp_url = str(data.get("calendar_webapp_url", "") or "").strip()
+
     return AppConfig(
         telegram_token=str(data["telegram_token"]),
         telegram_chat_id=str(data["telegram_chat_id"]),
@@ -117,6 +120,7 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         auto_checkout_random_offset_minutes=random_offset,
         max_reminders=max_reminders,
         reminder_interval=reminder_interval,
+        calendar_webapp_url=calendar_webapp_url,
     )
 
 
