@@ -24,15 +24,13 @@ class CalendarEntry:
     start: str
     end: str
     code: str
-    label: str
 
-    def as_payload(self) -> list[str]:
+    def as_payload(self) -> str:
         """Return the compact representation sent to the WebApp."""
 
-        payload = [self.code, self.start, self.end]
-        if self.label:
-            payload.append(self.label)
-        return payload
+        if self.start == self.end:
+            return f"{self.code}{self.start}"
+        return f"{self.code}{self.start}:{self.end}"
 
 
 class CalendarFetchError(RuntimeError):
@@ -69,13 +67,28 @@ def _map_kind(tipo: str) -> Optional[str]:
     return None
 
 
-def _normalize_date(value: Any) -> Optional[str]:
-    if not value:
+def _from_timestamp(value: float) -> Optional[str]:
+    try:
+        if value > 1e11:  # milliseconds precision
+            value /= 1000.0
+        return datetime.utcfromtimestamp(value).date().isoformat()
+    except (OSError, OverflowError, ValueError):  # pragma: no cover - system dependent
         return None
+
+
+def _normalize_date(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+
+    if isinstance(value, (int, float)):
+        return _from_timestamp(float(value))
 
     text = str(value).strip()
     if not text:
         return None
+
+    if text.isdigit():
+        return _from_timestamp(float(text))
 
     # Most values already come as YYYY-MM-DD HH:MM:SS; trim the time portion first.
     if len(text) >= 10 and text[4] == "-" and text[7] == "-":
@@ -92,18 +105,17 @@ def _normalize_date(value: Any) -> Optional[str]:
 def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[CalendarEntry]:
     for entry in raw_entries:
         start = _normalize_date(entry.get("startDate"))
-        end = _normalize_date(entry.get("endDate"))
+        end = _normalize_date(entry.get("endDate")) or start
         tipo = entry.get("tipo", "")
         if not start or not end:
             continue
         kind = _map_kind(str(tipo))
         if not kind:
             continue
-        label = str(entry.get("name") or "").strip()
-        yield CalendarEntry(start=start, end=end, code=kind, label=label)
+        yield CalendarEntry(start=start, end=end, code=kind)
 
 
-def fetch_calendar_summary() -> list[list[str]]:
+def fetch_calendar_summary() -> list[str]:
     """Return compact calendar entries relevant for the vacation viewer."""
 
     config = get_config()

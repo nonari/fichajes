@@ -137,14 +137,27 @@
       }
 
       return rawEntries
-        .filter((entry) => Array.isArray(entry) && entry.length >= 3)
-        .map(([code, start, end, label = ""]) => ({
-          code: typeof code === "string" ? code : "",
-          start: typeof start === "string" ? start : "",
-          end: typeof end === "string" ? end : "",
-          label: typeof label === "string" ? label : "",
-        }))
-        .filter((entry) => entry.code && entry.start && entry.end);
+        .filter((entry) => typeof entry === "string" && entry.length >= 11)
+        .map((token) => {
+          const code = token[0];
+          const payload = token.slice(1);
+          if (!code || !payload) {
+            return null;
+          }
+
+          const [startPart, endPart] = payload.split(":", 2);
+          const start = typeof startPart === "string" ? startPart.slice(0, 10) : "";
+          const end = typeof endPart === "string" && endPart
+            ? endPart.slice(0, 10)
+            : start;
+
+          return {
+            code,
+            start,
+            end,
+          };
+        })
+        .filter((entry) => entry && TYPE_COLORS[entry.code] && entry.start && entry.end);
     }
 
     function readCalendarData() {
@@ -181,12 +194,6 @@
             info.el.classList.add("weekend-cell");
           }
         },
-        eventDidMount: (info) => {
-          const label = info.event.extendedProps?.label;
-          if (label) {
-            info.el.setAttribute("title", label);
-          }
-        },
       });
 
       const { entries, error } = readCalendarData();
@@ -200,10 +207,6 @@
           end: addDays(entry.end, 1),
           display: "background",
           backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
-          extendedProps: {
-            label: entry.label,
-            code: entry.code,
-          },
         }));
 
         calendar.addEventSource(events);
