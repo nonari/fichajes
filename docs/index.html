@@ -3,34 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Telegram WebApp Calendar</title>
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+  <title>Telegram Calendar</title>
+
+  <!-- ✅ FullCalendar global build (correct version) -->
+  <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
+
+  <!-- ✅ Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; background: #f8f9fa; }
-    #calendar { max-width: 90%; margin: 1rem auto; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #f8f9fa;
+      font-family: sans-serif;
+    }
+    #calendar {
+      max-width: 90%;
+      margin: 1rem auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
   <div id="calendar"></div>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // use full screen
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg) tg.expand();
 
-    document.addEventListener('DOMContentLoaded', function() {
-      const calendarEl = document.getElementById('calendar');
-      const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("✅ FullCalendar version:", FullCalendar.version);
+
+      const el = document.getElementById("calendar");
+      const calendar = new FullCalendar.Calendar(el, {
+        initialView: "dayGridMonth",
         selectable: true,
         height: "auto",
-        dateClick: function(info) {
-          tg.sendData(info.dateStr); // sends the selected date back to the bot
-          tg.close(); // closes webapp after selecting date
-        }
+        dateClick: (info) => {
+          if (tg) {
+            tg.sendData(info.dateStr);
+            tg.close();
+          } else {
+            alert("Selected date: " + info.dateStr);
+          }
+        },
       });
+
       calendar.render();
+      if (tg) tg.ready();
     });
   </script>
 </body>
