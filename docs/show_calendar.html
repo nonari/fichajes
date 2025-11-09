@@ -61,25 +61,11 @@
     }
 
     .legend-color.vacaciones {
-      background-color: #16a34a; /* verde */
+      background-color: #16a34a;
     }
 
     .legend-color.no-laboral {
-      background-color: #9333ea; /* morado */
-    }
-
-    .legend-color.weekend {
-      background: linear-gradient(135deg, rgba(219, 234, 254, 0.8), rgba(191, 219, 254, 0.9));
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
-    }
-
-    .weekend-cell {
-      background: linear-gradient(180deg, rgba(219, 234, 254, 0.25) 0%, rgba(219, 234, 254, 0.55) 100%);
-    }
-
-    .weekend-cell .fc-daygrid-day-number {
-      color: #1d4ed8;
-      font-weight: 600;
+      background-color: #9333ea;
     }
 
     .status-message {
@@ -100,8 +86,14 @@
       border: 0;
     }
 
-        /* Color Saturdays and Sundays */
-    .fc-daygrid-day.fc-day-sat, .fc-daygrid-day.fc-day-sun {
+    /* Reduce cell height by ~25% */
+    .fc-daygrid-day-frame {
+      min-height: 5em !important; /* default ~6.5em */
+    }
+
+    /* Color Saturdays and Sundays */
+    .fc-daygrid-day.fc-day-sat,
+    .fc-daygrid-day.fc-day-sun {
       background: linear-gradient(180deg, rgba(219, 234, 254, 0.25) 0%, rgba(219, 234, 254, 0.55) 100%);
     }
 
@@ -110,7 +102,6 @@
       color: #1d4ed8;
       font-weight: 600;
     }
-
   </style>
 </head>
 <body>
@@ -120,7 +111,6 @@
     <div class="legend" aria-hidden="true">
       <span class="legend-item"><span class="legend-color vacaciones"></span>Vacaciones</span>
       <span class="legend-item"><span class="legend-color no-laboral"></span>Día no laborable</span>
-      <span class="legend-item"><span class="legend-color weekend"></span>Fin de semana</span>
     </div>
 
     <div id="calendar" aria-label="Calendario anual"></div>
@@ -131,47 +121,37 @@
     const tg = window.Telegram ? window.Telegram.WebApp : null;
     if (tg) tg.expand();
 
-    // Mapa de colores
     const TYPE_COLORS = {
-      V: "#16a34a", // Vacaciones = verde
-      N: "#9333ea", // No laborable = morado
+      V: "#16a34a",
+      N: "#9333ea",
     };
 
-    // Añadir días a una fecha en formato YYYY-MM-DD
     function addDays(dateString, days) {
       const date = new Date(`${dateString}T00:00:00`);
       date.setDate(date.getDate() + days);
       return date.toISOString().slice(0, 10);
     }
 
-    // Normalizar entradas recibidas
     function normalizeEntries(rawEntries) {
       if (!Array.isArray(rawEntries)) return [];
-
       return rawEntries
         .filter((entry) => typeof entry === "string" && entry.length >= 11)
         .map((token) => {
           const code = token[0];
           const payload = token.slice(1);
           if (!code || !payload) return null;
-
           const [startPart, endPart] = payload.split(":", 2);
           const start = startPart?.slice(0, 10);
           const end = endPart?.slice(0, 10) || start;
-
           return { code, start, end };
         })
         .filter((entry) => entry && TYPE_COLORS[entry.code] && entry.start && entry.end);
     }
 
-    // Leer datos desde los parámetros de la URL
     function readCalendarData() {
       const params = new URLSearchParams(window.location.search);
       const raw = params.get("data");
-      if (!raw) {
-        return { entries: [], error: "No se recibieron datos del calendario." };
-      }
-
+      if (!raw) return { entries: [], error: "No se recibieron datos del calendario." };
       try {
         const decoded = decodeURIComponent(raw);
         const parsed = JSON.parse(decoded);
@@ -185,17 +165,15 @@
     document.addEventListener("DOMContentLoaded", () => {
       const calendarContainer = document.getElementById("calendar");
       const statusElement = document.getElementById("status");
-
-      // Fecha inicial = hoy
       const today = new Date().toISOString().slice(0, 10);
 
       const calendar = new FullCalendar.Calendar(calendarContainer, {
-        locale: "es", // ✅ idioma español
+        locale: "es",
         initialView: "dayGridMonth",
-        initialDate: today, // ✅ día inicial = hoy
+        initialDate: today,
         height: "auto",
         selectable: false,
-        firstDay: 1, // ✅ semana empieza en lunes
+        firstDay: 1,
         forceEventDuration: true,
         eventDisplay: "background",
         eventColor: "#94a3b8",
@@ -210,7 +188,7 @@
           month: "Mes",
           week: "Semana",
           day: "Día",
-        }
+        },
       });
 
       const { entries, error } = readCalendarData();
@@ -224,7 +202,6 @@
           backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
           opacity: 0.6,
         }));
-
         calendar.addEventSource(events);
       }
 
