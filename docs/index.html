@@ -99,6 +99,18 @@
       clip: rect(0, 0, 0, 0);
       border: 0;
     }
+
+        /* Color Saturdays and Sundays */
+    .fc-daygrid-day.fc-day-sat, .fc-daygrid-day.fc-day-sun {
+      background: linear-gradient(180deg, rgba(219, 234, 254, 0.25) 0%, rgba(219, 234, 254, 0.55) 100%);
+    }
+
+    .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
+    .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number {
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+
   </style>
 </head>
 <body>
@@ -198,12 +210,7 @@
           month: "Mes",
           week: "Semana",
           day: "Día",
-        },
-        dayCellDidMount: (info) => {
-          if (info.date.getDay() === 0 || info.date.getDay() === 6) {
-            info.el.classList.add("weekend-cell");
-          }
-        },
+        }
       });
 
       const { entries, error } = readCalendarData();
