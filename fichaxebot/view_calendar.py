@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date as dt_date, datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
 
 from selenium.common.exceptions import JavascriptException, TimeoutException
@@ -112,6 +112,26 @@ def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[Ca
         kind = _map_kind(str(tipo))
         if not kind:
             continue
+        try:
+            start_date = dt_date.fromisoformat(start)
+            end_date = dt_date.fromisoformat(end)
+        except ValueError:
+            continue
+
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+            start, end = start_date.isoformat(), end_date.isoformat()
+
+        if kind == "N":
+            current = start_date
+            only_weekend = True
+            while current <= end_date:
+                if current.weekday() < 5:
+                    only_weekend = False
+                    break
+                current += timedelta(days=1)
+            if only_weekend:
+                continue
         yield CalendarEntry(start=start, end=end, code=kind)
 
 
