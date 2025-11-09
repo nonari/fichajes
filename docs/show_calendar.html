@@ -1,213 +1,195 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Calendario anual USC</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendario anual USC</title>
 
-  <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://unpkg.com/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+    <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <style>
-    :root {
-      color-scheme: light;
-    }
+    <style>
+      :root { color-scheme: light; }
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background-color: #f5f7fb;
-      font-family: "Segoe UI", Roboto, sans-serif;
-      color: #1f2933;
-    }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #f5f7fb;
+        font-family: "Segoe UI", Roboto, sans-serif;
+        color: #1f2933;
+      }
 
-    #app {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 1.5rem 1rem 2rem;
-    }
+      #app {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 2rem;
+      }
 
-    #calendar {
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
-      padding: 1rem;
-    }
+      /* ⬇️ Keep this: helps ensure legend + calendar fit without page scroll */
+      #calendar {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+        padding: 1rem;
+        height: calc(100vh - 220px); /* room for legend + margins */
+        overflow: hidden;
+      }
 
-    .legend {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-      font-size: 0.95rem;
-    }
+      /* Compact day cells */
+      .fc-daygrid-day-frame { padding: 0.1rem !important; min-height: 0 !important; }
+      .fc-daygrid-day-top { padding-top: 2px !important; padding-bottom: 2px !important; }
 
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: #475569;
-    }
+      .legend {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        font-size: 0.95rem;
+      }
 
-    .legend-color {
-      width: 16px;
-      height: 16px;
-      border-radius: 4px;
-      display: inline-block;
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15);
-    }
+      .legend-item { display: inline-flex; align-items: center; gap: 0.5rem; color: #475569; }
+      .legend-color { width: 16px; height: 16px; border-radius: 4px; display: inline-block; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15); }
+      .legend-color.vacaciones { background-color: #16a34a; }
+      .legend-color.no-laboral { background-color: #9333ea; }
 
-    .legend-color.vacaciones {
-      background-color: #16a34a;
-    }
+      .status-message { text-align: center; margin-top: 1rem; color: #64748b; font-size: 0.95rem; }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
 
-    .legend-color.no-laboral {
-      background-color: #9333ea;
-    }
+      /* Color Saturdays and Sundays */
+      .fc-daygrid-day.fc-day-sat, .fc-daygrid-day.fc-day-sun {
+        background: linear-gradient(180deg, rgba(219, 234, 254, 0.25) 0%, rgba(219, 234, 254, 0.55) 100%);
+      }
+      .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
+      .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number { color: #1d4ed8; font-weight: 600; }
 
-    .status-message {
-      text-align: center;
-      margin-top: 1rem;
-      color: #64748b;
-      font-size: 0.95rem;
-    }
+      /* Compact toolbar spacing */
+      .fc .fc-toolbar.fc-header-toolbar { margin-bottom: 0.25rem; }
+    </style>
+  </head>
 
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      border: 0;
-    }
+  <body>
+    <div id="app">
+      <h1 class="visually-hidden">Calendario anual de vacaciones y días no laborables</h1>
 
-    /* Reduce cell height by ~25% */
-    .fc-daygrid-day-frame {
-      min-height: 5em !important; /* default ~6.5em */
-    }
+      <div class="legend" aria-hidden="true">
+        <span class="legend-item"><span class="legend-color vacaciones"></span>Vacaciones</span>
+        <span class="legend-item"><span class="legend-color no-laboral"></span>Día no laborable</span>
+      </div>
 
-    /* Color Saturdays and Sundays */
-    .fc-daygrid-day.fc-day-sat,
-    .fc-daygrid-day.fc-day-sun {
-      background: linear-gradient(180deg, rgba(219, 234, 254, 0.25) 0%, rgba(219, 234, 254, 0.55) 100%);
-    }
-
-    .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
-    .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number {
-      color: #1d4ed8;
-      font-weight: 600;
-    }
-  </style>
-</head>
-<body>
-  <div id="app">
-    <h1 class="visually-hidden">Calendario anual de vacaciones y días no laborables</h1>
-
-    <div class="legend" aria-hidden="true">
-      <span class="legend-item"><span class="legend-color vacaciones"></span>Vacaciones</span>
-      <span class="legend-item"><span class="legend-color no-laboral"></span>Día no laborable</span>
+      <div id="calendar" aria-label="Calendario anual"></div>
+      <div id="status" class="status-message" role="status" aria-live="polite"></div>
     </div>
 
-    <div id="calendar" aria-label="Calendario anual"></div>
-    <div id="status" class="status-message" role="status" aria-live="polite"></div>
-  </div>
+    <script>
+      const tg = window.Telegram ? window.Telegram.WebApp : null;
+      if (tg) tg.expand();
 
-  <script>
-    const tg = window.Telegram ? window.Telegram.WebApp : null;
-    if (tg) tg.expand();
+      // Mapa de colores
+      const TYPE_COLORS = { V: "#16a34a", N: "#9333ea" };
 
-    const TYPE_COLORS = {
-      V: "#16a34a",
-      N: "#9333ea",
-    };
-
-    function addDays(dateString, days) {
-      const date = new Date(`${dateString}T00:00:00`);
-      date.setDate(date.getDate() + days);
-      return date.toISOString().slice(0, 10);
-    }
-
-    function normalizeEntries(rawEntries) {
-      if (!Array.isArray(rawEntries)) return [];
-      return rawEntries
-        .filter((entry) => typeof entry === "string" && entry.length >= 11)
-        .map((token) => {
-          const code = token[0];
-          const payload = token.slice(1);
-          if (!code || !payload) return null;
-          const [startPart, endPart] = payload.split(":", 2);
-          const start = startPart?.slice(0, 10);
-          const end = endPart?.slice(0, 10) || start;
-          return { code, start, end };
-        })
-        .filter((entry) => entry && TYPE_COLORS[entry.code] && entry.start && entry.end);
-    }
-
-    function readCalendarData() {
-      const params = new URLSearchParams(window.location.search);
-      const raw = params.get("data");
-      if (!raw) return { entries: [], error: "No se recibieron datos del calendario." };
-      try {
-        const decoded = decodeURIComponent(raw);
-        const parsed = JSON.parse(decoded);
-        return { entries: normalizeEntries(parsed) };
-      } catch (error) {
-        console.error("Error al analizar los datos del calendario", error);
-        return { entries: [], error: "Los datos del calendario no tienen un formato válido." };
+      // Añadir días a una fecha en formato YYYY-MM-DD
+      function addDays(dateString, days) {
+        const date = new Date(`${dateString}T00:00:00`);
+        date.setDate(date.getDate() + days);
+        return date.toISOString().slice(0, 10);
       }
-    }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const calendarContainer = document.getElementById("calendar");
-      const statusElement = document.getElementById("status");
-      const today = new Date().toISOString().slice(0, 10);
+      // Normalizar entradas recibidas
+      function normalizeEntries(rawEntries) {
+        if (!Array.isArray(rawEntries)) return [];
+        return rawEntries
+          .filter((entry) => typeof entry === "string" && entry.length >= 11)
+          .map((token) => {
+            const code = token[0];
+            const payload = token.slice(1);
+            if (!code || !payload) return null;
+            const [startPart, endPart] = payload.split(":", 2);
+            const start = startPart?.slice(0, 10);
+            const end = endPart?.slice(0, 10) || start;
+            return { code, start, end };
+          })
+          .filter((e) => e && TYPE_COLORS[e.code] && e.start && e.end);
+      }
 
-      const calendar = new FullCalendar.Calendar(calendarContainer, {
-        locale: "es",
-        initialView: "dayGridMonth",
-        initialDate: today,
-        height: "auto",
-        selectable: false,
-        firstDay: 1,
-        forceEventDuration: true,
-        eventDisplay: "background",
-        eventColor: "#94a3b8",
-        eventOverlap: true,
-        headerToolbar: {
-          start: "title",
-          center: "",
-          end: "prev,next,today",
-        },
-        buttonText: {
-          today: "Hoy",
-          month: "Mes",
-          week: "Semana",
-          day: "Día",
-        },
+      // Leer datos desde los parámetros de la URL
+      function readCalendarData() {
+        const params = new URLSearchParams(window.location.search);
+        const raw = params.get("data");
+        if (!raw) return { entries: [], error: "No se recibieron datos del calendario." };
+        try {
+          const decoded = decodeURIComponent(raw);
+          const parsed = JSON.parse(decoded);
+          return { entries: normalizeEntries(parsed) };
+        } catch (err) {
+          console.error("Error al analizar los datos del calendario", err);
+          return { entries: [], error: "Los datos del calendario no tienen un formato válido." };
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const calendarContainer = document.getElementById("calendar");
+        const statusElement = document.getElementById("status");
+        const legendEl = document.querySelector(".legend");
+        const appEl = document.getElementById("app");
+        const today = new Date().toISOString().slice(0, 10);
+
+        function calcContentHeight() {
+          const appRect = appEl.getBoundingClientRect();
+          const appStyles = getComputedStyle(appEl);
+          const paddings = parseFloat(appStyles.paddingTop) + parseFloat(appStyles.paddingBottom);
+          const headerAllowance = 56;  // toolbar + margins
+          const bottomAllowance = 24;  // status/breathing room
+          const used = appRect.top + paddings + (legendEl?.offsetHeight || 0) + headerAllowance + bottomAllowance;
+          return Math.max(window.innerHeight - used, 320);
+        }
+
+        const calendar = new FullCalendar.Calendar(calendarContainer, {
+          locale: "es",
+          initialView: "dayGridMonth",
+          initialDate: today,
+
+          // Compactness controls
+          aspectRatio: 1.9,                   // larger => flatter cells
+          contentHeight: calcContentHeight(), // fit with legend
+
+          expandRows: true,       // distribute rows evenly in the fixed height
+          firstDay: 1,
+          selectable: false,
+          eventDisplay: "background",
+          eventColor: "#94a3b8",
+          eventOverlap: true,
+          dayMaxEvents: true,     // prevent tall cells with many events
+
+          headerToolbar: { start: "title", center: "", end: "prev,next,today" },
+          buttonText: { today: "Hoy", month: "Mes", week: "Semana", day: "Día" },
+        });
+
+        // Re-fit on resize/orientation change
+        window.addEventListener("resize", () => {
+          calendar.setOption("contentHeight", calcContentHeight());
+          calendar.updateSize();
+        });
+
+        const { entries, error } = readCalendarData();
+        if (error) statusElement.textContent = error;
+
+        if (entries.length > 0) {
+          calendar.addEventSource(entries.map((entry) => ({
+            start: entry.start,
+            end: addDays(entry.end, 2),
+            allDay: true,
+            display: "background",
+            backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
+            opacity: 0.6,
+          })));
+        }
+
+        calendar.render();
+        if (tg) tg.ready();
       });
-
-      const { entries, error } = readCalendarData();
-      if (error) statusElement.textContent = error;
-
-      if (entries.length > 0) {
-        const events = entries.map((entry) => ({
-          start: entry.start,
-          end: addDays(entry.end, 2),
-          display: "background",
-          backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
-          opacity: 0.6,
-        }));
-        calendar.addEventSource(events);
-      }
-
-      calendar.render();
-      if (tg) tg.ready();
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
