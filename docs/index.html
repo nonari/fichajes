@@ -195,7 +195,7 @@
       if (entries.length > 0) {
         const events = entries.map((entry) => ({
           start: entry.start,
-          end: entry.end,
+          end: addDays(entry.end, 1),
           display: "background",
           backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
           opacity: 0.6, // ✅ softer overlay
