@@ -173,7 +173,7 @@
 
       const calendar = new FullCalendar.Calendar(calendarContainer, {
         initialView: "dayGridMonth",
-        initialDate: "2025-01-01",
+        initialDate: "today",
         height: "auto",
         selectable: false,
         firstDay: 1, // ✅ Start week on Monday
@@ -195,7 +195,7 @@
       if (entries.length > 0) {
         const events = entries.map((entry) => ({
           start: entry.start,
-          end: addDays(entry.end, 1),
+          end: entry.end,
           display: "background",
           backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
           opacity: 0.6, // ✅ softer overlay
