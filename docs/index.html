@@ -61,11 +61,11 @@
     }
 
     .legend-color.vacaciones {
-      background-color: #16a34a; /* green */
+      background-color: #16a34a; /* verde */
     }
 
     .legend-color.no-laboral {
-      background-color: #9333ea; /* purple */
+      background-color: #9333ea; /* morado */
     }
 
     .legend-color.weekend {
@@ -119,18 +119,20 @@
     const tg = window.Telegram ? window.Telegram.WebApp : null;
     if (tg) tg.expand();
 
-    // Updated color map
+    // Mapa de colores
     const TYPE_COLORS = {
-      V: "#16a34a", // Vacaciones = green
-      N: "#9333ea", // No laborable = purple
+      V: "#16a34a", // Vacaciones = verde
+      N: "#9333ea", // No laborable = morado
     };
 
+    // Añadir días a una fecha en formato YYYY-MM-DD
     function addDays(dateString, days) {
       const date = new Date(`${dateString}T00:00:00`);
       date.setDate(date.getDate() + days);
       return date.toISOString().slice(0, 10);
     }
 
+    // Normalizar entradas recibidas
     function normalizeEntries(rawEntries) {
       if (!Array.isArray(rawEntries)) return [];
 
@@ -150,6 +152,7 @@
         .filter((entry) => entry && TYPE_COLORS[entry.code] && entry.start && entry.end);
     }
 
+    // Leer datos desde los parámetros de la URL
     function readCalendarData() {
       const params = new URLSearchParams(window.location.search);
       const raw = params.get("data");
@@ -162,7 +165,7 @@
         const parsed = JSON.parse(decoded);
         return { entries: normalizeEntries(parsed) };
       } catch (error) {
-        console.error("Error parsing calendar data", error);
+        console.error("Error al analizar los datos del calendario", error);
         return { entries: [], error: "Los datos del calendario no tienen un formato válido." };
       }
     }
@@ -171,16 +174,26 @@
       const calendarContainer = document.getElementById("calendar");
       const statusElement = document.getElementById("status");
 
+      // Fecha inicial = hoy
+      const today = new Date().toISOString().slice(0, 10);
+
       const calendar = new FullCalendar.Calendar(calendarContainer, {
+        locale: "es", // ✅ idioma español
         initialView: "dayGridMonth",
-        initialDate: "2025-01-01",
+        initialDate: today, // ✅ día inicial = hoy
         height: "auto",
         selectable: false,
-        firstDay: 1, // ✅ Start week on Monday
+        firstDay: 1, // ✅ semana empieza en lunes
         headerToolbar: {
           start: "title",
           center: "",
           end: "prev,next,today",
+        },
+        buttonText: {
+          today: "Hoy",
+          month: "Mes",
+          week: "Semana",
+          day: "Día",
         },
         dayCellDidMount: (info) => {
           if (info.date.getDay() === 0 || info.date.getDay() === 6) {
@@ -198,7 +211,7 @@
           end: addDays(entry.end, 1),
           display: "background",
           backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
-          opacity: 0.6, // ✅ softer overlay
+          opacity: 0.6,
         }));
 
         calendar.addEventSource(events);

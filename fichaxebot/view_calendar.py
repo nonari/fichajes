@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date as dt_date, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Iterable, Optional
 
 from selenium.common.exceptions import JavascriptException, TimeoutException
@@ -67,37 +67,31 @@ def _map_kind(tipo: str) -> Optional[str]:
     return None
 
 
-def _from_timestamp(value: float) -> Optional[str]:
-    try:
-        if value > 1e11:  # milliseconds precision
-            value /= 1000.0
-        return datetime.utcfromtimestamp(value).date().isoformat()
-    except (OSError, OverflowError, ValueError):  # pragma: no cover - system dependent
-        return None
-
-
-def _normalize_date(value: Any) -> Optional[str]:
+def _normalize_date(value: Any) -> Optional[datetime]:
+    """
+    Convert ISO string or timestamp (ms/s) to a timezone-aware UTC datetime object.
+    Returns None if parsing fails.
+    """
     if value is None:
         return None
 
+    # --- numeric timestamps ---
     if isinstance(value, (int, float)):
-        return _from_timestamp(float(value))
+        if value > 1e11:  # milliseconds → seconds
+            value /= 1000.0
+        try:
+            return datetime.fromtimestamp(value, tz=timezone.utc)
+        except (OSError, OverflowError, ValueError):
+            return None
 
+    # --- string (ISO 8601) ---
     text = str(value).strip()
     if not text:
         return None
 
-    if text.isdigit():
-        return _from_timestamp(float(text))
-
-    # Most values already come as YYYY-MM-DD HH:MM:SS; trim the time portion first.
-    if len(text) >= 10 and text[4] == "-" and text[7] == "-":
-        return text[:10]
-
-    cleaned = text.replace("Z", "+00:00")
-
     try:
-        return datetime.fromisoformat(cleaned).date().isoformat()
+        dt = datetime.fromisoformat(text).replace(tzinfo=timezone.utc)
+        return dt
     except ValueError:
         return None
 
@@ -105,34 +99,27 @@ def _normalize_date(value: Any) -> Optional[str]:
 def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[CalendarEntry]:
     for entry in raw_entries:
         start = _normalize_date(entry.get("startDate"))
-        end = _normalize_date(entry.get("endDate")) or start
+        end = _normalize_date(entry.get("endDate"))
         tipo = entry.get("tipo", "")
         if not start or not end:
+            logger.warning(f'Unexpected entry date format "{entry}"')
             continue
+        start = start + timedelta(days=1)
         kind = _map_kind(str(tipo))
         if not kind:
             continue
-        try:
-            start_date = dt_date.fromisoformat(start)
-            end_date = dt_date.fromisoformat(end)
-        except ValueError:
-            continue
-
-        if start_date > end_date:
-            start_date, end_date = end_date, start_date
-            start, end = start_date.isoformat(), end_date.isoformat()
 
         if kind == "N":
-            current = start_date
+            current = start
             only_weekend = True
-            while current <= end_date:
+            while current <= end:
                 if current.weekday() < 5:
                     only_weekend = False
                     break
                 current += timedelta(days=1)
             if only_weekend:
                 continue
-        yield CalendarEntry(start=start, end=end, code=kind)
+        yield CalendarEntry(start=start.date().isoformat(), end=end.date().isoformat(), code=kind)
 
 
 def fetch_calendar_summary() -> list[str]:
