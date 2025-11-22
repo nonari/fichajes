@@ -4,7 +4,7 @@ import asyncio
 import json
 from urllib.parse import quote
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
 
 from fichaxebot.view_calendar import CalendarFetchError, fetch_calendar_summary
@@ -50,18 +50,17 @@ async def show_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     payload = quote(json.dumps(entries, ensure_ascii=False, separators=(",", ":")), safe="")
     url = f"{webapp_url}?data={payload}"
 
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    text="Abrir calendario",
-                    web_app=WebAppInfo(url=url),
-                )
-            ]
-        ]
+    keyboard = ReplyKeyboardMarkup(
+        [[KeyboardButton(
+            text="Abrir calendario",
+            web_app=WebAppInfo(url=url)
+        )]],
+        resize_keyboard=True,
+        one_time_keyboard=False
     )
 
-    await status_message.edit_text(
-        "📆 Calendario listo. Pulsa el botón para abrirlo.",
+    # send NEW message WITH reply keyboard
+    await update.message.reply_text(
+        "📆 Calendario listo. 👇 Pulsa el botón para abrirlo",
         reply_markup=keyboard,
     )

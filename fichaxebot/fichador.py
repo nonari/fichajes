@@ -107,7 +107,7 @@ def perform_check_in(action: str) -> CheckInResult:
 
         # --- CLICK EN NOVA MARCAXE ---
         nova_btn = driver.find_element(By.ID, "novaMarcaxe")
-        driver.execute_script("arguments[0].click();", nova_btn)
+        # driver.execute_script("arguments[0].click();", nova_btn)
         logger.info("Click on 'novaMarcaxe' executed")
         time.sleep(5)
 

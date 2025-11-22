@@ -27,17 +27,15 @@
         padding: 1.5rem 1rem 2rem;
       }
 
-      /* ⬇️ Keep this: helps ensure legend + calendar fit without page scroll */
       #calendar {
         background: #ffffff;
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
         padding: 1rem;
-        height: calc(100vh - 220px); /* room for legend + margins */
+        height: calc(100vh - 220px);
         overflow: hidden;
       }
 
-      /* Compact day cells */
       .fc-daygrid-day-frame { padding: 0.1rem !important; min-height: 0 !important; }
       .fc-daygrid-day-top { padding-top: 2px !important; padding-bottom: 2px !important; }
 
@@ -58,14 +56,12 @@
       .status-message { text-align: center; margin-top: 1rem; color: #64748b; font-size: 0.95rem; }
       .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
 
-      /* Color Saturdays and Sundays */
       .fc-daygrid-day.fc-day-sat, .fc-daygrid-day.fc-day-sun {
         background: linear-gradient(180deg, rgba(219, 234, 254, 0.25) 0%, rgba(219, 234, 254, 0.55) 100%);
       }
       .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
       .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number { color: #1d4ed8; font-weight: 600; }
 
-      /* Compact toolbar spacing */
       .fc .fc-toolbar.fc-header-toolbar { margin-bottom: 0.25rem; }
     </style>
   </head>
@@ -87,44 +83,96 @@
       const tg = window.Telegram ? window.Telegram.WebApp : null;
       if (tg) tg.expand();
 
-      // Mapa de colores
+      const selectedDays = new Set();
+
+      function toggleDaySelection(dateStr) {
+        if (selectedDays.has(dateStr)) selectedDays.delete(dateStr);
+        else selectedDays.add(dateStr);
+      }
+
+      function getSelectedArray() {
+        return Array.from(selectedDays).sort();
+      }
+
+      function refreshMarkedDays(calendar) {
+        calendar.getEventSources().forEach(src => src.remove());
+        const events = getSelectedArray().map(d => ({
+          start: d,
+          end: d,
+          display: "background",
+          backgroundColor: "#16a34a88",
+          allDay: true,
+        }));
+        calendar.addEventSource(events);
+      }
+
+      /***********************************
+       * NEXT SCREEN
+       ***********************************/
+      function showNextScreen() {
+        const container = document.getElementById("app");
+        container.innerHTML = `
+          <h2>Resumen selección</h2>
+          <p>Días seleccionados: <strong>${selectedDays.size}</strong></p>
+
+          <div>
+            <label><input type="radio" name="tipo" value="op1" checked> Opción 1</label><br>
+            <label><input type="radio" name="tipo" value="op2"> Opción 2</label><br>
+            <label><input type="radio" name="tipo" value="op3"> Opción 3</label>
+          </div>
+
+          <button id="submitFinal"
+                  style="margin-top:1rem;padding:0.6rem 1rem;border-radius:8px;
+                         background:#1d4ed8;color:white;border:none;font-size:1rem;">
+            Enviar al bot
+          </button>
+
+          <div id="finalStatus" style="margin-top:1rem;color:#64748b;"></div>
+        `;
+
+        document.getElementById("submitFinal").onclick = () => {
+          const option = document.querySelector("input[name='tipo']:checked").value;
+
+          const payload = {
+            type: "calendar_final_submit",
+            days: getSelectedArray(),
+            option: option
+          };
+
+          tg.sendData(JSON.stringify(payload));
+        };
+      }
+
+      /***********************************
+       * MAIN SCREEN
+       ***********************************/
       const TYPE_COLORS = { V: "#16a34a", N: "#9333ea" };
 
-      // Añadir días a una fecha en formato YYYY-MM-DD
       function addDays(dateString, days) {
         const date = new Date(`${dateString}T00:00:00`);
         date.setDate(date.getDate() + days);
         return date.toISOString().slice(0, 10);
       }
 
-      // Normalizar entradas recibidas
       function normalizeEntries(rawEntries) {
         if (!Array.isArray(rawEntries)) return [];
         return rawEntries
-          .filter((entry) => typeof entry === "string" && entry.length >= 11)
-          .map((token) => {
-            const code = token[0];
-            const payload = token.slice(1);
-            if (!code || !payload) return null;
-            const [startPart, endPart] = payload.split(":", 2);
-            const start = startPart?.slice(0, 10);
-            const end = endPart?.slice(0, 10) || start;
-            return { code, start, end };
+          .filter((e) => typeof e === "string" && e.length >= 11)
+          .map((t) => {
+            const code = t[0];
+            const [start, end] = t.slice(1).split(":", 2);
+            return { code, start: start.slice(0, 10), end: (end || start).slice(0, 10) };
           })
-          .filter((e) => e && TYPE_COLORS[e.code] && e.start && e.end);
+          .filter((e) => TYPE_COLORS[e.code]);
       }
 
-      // Leer datos desde los parámetros de la URL
       function readCalendarData() {
         const params = new URLSearchParams(window.location.search);
-        const raw = params.get("data");
-        if (!raw) return { entries: [], error: "No se recibieron datos del calendario." };
         try {
-          const decoded = decodeURIComponent(raw);
-          const parsed = JSON.parse(decoded);
-          return { entries: normalizeEntries(parsed) };
-        } catch (err) {
-          console.error("Error al analizar los datos del calendario", err);
+          const raw = params.get("data");
+          if (!raw) return { entries: [], error: "No se recibieron datos del calendario." };
+          return { entries: normalizeEntries(JSON.parse(decodeURIComponent(raw))) };
+        } catch {
           return { entries: [], error: "Los datos del calendario no tienen un formato válido." };
         }
       }
@@ -140,9 +188,8 @@
           const appRect = appEl.getBoundingClientRect();
           const appStyles = getComputedStyle(appEl);
           const paddings = parseFloat(appStyles.paddingTop) + parseFloat(appStyles.paddingBottom);
-          const headerAllowance = 56;  // toolbar + margins
-          const bottomAllowance = 24;  // status/breathing room
-          const used = appRect.top + paddings + (legendEl?.offsetHeight || 0) + headerAllowance + bottomAllowance;
+          const used =
+            appRect.top + paddings + (legendEl?.offsetHeight || 0) + 56 + 24;
           return Math.max(window.innerHeight - used, 320);
         }
 
@@ -150,24 +197,22 @@
           locale: "es",
           initialView: "dayGridMonth",
           initialDate: today,
-
-          // Compactness controls
-          aspectRatio: 1.9,                   // larger => flatter cells
-          contentHeight: calcContentHeight(), // fit with legend
-
-          expandRows: true,       // distribute rows evenly in the fixed height
+          aspectRatio: 1.9,
+          contentHeight: calcContentHeight(),
+          expandRows: true,
           firstDay: 1,
-          selectable: false,
+          selectable: true,
           eventDisplay: "background",
-          eventColor: "#94a3b8",
-          eventOverlap: true,
-          dayMaxEvents: true,     // prevent tall cells with many events
+          dayMaxEvents: true,
+          headerToolbar: { start: "title", end: "prev,next,today" },
+          buttonText: { today: "Hoy" },
 
-          headerToolbar: { start: "title", center: "", end: "prev,next,today" },
-          buttonText: { today: "Hoy", month: "Mes", week: "Semana", day: "Día" },
+          dateClick(info) {
+            toggleDaySelection(info.dateStr);
+            refreshMarkedDays(calendar);
+          }
         });
 
-        // Re-fit on resize/orientation change
         window.addEventListener("resize", () => {
           calendar.setOption("contentHeight", calcContentHeight());
           calendar.updateSize();
@@ -177,18 +222,79 @@
         if (error) statusElement.textContent = error;
 
         if (entries.length > 0) {
-          calendar.addEventSource(entries.map((entry) => ({
-            start: entry.start,
-            end: addDays(entry.end, 2),
-            allDay: true,
-            display: "background",
-            backgroundColor: TYPE_COLORS[entry.code] || "#94a3b8",
-            opacity: 0.6,
-          })));
+          calendar.addEventSource(
+            entries.map((e) => ({
+              start: e.start,
+              end: addDays(e.end, 1),
+              allDay: true,
+              display: "background",
+              backgroundColor: TYPE_COLORS[e.code],
+              opacity: 0.6
+            }))
+          );
         }
 
         calendar.render();
         if (tg) tg.ready();
+
+        /*********************
+         * CONFIRM BUTTON
+         *********************/
+        const confirmBtn = document.createElement("button");
+        confirmBtn.textContent = "Confirmar selección";
+        confirmBtn.style = `
+          margin-top:1rem;padding:0.7rem 1rem;border-radius:8px;
+          background:#1d4ed8;color:white;border:none;font-size:1rem;width:100%;
+        `;
+        appEl.appendChild(confirmBtn);
+
+        confirmBtn.onclick = () => {
+          const payload = {
+            type: "calendar_selection",
+            days: getSelectedArray()
+          };
+
+          statusElement.textContent = "Enviando datos al bot...";
+          statusElement.style.color = "#64748b";
+
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = "Enviando…";
+
+          tg.sendData(JSON.stringify(payload));
+        };
+
+        /*********************
+         * GLOBAL TELEGRAM EVENTS
+         *********************/
+        if (tg) {
+          tg.onEvent("web_app_data", (event) => {
+            try {
+              const data = JSON.parse(event.data);
+
+              if (data.error) {
+                statusElement.textContent = data.error;
+                statusElement.style.color = "red";
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "Confirmar selección";
+                return;
+              }
+
+              statusElement.textContent = "✔ Datos enviados correctamente.";
+              statusElement.style.color = "green";
+
+              if (data.type === "calendar_selection") {
+                showNextScreen();
+              }
+
+            } catch (err) {
+              statusElement.textContent = "Error inesperado en la respuesta del bot.";
+              statusElement.style.color = "red";
+              confirmBtn.disabled = false;
+              confirmBtn.textContent = "Confirmar selección";
+            }
+          });
+        }
+
       });
     </script>
   </body>

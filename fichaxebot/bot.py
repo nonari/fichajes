@@ -32,6 +32,7 @@ from fichaxebot.utils import (
 from fichaxebot.fichador import get_today_records
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.webapp_controller.router import dispatch_webapp_reply
 
 logger = get_logger(__name__)
 
@@ -113,12 +114,15 @@ async def _run_bot() -> None:
     )
     app = ApplicationBuilder().token(TOKEN).build()
     app.scheduler_manager = scheduler_manager
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("marcar", mark_command))
     app.add_handler(CommandHandler("cancelar", cancel))
     app.add_handler(CommandHandler("marcajes", show_records))
     app.add_handler(CommandHandler("pendientes", show_pending))
     app.add_handler(CommandHandler("calendario", show_calendar))
+
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
 
     app.job_queue.run_daily(
