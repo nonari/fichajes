@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from holidays.countries.spain import Spain
 from telegram.ext import ContextTypes
 
-from fichaxebot.fichador import perform_check_in
+from fichaxebot.usc_api import perform_check_in
 from fichaxebot.logging_config import get_logger
 
 MADRID_TZ: Final[ZoneInfo] = ZoneInfo("Europe/Madrid")

@@ -3,7 +3,7 @@ import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from fichaxebot.fichador import get_today_records
+from fichaxebot.usc_api import get_today_records
 
 
 async def show_records(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

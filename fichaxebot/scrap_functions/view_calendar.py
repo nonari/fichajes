@@ -8,13 +8,9 @@ from typing import Any, Callable, Iterable, Optional
 from selenium.common.exceptions import JavascriptException, TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 
-from fichaxebot.config import get_config
-from fichaxebot.fichador import _create_driver, _login
 from fichaxebot.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-CALENDAR_URL = "https://fichaxe.usc.gal/pas/calendarioAnual"
 
 
 @dataclass
@@ -121,37 +117,3 @@ def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[Ca
                 continue
         yield CalendarEntry(start=start.date().isoformat(), end=end.date().isoformat(), code=kind)
 
-
-def fetch_calendar_summary() -> list[str]:
-    """Return compact calendar entries relevant for the vacation viewer."""
-
-    config = get_config()
-    if not config.usc_user or not config.usc_pass:
-        raise CalendarFetchError(
-            "Las credenciales de USC no están configuradas; no se puede obtener el calendario.",
-        )
-
-    driver = _create_driver()
-    wait = WebDriverWait(driver, 20)
-
-    try:
-        _login(driver, wait, config.usc_user, config.usc_pass)
-        driver.get(CALENDAR_URL)
-        try:
-            _wait_until(
-                wait,
-                lambda d: d.execute_script(
-                    "return Array.isArray(window.calendario) && window.calendario.length >= 0;"
-                ),
-            )
-        except TimeoutException as exc:  # pragma: no cover - depends on remote load
-            raise CalendarFetchError("No se pudo cargar el calendario en la página") from exc
-
-        raw_entries = _read_calendar_array(driver)
-        simplified = list(_iter_relevant_entries(raw_entries))
-    finally:
-        driver.quit()
-
-    simplified.sort(key=lambda item: item.start)
-    logger.info("Recovered %s calendar entries for the viewer", len(simplified))
-    return [entry.as_payload() for entry in simplified]

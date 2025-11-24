@@ -29,7 +29,7 @@ from fichaxebot.utils import (
     get_madrid_now,
     is_galicia_holiday,
 )
-from fichaxebot.fichador import get_today_records
+from fichaxebot.usc_api import get_today_records
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import SchedulerManager
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
