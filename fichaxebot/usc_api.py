@@ -160,7 +160,7 @@ class UscWebSession:
 
         # Perform the action
         btn = self.driver.find_element(By.ID, "novaMarcaxe")
-        # btn.click()
+        btn.click()
         time.sleep(3)
 
         # Refresh and verify the new record
