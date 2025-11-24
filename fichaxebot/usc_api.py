@@ -16,7 +16,7 @@ from fichaxebot.scrap_functions.mark import (
     get_today_records as _get_today_records,
     perform_check_in as _perform_check_in,
 )
-from fichaxebot.scrap_functions.view_calendar import CalendarFetchError, fetch_calendar_summary as _fetch_calendar_summary
+from fichaxebot.scrap_functions.view_calendar import fetch_calendar_summary as _fetch_calendar_summary
 
 logger = get_logger(__name__)
 
@@ -42,7 +42,24 @@ class UscWebSession:
         self.wait = WebDriverWait(self.driver, 20)
         self.config = get_config()
 
-    # -------------------------- DRIVER CREATION ----------------------------- #
+    def perform_check_in(self, action: str) -> CheckInResult:
+        return _perform_check_in(self, action)
+
+    def get_today_records(self) -> list[dict[str, str]]:
+        return _get_today_records(self)
+
+    def retrieve_vacations_info(self) -> dict:
+        # TODO
+        return {}
+
+    def fetch_calendar_summary(self) -> list[str]:
+        return _fetch_calendar_summary(self)
+
+    def close(self):
+        try:
+            self.driver.quit()
+        except Exception:
+            pass
 
     @staticmethod
     def _create_driver(headless: bool) -> webdriver.Chrome:
@@ -57,8 +74,6 @@ class UscWebSession:
             service=Service(ChromeDriverManager().install()),
             options=options
         )
-
-    # ---------------------- ENSURE ACCESS TO PROTECTED URL ------------------ #
 
     def _ensure_access_to(self, url: str) -> None:
         """
@@ -85,8 +100,6 @@ class UscWebSession:
             time.sleep(0.3)
         else:
             logger.info("Session active — no login needed.")
-
-    # ---------------------------- LOGIN ------------------------------------ #
 
     def _perform_login(self):
         user = self.config.usc_user
@@ -115,41 +128,3 @@ class UscWebSession:
         )
 
         logger.info("Login successful")
-
-    # ---------------------------- CHECK-IN --------------------------------- #
-
-    def perform_check_in(self, action: str) -> CheckInResult:
-        return _perform_check_in(self, action)
-
-    # -------------------------- DAILY RECORDS ------------------------------ #
-
-    def get_today_records(self) -> list[dict[str, str]]:
-        return _get_today_records(self)
-
-    # --------------------------- MOCK VACATIONS ----------------------------- #
-
-    def retrieve_vacations_info(self) -> dict:
-        """
-        Mock method for future real scraping.
-        """
-        # When implemented → call:
-        # self._ensure_access_to(PROTECTED_VACATIONS_URL)
-        return {
-            "vacations_used": 8,
-            "vacations_remaining": 14,
-            "source": "mock"
-        }
-
-    # -------------------------- CALENDAR SUMMARY --------------------------- #
-
-    def fetch_calendar_summary(self) -> list[str]:
-        return _fetch_calendar_summary(self)
-
-
-    # ------------------------------ CLOSE ---------------------------------- #
-
-    def close(self):
-        try:
-            self.driver.quit()
-        except Exception:
-            pass
