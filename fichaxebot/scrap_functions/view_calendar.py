@@ -7,10 +7,14 @@ from typing import Any, Callable, Iterable, Optional
 
 from selenium.common.exceptions import JavascriptException, TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 from fichaxebot.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+CALENDAR_URL = "https://fichaxe.usc.gal/pas/calendarioAnual"
 
 
 @dataclass
@@ -116,4 +120,35 @@ def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[Ca
             if only_weekend:
                 continue
         yield CalendarEntry(start=start.date().isoformat(), end=end.date().isoformat(), code=kind)
+
+
+def fetch_calendar_summary(session) -> list[str]:
+    """
+    Return compact calendar entries relevant for the vacation viewer,
+    using the same session-based authentication.
+    """
+
+    session._ensure_access_to(CALENDAR_URL)
+
+    wait = session.wait
+
+    try:
+        wait.until(
+            lambda d: d.execute_script(
+                "return Array.isArray(window.calendario) && window.calendario.length >= 0;"
+            ),
+        )
+    except TimeoutException as exc:
+        raise CalendarFetchError(
+            "No se pudo cargar el calendario en la página"
+        ) from exc
+
+    raw_entries = _read_calendar_array(session.driver)
+
+    simplified = list(_iter_relevant_entries(raw_entries))
+
+    simplified.sort(key=lambda item: item.start)
+    logger.info("Recovered %s calendar entries for the viewer", len(simplified))
+
+    return [entry.as_payload() for entry in simplified]
 

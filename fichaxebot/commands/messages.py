@@ -21,6 +21,7 @@ async def process_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     today = get_madrid_now().date()
 
     scheduler_manager: SchedulerManager = context.application.scheduler_manager
+    session = context.application.web_session
     appconfig = get_config()
     if response in {"sí", "si"} and context.application.bot_data[AWAITING_RESPONSE_KEY]:
         if scheduler_manager.has_pending():
@@ -37,7 +38,7 @@ async def process_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         await update.message.reply_text("🔄 Intentando fichaje de entrada...")
-        result = await execute_check_in_async("entrada", context)
+        result = await execute_check_in_async("entrada", session, context)
         await update.message.reply_text(result.message)
 
         if result.success:

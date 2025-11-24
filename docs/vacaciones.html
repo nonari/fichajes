@@ -83,6 +83,66 @@
       const tg = window.Telegram ? window.Telegram.WebApp : null;
       if (tg) tg.expand();
 
+      const selectedDays = new Set();
+
+      function toggleDaySelection(dateStr) {
+        if (selectedDays.has(dateStr)) selectedDays.delete(dateStr);
+        else selectedDays.add(dateStr);
+      }
+
+      function getSelectedArray() {
+        return Array.from(selectedDays).sort();
+      }
+
+      function refreshMarkedDays(calendar) {
+        calendar.getEventSources().forEach(src => src.remove());
+        const events = getSelectedArray().map(d => ({
+          start: d,
+          end: d,
+          display: "background",
+          backgroundColor: "#16a34a88",
+          allDay: true,
+        }));
+        calendar.addEventSource(events);
+      }
+
+      /***********************************
+       * NEXT SCREEN
+       ***********************************/
+      function showNextScreen() {
+        const container = document.getElementById("app");
+        container.innerHTML = `
+          <h2>Resumen selección</h2>
+          <p>Días seleccionados: <strong>${selectedDays.size}</strong></p>
+
+          <div>
+            <label><input type="radio" name="tipo" value="op1" checked> Opción 1</label><br>
+            <label><input type="radio" name="tipo" value="op2"> Opción 2</label><br>
+            <label><input type="radio" name="tipo" value="op3"> Opción 3</label>
+          </div>
+
+          <button id="submitFinal"
+                  style="margin-top:1rem;padding:0.6rem 1rem;border-radius:8px;
+                         background:#1d4ed8;color:white;border:none;font-size:1rem;">
+            Enviar al bot
+          </button>
+
+          <div id="finalStatus" style="margin-top:1rem;color:#64748b;"></div>
+        `;
+
+        document.getElementById("submitFinal").onclick = () => {
+          const option = document.querySelector("input[name='tipo']:checked").value;
+
+          const payload = {
+            type: "calendar_final_submit",
+            days: getSelectedArray(),
+            option: option
+          };
+
+          tg.sendData(JSON.stringify(payload));
+        };
+      }
+
       /***********************************
        * MAIN SCREEN
        ***********************************/
@@ -141,11 +201,16 @@
           contentHeight: calcContentHeight(),
           expandRows: true,
           firstDay: 1,
-          selectable: false,
+          selectable: true,
           eventDisplay: "background",
           dayMaxEvents: true,
           headerToolbar: { start: "title", end: "prev,next,today" },
-          buttonText: { today: "Hoy" }
+          buttonText: { today: "Hoy" },
+
+          dateClick(info) {
+            toggleDaySelection(info.dateStr);
+            refreshMarkedDays(calendar);
+          }
         });
 
         window.addEventListener("resize", () => {
@@ -171,6 +236,64 @@
 
         calendar.render();
         if (tg) tg.ready();
+
+        /*********************
+         * CONFIRM BUTTON
+         *********************/
+        const confirmBtn = document.createElement("button");
+        confirmBtn.textContent = "Confirmar selección";
+        confirmBtn.style = `
+          margin-top:1rem;padding:0.7rem 1rem;border-radius:8px;
+          background:#1d4ed8;color:white;border:none;font-size:1rem;width:100%;
+        `;
+        appEl.appendChild(confirmBtn);
+
+        confirmBtn.onclick = () => {
+          const payload = {
+            type: "calendar_selection",
+            days: getSelectedArray()
+          };
+
+          statusElement.textContent = "Enviando datos al bot...";
+          statusElement.style.color = "#64748b";
+
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = "Enviando…";
+
+          tg.sendData(JSON.stringify(payload));
+        };
+
+        /*********************
+         * GLOBAL TELEGRAM EVENTS
+         *********************/
+        if (tg) {
+          tg.onEvent("web_app_data", (event) => {
+            try {
+              const data = JSON.parse(event.data);
+
+              if (data.error) {
+                statusElement.textContent = data.error;
+                statusElement.style.color = "red";
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "Confirmar selección";
+                return;
+              }
+
+              statusElement.textContent = "✔ Datos enviados correctamente.";
+              statusElement.style.color = "green";
+
+              if (data.type === "calendar_selection") {
+                showNextScreen();
+              }
+
+            } catch (err) {
+              statusElement.textContent = "Error inesperado en la respuesta del bot.";
+              statusElement.style.color = "red";
+              confirmBtn.disabled = false;
+              confirmBtn.textContent = "Confirmar selección";
+            }
+          });
+        }
 
       });
     </script>

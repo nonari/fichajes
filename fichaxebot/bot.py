@@ -20,6 +20,7 @@ from fichaxebot.commands import (
     show_pending,
     show_records,
     show_calendar,
+    show_vacations,
     start,
 )
 from fichaxebot.config import get_config
@@ -29,7 +30,7 @@ from fichaxebot.utils import (
     get_madrid_now,
     is_galicia_holiday,
 )
-from fichaxebot.usc_api import get_today_records
+from fichaxebot.usc_api import UscWebSession
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import SchedulerManager
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
@@ -114,6 +115,8 @@ async def _run_bot() -> None:
     )
     app = ApplicationBuilder().token(TOKEN).build()
     app.scheduler_manager = scheduler_manager
+    web_session = UscWebSession()
+    app.web_session = web_session
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("marcar", mark_command))
@@ -121,6 +124,7 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("marcajes", show_records))
     app.add_handler(CommandHandler("pendientes", show_pending))
     app.add_handler(CommandHandler("calendario", show_calendar))
+    app.add_handler(CommandHandler("vacaciones", show_vacations))
 
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
@@ -175,7 +179,7 @@ async def _run_bot() -> None:
         )
 
     try:
-        records = await asyncio.to_thread(get_today_records)
+        records = await asyncio.to_thread(web_session.get_today_records)
     except Exception as exc:  # noqa: BLE001
         await app.bot.send_message(
             chat_id=CHAT_ID,
@@ -198,6 +202,8 @@ async def _run_bot() -> None:
     await app.updater.stop()
     await app.stop()
     await app.shutdown()
+
+    web_session.close()
 
 def main() -> None:
     asyncio.run(_run_bot())

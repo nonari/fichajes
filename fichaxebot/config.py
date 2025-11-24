@@ -25,6 +25,7 @@ class AppConfig:
     max_reminders: int
     reminder_interval: timedelta
     calendar_webapp_url: str
+    vacations_webapp_url: str
 
 
 _config: Optional[AppConfig] = None
@@ -109,6 +110,7 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     reminder_interval = timedelta(minutes=reminder_interval_minutes)
 
     calendar_webapp_url = str(data.get("calendar_webapp_url", "") or "").strip()
+    vacations_webapp_url = str(data.get("vacations_webapp_url", calendar_webapp_url) or "").strip()
 
     return AppConfig(
         telegram_token=str(data["telegram_token"]),
@@ -121,6 +123,7 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         max_reminders=max_reminders,
         reminder_interval=reminder_interval,
         calendar_webapp_url=calendar_webapp_url,
+        vacations_webapp_url=vacations_webapp_url,
     )
 
 

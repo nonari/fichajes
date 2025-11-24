@@ -8,7 +8,6 @@ from zoneinfo import ZoneInfo
 from holidays.countries.spain import Spain
 from telegram.ext import ContextTypes
 
-from fichaxebot.usc_api import perform_check_in
 from fichaxebot.logging_config import get_logger
 
 MADRID_TZ: Final[ZoneInfo] = ZoneInfo("Europe/Madrid")
@@ -21,9 +20,9 @@ def get_madrid_now() -> datetime:
 
 
 async def execute_check_in_async(
-    action: str, context: ContextTypes.DEFAULT_TYPE
+    action: str, session, context: ContextTypes.DEFAULT_TYPE
 ):
-    result = await asyncio.to_thread(perform_check_in, action)
+    result = await asyncio.to_thread(session.perform_check_in, action)
     logger.info("Check-in result for %s: %s", action, result.message)
     return result
 

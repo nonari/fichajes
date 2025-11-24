@@ -61,7 +61,8 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
 
-    result = await execute_check_in_async(action, context)
+    session = context.application.web_session
+    result = await execute_check_in_async(action, session, context)
     await update.message.reply_text(result.message)
 
     if action == "entrada":

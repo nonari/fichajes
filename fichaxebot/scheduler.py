@@ -186,7 +186,8 @@ class SchedulerManager:
             return
 
         logger.info("Executing scheduled mark %s (%s)", identifier, mark.action)
-        resultado = await execute_check_in_async(mark.action, context)
+        session = context.application.web_session
+        resultado = await execute_check_in_async(mark.action, session, context)
 
         prefix = "🚪" if mark.action == "entrada" else "🏁"
         await context.bot.send_message(
