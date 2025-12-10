@@ -7,26 +7,51 @@ SERVICE_NAME="fichaxe.service"
 # 1. Detect or accept BOT_PATH
 # ──────────────────────────────────────────────
 BOT_PATH="${1:-$(pwd)}"  # use argument or current directory
-PYTHON_PATH="${BOT_PATH}/.venv/bin/python3"
+VENV_PATH="${BOT_PATH}/.venv"
+PYTHON_PATH="${VENV_PATH}/bin/python3"
 LOG_FILE="${BOT_PATH}/fichaje.log"
+REQ_FILE="${BOT_PATH}/requirements.txt"
 
 echo "📦 Installing ${SERVICE_NAME}"
 echo "➡️ BOT_PATH=${BOT_PATH}"
 
-# Check that the package exists
 if [ ! -f "${BOT_PATH}/fichaxebot/bot.py" ]; then
     echo "❌ fichaxebot/bot.py not found in ${BOT_PATH}"
     exit 1
 fi
 
-# Check python binary
+# ──────────────────────────────────────────────
+# 2. Ensure Virtual Environment
+# ──────────────────────────────────────────────
+if [ ! -d "${VENV_PATH}" ]; then
+    echo "🐍 Creating virtual environment: ${VENV_PATH}"
+    python3 -m venv "${VENV_PATH}"
+    source "${VENV_PATH}/bin/activate"
+
+    if [ -f "${REQ_FILE}" ]; then
+        echo "📦 Installing dependencies from requirements.txt"
+        pip install --upgrade pip
+        pip install -r "${REQ_FILE}"
+    else
+        echo "⚠️ No requirements.txt found — skipping dependency install"
+    fi
+
+    deactivate
+else
+    echo "✔️ Reusing existing virtualenv"
+    if [ ! -x "${PYTHON_PATH}" ]; then
+        echo "❌ Virtualenv broken: python binary not found!"
+        exit 1
+    fi
+fi
+
 if [ ! -x "${PYTHON_PATH}" ]; then
-    echo "⚠️ Virtual env not found; using system python"
+    echo "⚠️ Virtual env not found or invalid; using system python"
     PYTHON_PATH="$(command -v python3)"
 fi
 
 # ──────────────────────────────────────────────
-# 2. Generate systemd service file
+# 3. Generate systemd service file
 # ──────────────────────────────────────────────
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 
@@ -51,7 +76,7 @@ EOF
 echo "📝 Created ${SERVICE_FILE}"
 
 # ──────────────────────────────────────────────
-# 3. Enable, start, and verify service
+# 4. Enable, start, verify service
 # ──────────────────────────────────────────────
 sudo systemctl daemon-reload
 sudo systemctl enable "${SERVICE_NAME}"
