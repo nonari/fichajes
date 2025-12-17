@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Información de vacaciones</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+      :root { color-scheme: light; }
+
+      body {
+        font-family: "Segoe UI", Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f7fb;
+        color: #1f2933;
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+        margin-bottom: 16px;
+      }
+
+      .card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+        padding: 16px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      th {
+        background-color: #f0f4f8;
+        font-weight: 600;
+      }
+
+      tr:hover td {
+        background-color: #f9fafb;
+      }
+
+      .error {
+        color: #b00020;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Vacaciones, permisos y licencias</h1>
+      <div id="content" class="card"></div>
+    </div>
+
+    <script>
+      function renderError(message) {
+        const content = document.getElementById("content");
+        content.innerHTML = `<p class="error">${message}</p>`;
+      }
+
+      function buildTable(data) {
+        const { columns, rowNames, rows } = data;
+        if (!Array.isArray(columns) || !Array.isArray(rowNames) || !Array.isArray(rows)) {
+          return renderError("Faltan datos para mostrar la tabla.");
+        }
+
+        const headerCells = ["<th>" + (columns[0] || "Tipo") + "</th>"];
+        for (let i = 1; i < columns.length; i += 1) {
+          headerCells.push(`<th>${columns[i]}</th>`);
+        }
+
+        const bodyRows = rows
+          .map((row, index) => {
+            const name = rowNames[index] || "";
+            const cells = [`<td>${name}</td>`];
+            for (let i = 0; i < row.length; i += 1) {
+              cells.push(`<td>${row[i]}</td>`);
+            }
+            return `<tr>${cells.join("")}</tr>`;
+          })
+          .join("");
+
+        const tableHtml = `
+          <table>
+            <thead><tr>${headerCells.join("")}</tr></thead>
+            <tbody>${bodyRows}</tbody>
+          </table>
+        `;
+
+        document.getElementById("content").innerHTML = tableHtml;
+      }
+
+      (function init() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const raw = params.get("data");
+          if (!raw) {
+            return renderError("No se encontraron datos para mostrar.");
+          }
+
+          const data = JSON.parse(decodeURIComponent(raw));
+          buildTable(data);
+        } catch (err) {
+          renderError("No se pudo interpretar la información de vacaciones.");
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -19,6 +19,7 @@ class AppConfig:
     telegram_chat_id: str
     usc_user: str
     usc_pass: str
+    vacations_person_id: str
     daily_question_time: dtime
     auto_checkout_delay: Optional[timedelta]
     auto_checkout_random_offset_minutes: int
@@ -26,6 +27,7 @@ class AppConfig:
     reminder_interval: timedelta
     calendar_webapp_url: str
     vacations_webapp_url: str
+    vacations_info_webapp_url: str
 
 
 _config: Optional[AppConfig] = None
@@ -111,12 +113,15 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
 
     calendar_webapp_url = str(data.get("calendar_webapp_url", "") or "").strip()
     vacations_webapp_url = str(data.get("vacations_webapp_url", calendar_webapp_url) or "").strip()
+    vacations_info_webapp_url = str(data.get("vacations_info_webapp_url", "") or "").strip()
+    vacations_person_id = str(data.get("vacations_person_id", "") or "").strip()
 
     return AppConfig(
         telegram_token=str(data["telegram_token"]),
         telegram_chat_id=str(data["telegram_chat_id"]),
         usc_user=str(data["usc_user"]),
         usc_pass=str(data["usc_pass"]),
+        vacations_person_id=vacations_person_id,
         daily_question_time=daily_question_time,
         auto_checkout_delay=auto_checkout_delay,
         auto_checkout_random_offset_minutes=random_offset,
@@ -124,6 +129,7 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         reminder_interval=reminder_interval,
         calendar_webapp_url=calendar_webapp_url,
         vacations_webapp_url=vacations_webapp_url,
+        vacations_info_webapp_url=vacations_info_webapp_url,
     )
 
 

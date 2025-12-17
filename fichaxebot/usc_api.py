@@ -16,6 +16,9 @@ from fichaxebot.scrap_functions.mark import (
     get_today_records as _get_today_records,
     perform_check_in as _perform_check_in,
 )
+from fichaxebot.scrap_functions.vacations_info import (
+    fetch_vacations_info as _fetch_vacations_info,
+)
 from fichaxebot.scrap_functions.view_calendar import fetch_calendar_summary as _fetch_calendar_summary
 
 logger = get_logger(__name__)
@@ -48,9 +51,8 @@ class UscWebSession:
     def get_today_records(self) -> list[dict[str, str]]:
         return _get_today_records(self)
 
-    def retrieve_vacations_info(self) -> dict:
-        # TODO
-        return {}
+    def retrieve_vacations_info(self) -> tuple[list[str], list[str], list[list[int]]]:
+        return _fetch_vacations_info(self)
 
     def fetch_calendar_summary(self) -> list[str]:
         return _fetch_calendar_summary(self)

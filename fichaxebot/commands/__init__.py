@@ -12,6 +12,7 @@ from fichaxebot.commands.pending import show_pending
 from fichaxebot.commands.records import show_records
 from fichaxebot.commands.start import start
 from fichaxebot.commands.vacations import show_vacations
+from fichaxebot.commands.vacations_info import show_vacations_info
 
 __all__ = [
     "AWAITING_RESPONSE_KEY",
@@ -25,5 +26,6 @@ __all__ = [
     "show_pending",
     "show_records",
     "show_vacations",
+    "show_vacations_info",
     "start",
 ]

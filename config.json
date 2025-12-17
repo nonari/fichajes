@@ -5,6 +5,8 @@
   "usc_pass": "tu_contraseña",
   "calendar_webapp_url": "https://nonari.github.io/fichajes/show_calendar.html",
   "vacations_webapp_url": "https://nonari.github.io/fichajes/vacaciones.html",
+  "vacations_info_webapp_url": "https://nonari.github.io/fichajes/vacations_info.html",
+  "vacations_person_id": "",
   "daily_question_time": "09:00",
   "auto_checkout_delay_minutes": 420,
   "auto_checkout_random_offset_minutes": 3,

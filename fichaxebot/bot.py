@@ -21,6 +21,7 @@ from fichaxebot.commands import (
     show_records,
     show_calendar,
     show_vacations,
+    show_vacations_info,
     start,
 )
 from fichaxebot.config import get_config
@@ -125,6 +126,7 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("pendientes", show_pending))
     app.add_handler(CommandHandler("calendario", show_calendar))
     app.add_handler(CommandHandler("vacaciones", show_vacations))
+    app.add_handler(CommandHandler("vacaciones_info", show_vacations_info))
 
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
