@@ -56,21 +56,13 @@ The three `*_webapp_url` settings in the example point to this project's GitHub 
 
 Install **Python 3.10+**, Python's `venv` support, and **Google Chrome**. Internet access is needed for Telegram, USC, and automatic ChromeDriver setup.
 
-From the repository directory:
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m fichaxebot.bot
-```
-
-Press `Ctrl+C` to stop. To run automatically at boot with systemd:
+After configuring `config.json`, run from the repository directory:
 
 ```bash
 bash install.sh "$(pwd)"
 ```
 
-The installer creates `.venv` if needed, installs dependencies, then uses sudo to create, enable, and start `fichaxe.service`. You can run it directly without the manual setup above. An existing broken environment must be repaired or recreated first. The generated service runs as root.
+The installer creates the Python environment, installs dependencies, and uses sudo to install and start `fichaxe.service` automatically at boot. The service runs as root.
 
 ```bash
 sudo systemctl status fichaxe.service
