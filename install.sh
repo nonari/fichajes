@@ -7,7 +7,9 @@ SERVICE_NAME="fichaxe.service"
 # 1. Detect or accept BOT_PATH
 # ──────────────────────────────────────────────
 BOT_PATH="${1:-$(pwd)}"  # use argument or current directory
-PYTHON_PATH="${BOT_PATH}/.venv/bin/python3"
+VENV_PATH="${BOT_PATH}/.venv"
+PYTHON_PATH="${VENV_PATH}/bin/python3"
+REQ_FILE="${BOT_PATH}/requirements.txt"
 LOG_FILE="${BOT_PATH}/fichaje.log"
 
 echo "📦 Installing ${SERVICE_NAME}"
@@ -19,11 +21,27 @@ if [ ! -f "${BOT_PATH}/fichaxebot/bot.py" ]; then
     exit 1
 fi
 
-# Check python binary
-if [ ! -x "${PYTHON_PATH}" ]; then
-    echo "⚠️ Virtual env not found; using system python"
-    PYTHON_PATH="$(command -v python3)"
+# Prepare dependencies before creating or starting the service.
+if [ ! -f "${REQ_FILE}" ]; then
+    echo "❌ requirements.txt not found in ${BOT_PATH}"
+    exit 1
 fi
+
+if [ ! -e "${VENV_PATH}" ] && [ ! -L "${VENV_PATH}" ]; then
+    echo "🐍 Creating virtual environment: ${VENV_PATH}"
+    python3 -m venv "${VENV_PATH}"
+else
+    echo "✔️ Reusing existing virtual environment"
+fi
+
+if [ ! -x "${PYTHON_PATH}" ]; then
+    echo "❌ Virtual environment is broken: ${PYTHON_PATH} is missing or not executable."
+    echo "Repair or recreate ${VENV_PATH}, then run this installer again."
+    exit 1
+fi
+
+echo "📦 Installing dependencies from requirements.txt"
+"${PYTHON_PATH}" -m pip install -r "${REQ_FILE}"
 
 # ──────────────────────────────────────────────
 # 2. Generate systemd service file

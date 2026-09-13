@@ -70,7 +70,7 @@ Press `Ctrl+C` to stop. To run automatically at boot with systemd:
 bash install.sh "$(pwd)"
 ```
 
-The installer uses sudo and creates, enables, and starts `fichaxe.service`. The generated service runs as root.
+The installer creates `.venv` if needed, installs dependencies, then uses sudo to create, enable, and start `fichaxe.service`. You can run it directly without the manual setup above. An existing broken environment must be repaired or recreated first. The generated service runs as root.
 
 ```bash
 sudo systemctl status fichaxe.service
