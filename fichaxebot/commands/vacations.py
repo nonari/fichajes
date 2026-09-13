@@ -1,64 +1,53 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from urllib.parse import quote, urlsplit, urlunsplit
+from uuid import uuid4
 
 from telegram import Update, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
 
-from fichaxebot.commands.calendar import _build_calendar_url
 from fichaxebot.config import get_config
 from fichaxebot.logging_config import get_logger
-from fichaxebot.scrap_functions.view_calendar import CalendarFetchError
 
 logger = get_logger(__name__)
+VACATION_SELECTION_KEY = "vacation_selection"
+
+
+def _build_vacations_url(base_url: str, payload: dict) -> str:
+    # A fragment keeps balances out of the static host's query/access logs.
+    parts = urlsplit(base_url)
+    data = quote(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), safe="")
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, f"data={data}"))
 
 
 async def show_vacations(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message:
-        return
-
-    status_message = await update.message.reply_text("🔄 Obteniendo calendario de vacaciones...")
-    session = context.application.web_session
-
-    try:
-        entries = await asyncio.to_thread(session.fetch_calendar_summary)
-    except CalendarFetchError as exc:
-        logger.warning("Calendar fetch failed: %s", exc)
-        await status_message.edit_text(f"❌ No se pudo obtener el calendario: {exc}")
-        return
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Unexpected error while fetching the vacations calendar")
-        await status_message.edit_text(
-            "❌ Error inesperado al obtener el calendario. Inténtalo de nuevo más tarde.",
-        )
-        return
-
-    if not entries:
-        await status_message.edit_text(
-            "ℹ️ No hay vacaciones ni días no laborables registrados en el calendario.",
-        )
-        return
-
     config = get_config()
-    webapp_url = getattr(config, "vacations_webapp_url", "") or getattr(config, "calendar_webapp_url", "") or ""
+    if not update.message or str(update.effective_chat.id) != str(config.telegram_chat_id):
+        return
+    webapp_url = config.vacations_webapp_url
     if not webapp_url:
-        await status_message.edit_text(
-            "⚙️ Configura 'vacations_webapp_url' en config.json para abrir el calendario de vacaciones.",
-        )
+        await update.message.reply_text("Configura 'vacations_webapp_url' para abrir la selección.")
         return
 
-    url = _build_calendar_url(webapp_url, entries, mode="vacations")
-
+    status_message = await update.message.reply_text("🔄 Consultando años, saldos y calendario en USC...")
+    try:
+        payload = await asyncio.to_thread(context.application.web_session.fetch_vacation_selection_data)
+    except Exception:
+        logger.exception("Could not load vacation selection data")
+        await status_message.edit_text("❌ No se pudieron consultar los saldos y el calendario. Inténtalo de nuevo.")
+        return
+    if not payload["years"]:
+        await status_message.edit_text("ℹ️ USC no ofrece años de saldo disponibles para esta solicitud.")
+        return
+    payload["requestId"] = uuid4().hex
+    context.user_data[VACATION_SELECTION_KEY] = payload
     keyboard = ReplyKeyboardMarkup(
-        [[KeyboardButton(
-            text="Abrir calendario de vacaciones",
-            web_app=WebAppInfo(url=url)
-        )]],
+        [[KeyboardButton("Seleccionar vacaciones", web_app=WebAppInfo(url=_build_vacations_url(webapp_url, payload)))]],
         resize_keyboard=True,
-        one_time_keyboard=False
     )
-
     await update.message.reply_text(
-        "📆 Calendario listo. 👇 Pulsa el botón para abrirlo",
-        reply_markup=keyboard,
+        "📆 Elige el año del saldo, el tipo de vacaciones y después las fechas.", reply_markup=keyboard,
     )
+    await status_message.delete()

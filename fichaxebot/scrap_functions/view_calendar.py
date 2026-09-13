@@ -58,12 +58,14 @@ def _read_calendar_array(driver) -> list[dict[str, Any]]:
         raise CalendarFetchError("El calendario recibido tiene un formato desconocido") from exc
 
 
-def _map_kind(tipo: str) -> Optional[str]:
+def _map_kind(tipo: str, *, for_vacation_selection: bool = False) -> Optional[str]:
     normalized = tipo.upper()
     if "VACACION" in normalized:
         return "V"
     if "NON_LABORABLE" in normalized:
         return "N"
+    if for_vacation_selection and normalized == "QUENDA_ALTERNATIVA":
+        return "P"
     return None
 
 
@@ -96,7 +98,9 @@ def _normalize_date(value: Any) -> Optional[datetime]:
         return None
 
 
-def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[CalendarEntry]:
+def _iter_relevant_entries(
+    raw_entries: Iterable[dict[str, Any]], *, for_vacation_selection: bool = False
+) -> Iterable[CalendarEntry]:
     for entry in raw_entries:
         start = _normalize_date(entry.get("startDate"))
         end = _normalize_date(entry.get("endDate"))
@@ -105,11 +109,11 @@ def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[Ca
             logger.warning(f'Unexpected entry date format "{entry}"')
             continue
         start = start + timedelta(days=1)
-        kind = _map_kind(str(tipo))
+        kind = _map_kind(str(tipo), for_vacation_selection=for_vacation_selection)
         if not kind:
             continue
 
-        if kind == "N":
+        if kind == "N" and not for_vacation_selection:
             current = start
             only_weekend = True
             while current <= end:
@@ -122,7 +126,7 @@ def _iter_relevant_entries(raw_entries: Iterable[dict[str, Any]]) -> Iterable[Ca
         yield CalendarEntry(start=start.date().isoformat(), end=end.date().isoformat(), code=kind)
 
 
-def fetch_calendar_summary(session) -> list[str]:
+def fetch_calendar_summary(session, *, for_vacation_selection: bool = False) -> list[str]:
     """
     Return compact calendar entries relevant for the vacation viewer,
     using the same session-based authentication.
@@ -145,7 +149,9 @@ def fetch_calendar_summary(session) -> list[str]:
 
     raw_entries = _read_calendar_array(session.driver)
 
-    simplified = list(_iter_relevant_entries(raw_entries))
+    simplified = list(_iter_relevant_entries(
+        raw_entries, for_vacation_selection=for_vacation_selection
+    ))
 
     simplified.sort(key=lambda item: item.start)
     logger.info("Recovered %s calendar entries for the viewer", len(simplified))

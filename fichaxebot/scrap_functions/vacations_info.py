@@ -31,10 +31,10 @@ def fetch_vacations_info(session) -> tuple[list[str], list[str], list[list[int]]
     entry in ``row_names``.
     """
 
-    person_id = getattr(session.config, "vacations_person_id", "")
+    person_id = getattr(session, "internal_user_id", "")
     if not person_id:
         raise VacationsInfoError(
-            "El identificador personal no está configurado (vacations_person_id)."
+            "No se pudo descubrir el identificador interno del usuario en USC."
         )
 
     url = VACATIONS_URL_TEMPLATE.format(person_id=person_id)
@@ -71,4 +71,3 @@ def fetch_vacations_info(session) -> tuple[list[str], list[str], list[list[int]]
         raise VacationsInfoError("La tabla de vacaciones no contiene datos válidos.")
 
     return headers, row_names, rows
-

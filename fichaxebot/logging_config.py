@@ -24,7 +24,7 @@ def get_log_file_path() -> Path:
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
-    """Return a configured logger that writes to the application log file."""
+    """Return a logger with timestamped, severity-labelled file and console output."""
     log_file = get_log_file_path()
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -38,6 +38,9 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
         logger.setLevel(logging.DEBUG)
         logger.propagate = False
         logger._fichaxe_configured = True  # type: ignore[attr-defined]

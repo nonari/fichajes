@@ -1,4 +1,5 @@
 import time
+from threading import RLock
 from typing import Final
 
 from selenium import webdriver
@@ -20,6 +21,12 @@ from fichaxebot.scrap_functions.vacations_info import (
     fetch_vacations_info as _fetch_vacations_info,
 )
 from fichaxebot.scrap_functions.view_calendar import fetch_calendar_summary as _fetch_calendar_summary
+from fichaxebot.scrap_functions.vacation_request import (
+    REQUEST_URL,
+    fetch_vacation_catalog, fill_vacation_request, validate_selection,
+    save_vacation_draft, submit_vacation_draft,
+)
+from fichaxebot.utils import get_madrid_now
 
 logger = get_logger(__name__)
 
@@ -41,21 +48,73 @@ class UscWebSession:
     """
 
     def __init__(self, headless: bool = True):
+        self._lock = RLock()
         self.driver = self._create_driver(headless=headless)
         self.wait = WebDriverWait(self.driver, 20)
         self.config = get_config()
+        try:
+            self.internal_user_id = self._discover_internal_user_id()
+        except Exception:
+            self.close()
+            raise
+
+    def _discover_internal_user_id(self) -> str:
+        """Read the authenticated applicant ID without modifying the request form."""
+        self._ensure_access_to(REQUEST_URL)
+        def read_applicant(driver):
+            fields = driver.find_elements(By.ID, "idSolicitante")
+            value = fields[0].get_attribute("value") if fields else ""
+            value = (value or "").strip()
+            return value if value.isascii() and value.isdecimal() and int(value) > 0 else False
+
+        person_id = self.wait.until(
+            read_applicant,
+            message="No se pudo descubrir el identificador interno del usuario en USC.",
+        )
+        logger.info("Internal USC user ID discovered from the authenticated request form")
+        return person_id
 
     def perform_check_in(self, action: str) -> CheckInResult:
-        return _perform_check_in(self, action)
+        self._require_writes_enabled()
+        with self._lock:
+            return _perform_check_in(self, action)
 
     def get_today_records(self) -> list[dict[str, str]]:
-        return _get_today_records(self)
+        with self._lock:
+            return _get_today_records(self)
 
     def retrieve_vacations_info(self) -> tuple[list[str], list[str], list[list[int]]]:
-        return _fetch_vacations_info(self)
+        with self._lock:
+            return _fetch_vacations_info(self)
 
-    def fetch_calendar_summary(self) -> list[str]:
-        return _fetch_calendar_summary(self)
+    def fetch_calendar_summary(self, *, for_vacation_selection: bool = False) -> list[str]:
+        with self._lock:
+            return _fetch_calendar_summary(self, for_vacation_selection=for_vacation_selection)
+
+    def fetch_vacation_selection_data(self) -> dict:
+        with self._lock:
+            catalog = fetch_vacation_catalog(self)
+            entries = _fetch_calendar_summary(self, for_vacation_selection=True)
+            return {**catalog, "entries": entries}
+
+    def prepare_vacation_request(self, data: dict) -> dict:
+        self._require_writes_enabled()
+        with self._lock:
+            # Balances and calendar may have changed while the Mini App was open.
+            catalog = fetch_vacation_catalog(self)
+            entries = _fetch_calendar_summary(self, for_vacation_selection=True)
+            selection = validate_selection(data, catalog, entries, get_madrid_now().date())
+            fill_vacation_request(self, selection)
+            return save_vacation_draft(self, selection)
+
+    def submit_vacation_request(self, draft: dict) -> str:
+        self._require_writes_enabled()
+        with self._lock:
+            return submit_vacation_draft(self, draft)
+
+    def _require_writes_enabled(self) -> None:
+        if self.config.read_only:
+            raise PermissionError("Modo de solo lectura: las escrituras en USC están desactivadas.")
 
     def close(self):
         try:
@@ -125,7 +184,7 @@ class UscWebSession:
 
         self.wait.until(
             EC.presence_of_element_located(
-                (By.XPATH, "//h1[contains(text(), 'Acceso correcto')]")
+                (By.XPATH, "//h1[contains(., 'Acceso correcto') or contains(., 'Log In Successful')]")
             )
         )
 

@@ -4,6 +4,7 @@ from telegram import ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
+    CallbackQueryHandler,
     MessageHandler,
     ContextTypes,
     filters,
@@ -25,6 +26,7 @@ from fichaxebot.commands import (
     start,
 )
 from fichaxebot.config import get_config
+from fichaxebot.access_control import restrict_to_chat
 from fichaxebot.utils import (
     MADRID_TZ,
     cancel_reminder,
@@ -35,6 +37,7 @@ from fichaxebot.usc_api import UscWebSession
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import SchedulerManager
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
+from fichaxebot.webapp_controller.calendar_vacations import confirm_vacation_request
 
 logger = get_logger(__name__)
 
@@ -115,6 +118,7 @@ async def _run_bot() -> None:
         appconfig.auto_checkout_random_offset_minutes,
     )
     app = ApplicationBuilder().token(TOKEN).build()
+    restrict_to_chat(app, appconfig.telegram_chat_id)
     app.scheduler_manager = scheduler_manager
     web_session = UscWebSession()
     app.web_session = web_session
@@ -128,6 +132,7 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("vacaciones", show_vacations))
     app.add_handler(CommandHandler("vacaciones_info", show_vacations_info))
 
+    app.add_handler(CallbackQueryHandler(confirm_vacation_request, pattern=r"^vacation_submit:[1-9]\d*$"))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
 
@@ -161,7 +166,7 @@ async def _run_bot() -> None:
     stop_event = asyncio.Event()
 
     def handle_stop(*_):
-        print("🛑 Stopping bot...")
+        logger.info("🛑 Stopping bot...")
         stop_event.set()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -197,7 +202,7 @@ async def _run_bot() -> None:
         await app.bot.send_message(chat_id=CHAT_ID, text=resumen)
 
     await app.updater.start_polling()
-    print("🤖 Bot running. Press Ctrl+C to stop.")
+    logger.info("🤖 Bot running. Press Ctrl+C to stop.")
 
     await stop_event.wait()
 

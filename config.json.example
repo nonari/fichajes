@@ -11,5 +11,5 @@
   "auto_checkout_random_offset_minutes": 3,
   "max_reminders": 3,
   "reminder_interval_minutes": 5,
-  "vacations_person_id": "YOUR_USC_INTERNAL_USER_ID"
+  "read_only": true
 }

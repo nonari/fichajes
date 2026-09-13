@@ -99,3 +99,29 @@ var calendario = [
   }
 ];
 ```
+
+
+## Vacation selection payload
+
+`/vacaciones` requests `fetch_calendar_summary(for_vacation_selection=True)`.
+The compact entries use inclusive dates: `P2026-09-11` for one day or
+`V2026-09-14:2026-09-16` for a range.
+
+| USC `tipo` | Payload | Selection display |
+|---|---|---|
+| `DIA_NON_LABORABLE` | `N` | Purple, including weekend entries |
+| Vacation types containing `VACACION`, approved or requested | `V` | Green: registered vacations |
+| `QUENDA_ALTERNATIVA` | `P` | Light blue with an underline: partial working day |
+| `QUENDA_PRIMARIA` | Omitted | Ordinary working day |
+
+The partial-day mapping follows the user’s identification of the light-blue
+underline and the shift/color mapping above. The saved USC renderer in
+`resources/calendar.html` underlines `QUENDA_PRIMARIA` and
+`QUENDA_ALTERNATIVA` using each entry’s `color`. This change was not verified
+against a live authenticated Chrome session.
+
+Newly selected dates have an amber outline independent of the three day types.
+Selecting, deselecting, and changing months preserve the USC markings.
+The ordinary `/calendario` payload retains its existing category filtering.
+The request workflow, including draft creation and explicit submission, is described
+in [vacation_request_structure.md](vacation_request_structure.md).
