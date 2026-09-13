@@ -1,0 +1,11 @@
+# Local credentials and runtime files
+config.json
+.env
+.env.*
+!.env.example
+.idea/
+__pycache__/
+*.py[cod]
+*.log
+.schedule.data
+logs/

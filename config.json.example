@@ -1,0 +1,15 @@
+{
+  "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN",
+  "telegram_chat_id": "YOUR_TELEGRAM_CHAT_ID",
+  "usc_user": "YOUR_USC_USERNAME",
+  "usc_pass": "YOUR_USC_PASSWORD",
+  "calendar_webapp_url": "https://nonari.github.io/fichajes/show_calendar.html",
+  "vacations_webapp_url": "https://nonari.github.io/fichajes/vacaciones.html",
+  "vacations_info_webapp_url": "https://nonari.github.io/fichajes/vacations_info.html",
+  "daily_question_time": "09:00",
+  "auto_checkout_delay_minutes": 420,
+  "auto_checkout_random_offset_minutes": 3,
+  "max_reminders": 3,
+  "reminder_interval_minutes": 5,
+  "vacations_person_id": "YOUR_USC_INTERNAL_USER_ID"
+}

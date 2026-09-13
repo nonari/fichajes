@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vacacións</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+            --accent: #2481cc;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        /* Title for the year */
+        .year-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin: 4px 0 12px 4px;
+            color: var(--text);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            width: 100%;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 10px;
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 6px 2px;
+            text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+
+        /* First Column (Type) - 30% Width */
+        th:first-child, td:first-child {
+            width: 30%;
+            text-align: left;
+            padding-left: 6px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.1;
+        }
+
+        /* Data Columns - ~14% Width each */
+        th:not(:first-child), td:not(:first-child) {
+            width: 14%;
+        }
+
+        th {
+            background-color: #f9fafb;
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 9px;
+            text-transform: uppercase;
+            vertical-align: top;
+            line-height: 1.2;
+            padding: 10px 2px;
+        }
+
+        td { font-weight: 500; }
+
+        tr:nth-child(even) { background-color: #fafbfc; }
+        tr:last-child td { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="year-header" class="year-title">Vacacións</div>
+        <div id="content" class="card"></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        function buildTable(data) {
+            const { columns, rowNames, rows } = data;
+
+            // 1. Identify the Year column
+            const yearIndex = columns.findIndex(col =>
+                col.toLowerCase().includes("ano") || col.toLowerCase().includes("año")
+            );
+
+            // 2. Extract year value from the first row to use as title
+            if (yearIndex !== -1 && rows.length > 0) {
+                // rows[0] is the data array for the first row
+                // yearIndex - 1 because row data starts from index 0 (matching columns[1])
+                const yearValue = rows[0][yearIndex - 1];
+                document.getElementById("year-header").innerText = `Vacacións ${yearValue}`;
+            }
+
+            // 3. Filter out the Year from Headers
+            const filteredHeaders = columns.filter((_, index) => index !== yearIndex);
+
+            // 4. Build Table
+            const headerHtml = `<thead><tr>${filteredHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+
+            const bodyHtml = rows.map((row, i) => {
+                // Filter out the year value from each data row
+                const filteredRowData = row.filter((_, index) => (index + 1) !== yearIndex);
+
+                const cells = [
+                    `<td>${rowNames[i]}</td>`,
+                    ...filteredRowData.map(cell => `<td>${cell}</td>`)
+                ].join('');
+
+                return `<tr>${cells}</tr>`;
+            }).join('');
+
+            document.getElementById("content").innerHTML = `
+                <table>
+                    ${headerHtml}
+                    <tbody>${bodyHtml}</tbody>
+                </table>
+            `;
+        }
+
+        (function init() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const raw = params.get("data");
+
+                if (raw) {
+                    const data = JSON.parse(decodeURIComponent(raw));
+                    buildTable(data);
+                } else {
+                    // FULL TEST DATA - 5 ROWS + YEAR
+                    buildTable({
+                        columns: ["Tipo de vacacións", "Ano", "Núm. días xerais", "Núm. días excepcionais", "Días antigüidade", "Núm. días autorizados", "Núm. días solicitados"],
+                        rowNames: [
+                            "Asuntos particulares vinculados a festas locais",
+                            "Asuntos particulares xerais",
+                            "Asuntos parti. persoal centros sen festividade",
+                            "Asuntos parti. por festivos fin de semana",
+                            "Vacacións"
+                        ],
+                        rows: [
+                            ["2025", "2", "0", "0", "2", "0"],
+                            ["2025", "9", "0", "0", "5", "0"],
+                            ["2025", "1", "0", "0", "1", "0"],
+                            ["2025", "3", "0", "0", "3", "0"],
+                            ["2025", "22", "0", "0", "22", "0"]
+                        ]
+                    });
+                }
+            } catch (e) {
+                document.getElementById("content").innerHTML = "<p style='padding:10px;'>Erro de datos.</p>";
+            }
+        })();
+    </script>
+</body>
+</html>
