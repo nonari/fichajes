@@ -7,9 +7,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-VACATIONS_URL_TEMPLATE: Final[str] = (
-    "https://fichaxe.usc.gal/pas/persoa/{person_id}/vacacionsPermisosLicenzas"
-)
+VACATIONS_URL: Final[str] = "https://fichaxe.usc.gal/pas/vacacionsPermisosLicenzas"
 
 
 class VacationsInfoError(Exception):
@@ -31,14 +29,9 @@ def fetch_vacations_info(session) -> tuple[list[str], list[str], list[list[int]]
     entry in ``row_names``.
     """
 
-    person_id = getattr(session, "internal_user_id", "")
-    if not person_id:
-        raise VacationsInfoError(
-            "No se pudo descubrir el identificador interno del usuario en USC."
-        )
-
-    url = VACATIONS_URL_TEMPLATE.format(person_id=person_id)
-    session._ensure_access_to(url)
+    # USC redirects to the authenticated person's summary. The request form's
+    # idSolicitante belongs to a different ID space than this page's person ID.
+    session._ensure_access_to(VACATIONS_URL)
 
     try:
         table = session.wait.until(
