@@ -27,6 +27,7 @@ from fichaxebot.commands import (
 )
 from fichaxebot.config import get_config
 from fichaxebot.access_control import restrict_to_chat
+from fichaxebot.plugins import register_plugins
 from fichaxebot.utils import (
     MADRID_TZ,
     cancel_reminder,
@@ -120,8 +121,6 @@ async def _run_bot() -> None:
     app = ApplicationBuilder().token(TOKEN).build()
     restrict_to_chat(app, appconfig.telegram_chat_id)
     app.scheduler_manager = scheduler_manager
-    web_session = UscWebSession()
-    app.web_session = web_session
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("marcar", mark_command))
@@ -131,6 +130,10 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("calendario", show_calendar))
     app.add_handler(CommandHandler("vacaciones", show_vacations))
     app.add_handler(CommandHandler("vacaciones_info", show_vacations_info))
+    register_plugins(app, appconfig.plugins)
+
+    web_session = UscWebSession()
+    app.web_session = web_session
 
     app.add_handler(CallbackQueryHandler(confirm_vacation_request, pattern=r"^vacation_submit:[1-9]\d*$"))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))

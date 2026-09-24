@@ -108,3 +108,51 @@ Send commands in your private chat:
 | `/cancelar` | Cancel scheduled marks. |
 
 Restart the app after changing configuration. Run only one instance per bot token. If commands do not respond, check the process logs, token, and chat ID. If Telegram reports an existing webhook, remove it with its [deleteWebhook method](https://core.telegram.org/bots/api#deletewebhook); this app uses polling.
+
+## 4. Add command plugins
+
+Keep each plugin in a Python package under `plugins/<name>/`. Its `__init__.py`
+exports a `COMMANDS` mapping from command names (without `/`) to async callbacks:
+
+```python
+# plugins/my_plugin/__init__.py
+async def hello(update, context):
+    await update.effective_message.reply_text("Hello!")
+
+
+async def echo(update, context):
+    await update.effective_message.reply_text(" ".join(context.args) or "Usage: /echo <text>")
+
+
+COMMANDS = {"hello": hello, "echo": echo}
+```
+
+Add `"plugins": ["my_plugin"]` to `config.json` and restart the bot. Multiple
+plugins load in the order listed. Omit the setting or use `"plugins": []` to
+disable all plugins; unlisted plugins are not imported. Names must be unique
+Python package names, without paths or dots. No changes to the bot's command
+registration are needed when adding another plugin.
+
+The included `plugins/plugin1/` example is disabled by default. Enable it with
+`"plugins": ["plugin1"]`, restart, then send `/hello` or `/echo some text` in your
+configured chat.
+
+Callbacks use the usual Telegram `(update, context)` signature. Command arguments
+are available in `context.args`; existing services are available as
+`context.application.web_session` and `context.application.scheduler_manager`.
+Use `asyncio.to_thread(...)` for blocking browser calls, as the built-in commands
+do. Keep supporting code and resources in the plugin folder and use relative
+imports such as `from .commands import COMMANDS`. Access app services inside
+callbacks, since plugins are imported before the USC browser session starts.
+
+Commands contain 1–32 ASCII letters, digits, or underscores and are
+case-insensitive. Invalid exports, import failures, or names colliding with
+built-in commands or another enabled plugin stop startup with an error naming
+the plugin. Plugin commands inherit the existing restriction to
+`telegram_chat_id`.
+
+Plugins run as trusted local Python code in the bot process; the folder is an
+organizational boundary, not a sandbox. Install any extra plugin dependencies
+in the bot's environment yourself. Restart after code or configuration changes.
+With Docker, rebuild the image for code changes using
+`docker compose up -d --build`. There is no runtime installation or hot reload.

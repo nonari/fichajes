@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import keyword
+from dataclasses import dataclass, field
 from datetime import time as dtime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -28,6 +29,7 @@ class AppConfig:
     vacations_webapp_url: str
     vacations_info_webapp_url: str
     read_only: bool = False
+    plugins: list[str] = field(default_factory=list)
 
 
 _config: Optional[AppConfig] = None
@@ -74,6 +76,15 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     read_only = data.get("read_only", False)
     if not isinstance(read_only, bool):
         raise ValueError("'read_only' debe ser true o false")
+
+    plugins = data.get("plugins", [])
+    if not isinstance(plugins, list) or any(
+        not isinstance(name, str) or not name.isidentifier() or keyword.iskeyword(name)
+        for name in plugins
+    ):
+        raise ValueError("'plugins' debe ser una lista de nombres de paquetes Python, sin rutas ni puntos")
+    if len(plugins) != len(set(plugins)):
+        raise ValueError("'plugins' no puede contener nombres duplicados")
 
     missing = {key for key in [
         "telegram_token",
@@ -132,6 +143,7 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         vacations_webapp_url=vacations_webapp_url,
         vacations_info_webapp_url=vacations_info_webapp_url,
         read_only=read_only,
+        plugins=plugins,
     )
 
 

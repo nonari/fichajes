@@ -11,5 +11,6 @@
   "auto_checkout_random_offset_minutes": 3,
   "max_reminders": 3,
   "reminder_interval_minutes": 5,
-  "read_only": true
+  "read_only": true,
+  "plugins": []
 }

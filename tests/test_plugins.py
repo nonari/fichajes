@@ -1,0 +1,219 @@
+import importlib
+import json
+import sys
+import tempfile
+import textwrap
+import types
+import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+from telegram import Chat, Message, MessageEntity, Update, User
+from telegram.ext import ApplicationBuilder, CommandHandler
+
+from fichaxebot.access_control import restrict_to_chat
+from fichaxebot.config import load_config
+from fichaxebot.plugins import register_plugins
+
+
+class PluginConfigTests(unittest.TestCase):
+    def load(self, **overrides):
+        data = {
+            "telegram_token": "123456:TEST_TOKEN",
+            "telegram_chat_id": "123",
+            "usc_user": "test",
+            "usc_pass": "test",
+            **overrides,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            return load_config(path)
+
+    def test_plugins_default_to_disabled(self):
+        self.assertEqual(self.load().plugins, [])
+        self.assertEqual(self.load(plugins=[]).plugins, [])
+
+    def test_enabled_plugins_preserve_configuration_order(self):
+        self.assertEqual(self.load(plugins=["second", "first"]).plugins, ["second", "first"])
+
+    def test_plugins_must_be_a_list_of_unique_package_names(self):
+        for value in (
+            None, "plugin1", {}, 1, [None], [1], [""], ["../outside"],
+            ["nested.plugin"], ["two-words"], ["plugin1", "plugin1"], ["class"],
+        ):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "plugins"):
+                self.load(plugins=value)
+
+
+class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.plugin_dir = Path(directory.name)
+        package = types.ModuleType("plugins")
+        package.__path__ = [directory.name]
+        modules = patch.dict(sys.modules, {"plugins": package})
+        modules.start()
+        self.addCleanup(modules.stop)
+
+        self.app = ApplicationBuilder().token("123456:TEST_TOKEN").build()
+        self.app._initialized = True
+        self.app.bot._bot_user = User(456, "Test", True, username="test_bot")
+        self.app.web_session = object()
+        self.app.scheduler_manager = object()
+        restrict_to_chat(self.app, "123")
+        self.errors = []
+
+        async def capture_error(update, context):
+            self.errors.append(context.error)
+
+        self.app.add_error_handler(capture_error)
+
+    async def asyncTearDown(self):
+        self.assertEqual(self.errors, [])
+
+    def plugin(self, name, source):
+        directory = self.plugin_dir / name
+        directory.mkdir()
+        (directory / "__init__.py").write_text(textwrap.dedent(source), encoding="utf-8")
+        importlib.invalidate_caches()
+        return directory
+
+    def command_plugin(self, name, commands):
+        self.plugin(name, f"""
+            async def run(update, context):
+                context.bot_data.setdefault("calls", []).append(({name!r}, context.args))
+                context.bot_data["services"] = (
+                    context.application.web_session, context.application.scheduler_manager,
+                )
+            COMMANDS = {{command: run for command in {commands!r}}}
+        """)
+
+    async def dispatch(self, text, chat_id=123):
+        command = text.split()[0]
+        message = Message(
+            1, datetime.now(timezone.utc), Chat(chat_id, "private"),
+            from_user=User(789, "User", False), text=text,
+            entities=[MessageEntity(MessageEntity.BOT_COMMAND, 0, len(command))],
+        )
+        message.set_bot(self.app.bot)
+        await self.app.process_update(Update(1, message=message))
+
+    async def test_multiple_commands_dispatch_with_arguments_and_services(self):
+        self.command_plugin("feature", ["hello", "echo"])
+        register_plugins(self.app, ["feature"])
+
+        await self.dispatch("/hello")
+        await self.dispatch("/echo@test_bot one two")
+
+        self.assertEqual(self.app.bot_data["calls"], [("feature", []), ("feature", ["one", "two"])])
+        self.assertEqual(self.app.bot_data["services"], (self.app.web_session, self.app.scheduler_manager))
+
+    async def test_other_chats_cannot_invoke_plugins(self):
+        self.command_plugin("feature", ["hello"])
+        register_plugins(self.app, ["feature"])
+        await self.dispatch("/hello", chat_id=999)
+        self.assertNotIn("calls", self.app.bot_data)
+
+    async def test_disabled_plugins_are_not_imported_or_registered(self):
+        self.plugin("disabled", 'raise RuntimeError("must not import")')
+        register_plugins(self.app, [])
+        self.assertNotIn("plugins.disabled", sys.modules)
+        self.assertNotIn(0, self.app.handlers)
+
+        self.command_plugin("enabled", ["hello"])
+        register_plugins(self.app, ["enabled"])
+        await self.dispatch("/hello")
+        self.assertEqual(self.app.bot_data["calls"], [("enabled", [])])
+        self.assertNotIn("plugins.disabled", sys.modules)
+
+    async def test_imports_enabled_plugins_in_configuration_order(self):
+        self.plugin("first", """
+            import plugins
+            plugins.load_order = ["first"]
+            COMMANDS = {}
+        """)
+        self.plugin("second", """
+            import plugins
+            plugins.load_order.append("second")
+            COMMANDS = {}
+        """)
+        register_plugins(self.app, ["first", "second"])
+        self.assertEqual(sys.modules["plugins"].load_order, ["first", "second"])
+
+    async def test_plugin_can_import_its_supporting_modules(self):
+        directory = self.plugin("feature", "from .commands import COMMANDS")
+        (directory / "commands.py").write_text(
+            'async def run(update, context):\n    context.bot_data["result"] = "ok"\n'
+            'COMMANDS = {"hello": run}\n', encoding="utf-8",
+        )
+        register_plugins(self.app, ["feature"])
+        await self.dispatch("/hello")
+        self.assertEqual(self.app.bot_data["result"], "ok")
+
+    async def test_builtin_command_collision_is_rejected_case_insensitively(self):
+        async def builtin(update, context):
+            context.bot_data["builtin"] = True
+
+        self.app.add_handler(CommandHandler("start", builtin))
+        self.command_plugin("feature", ["hello", "START"])
+        with self.assertRaisesRegex(ValueError, "feature.*start"):
+            register_plugins(self.app, ["feature"])
+        await self.dispatch("/start")
+        await self.dispatch("/hello")
+        self.assertTrue(self.app.bot_data["builtin"])
+        self.assertNotIn("calls", self.app.bot_data)
+
+    async def test_collisions_between_plugins_leave_no_partial_registration(self):
+        self.command_plugin("first", ["hello"])
+        self.command_plugin("second", ["HELLO"])
+        with self.assertRaisesRegex(ValueError, "second.*hello"):
+            register_plugins(self.app, ["first", "second"])
+        self.assertNotIn(0, self.app.handlers)
+
+    async def test_case_insensitive_collision_within_one_plugin(self):
+        self.command_plugin("feature", ["hello", "HELLO"])
+        with self.assertRaisesRegex(ValueError, "feature.*hello"):
+            register_plugins(self.app, ["feature"])
+
+    async def test_invalid_command_names_are_rejected(self):
+        for index, name in enumerate(("", "/hello", "two words", "ñ", "x" * 33, "hello\n", 1, ("a", "b"))):
+            plugin_name = f"invalid_{index}"
+            self.command_plugin(plugin_name, [name])
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, plugin_name):
+                register_plugins(self.app, [plugin_name])
+
+    async def test_malformed_command_exports_are_rejected(self):
+        for index, source in enumerate((
+            "", "COMMANDS = []", "COMMANDS = None",
+            'COMMANDS = {"hello": 1}',
+            'def run(update, context): pass\nCOMMANDS = {"hello": run}',
+        )):
+            name = f"malformed_{index}"
+            self.plugin(name, source)
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, name):
+                register_plugins(self.app, [name])
+
+    async def test_import_errors_identify_plugin_and_preserve_cause(self):
+        self.plugin("broken", 'raise RuntimeError("plugin failed to import")')
+        for name, cause in (("missing", ModuleNotFoundError), ("broken", RuntimeError)):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, name) as caught:
+                register_plugins(self.app, [name])
+            self.assertIsInstance(caught.exception.__cause__, cause)
+
+    async def test_plugin_must_be_a_package(self):
+        (self.plugin_dir / "loose.py").write_text("COMMANDS = {}", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "loose"):
+            register_plugins(self.app, ["loose"])
+
+    async def test_startup_rejects_invalid_plugin_before_opening_browser(self):
+        config = PluginConfigTests().load(plugins=["missing"])
+        with patch("fichaxebot.config.get_config", return_value=config):
+            bot = importlib.import_module("fichaxebot.bot")
+        with patch.object(bot, "get_config", return_value=config), \
+             patch.object(bot, "UscWebSession") as browser:
+            with self.assertRaisesRegex(ValueError, "missing"):
+                await bot._run_bot()
+            browser.assert_not_called()

@@ -18,7 +18,7 @@ setup(
     version=version_ns["__version__"],
     description="Telegram bot to automate USC fichaxe check-ins",
     author="",
-    packages=find_packages(include=["fichaxebot", "fichaxebot.*"]),
+    packages=find_packages(include=["fichaxebot", "fichaxebot.*", "plugins", "plugins.*"]),
     install_requires=requirements,
     package_data={"fichaxebot": ["resources/*.html"]},
     include_package_data=True,
