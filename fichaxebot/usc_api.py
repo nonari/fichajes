@@ -24,7 +24,7 @@ from fichaxebot.scrap_functions.view_calendar import fetch_calendar_summary as _
 from fichaxebot.scrap_functions.vacation_request import (
     REQUEST_URL,
     fetch_vacation_catalog, fill_vacation_request, validate_selection,
-    save_vacation_draft, submit_vacation_draft,
+    submit_vacation_request as _submit_vacation_request,
 )
 from fichaxebot.utils import get_madrid_now
 
@@ -97,7 +97,8 @@ class UscWebSession:
             entries = _fetch_calendar_summary(self, for_vacation_selection=True)
             return {**catalog, "entries": entries}
 
-    def prepare_vacation_request(self, data: dict) -> dict:
+    def submit_vacation_request(self, data: dict) -> dict:
+        """Validate and finish the USC wizard without releasing the browser lock."""
         self._require_writes_enabled()
         with self._lock:
             # Balances and calendar may have changed while the Mini App was open.
@@ -105,12 +106,7 @@ class UscWebSession:
             entries = _fetch_calendar_summary(self, for_vacation_selection=True)
             selection = validate_selection(data, catalog, entries, get_madrid_now().date())
             fill_vacation_request(self, selection)
-            return save_vacation_draft(self, selection)
-
-    def submit_vacation_request(self, draft: dict) -> str:
-        self._require_writes_enabled()
-        with self._lock:
-            return submit_vacation_draft(self, draft)
+            return _submit_vacation_request(self, selection)
 
     def _require_writes_enabled(self) -> None:
         if self.config.read_only:

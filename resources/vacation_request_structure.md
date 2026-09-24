@@ -17,14 +17,14 @@ its `Resumo` page. Personal details and authentication data are not copied here.
    A prior-year balance can therefore fund January dates in the current year.
    USC non-working days and existing approved/requested vacations are blocked.
    Alternative shifts are marked light blue and remain selectable as full days.
-5. A summary lists the selected dates. **Crear borrador en USC** sends one
-   `vacation_request` message to the bot. Telegram `sendData` closes the Mini App;
+5. **Solicitar en USC** sends one `vacation_request_submit` message directly
+   from the date-selection screen. Telegram `sendData` closes the Mini App;
    the intermediate steps stay in the Mini App without sending messages.
 6. The bot checks the launch identifier and rechecks the USC balances/calendar,
-   fills one period per date, clicks **Seguinte**, and verifies the saved draft.
-7. Telegram shows the draft's review link and **Solicitar en USC**. Only that
-   final button invokes USC's separate submission action. The bot verifies the
-   draft again and reads back the saved state after submission.
+   fills one period per date, clicks **Seguinte**, verifies the transient USC
+   summary, and immediately clicks **Solicitar** in the same browser session.
+7. The bot reads the resulting page in place and reports USC's state and the
+   selected dates. There is no second confirmation button or review link.
 
 ## Form contract
 
@@ -38,9 +38,9 @@ its `Resumo` page. Personal details and authentication data are not copied here.
 | Applicant | `#idSolicitante`, read from the authenticated page |
 | Add period | `#engadePeriodo` / `engadirPeriodo()` |
 | Start/end | `periodos[n].dataInicio`, `periodos[n].dataFin`, `DD/MM/YYYY` |
-| Save draft | `#seguinte` |
-| Saved review | `/pas/solicitude/{id}/resumo` |
-| Submit draft | Review link ending in `/resumo/solicitar` |
+| Advance to transient summary | `#seguinte` |
+| Transient summary | `/pas/solicitude/{id}/resumo`; never reopen it |
+| Submit request | Current summary's link ending in `/resumo/solicitar` |
 
 Each selected day is a separate period with identical start and end dates.
 Hourly fractioning remains unchecked. No attempt is made to turn a partial
@@ -51,10 +51,13 @@ USC's `actualizarDias()` reads `GET /pas/obterNumeroDias` with `idTipoVacacions`
 calculating an allowance from the vacation-info table. A failed or malformed
 balance response stops the selection load; it does not become a zero balance.
 
-The saved review exposes `Estado`, `Ano`, `Tipo de solicitude`, and
+The transient summary exposes `Estado`, `Ano`, `Tipo de solicitude`, and
 `Tipo de vacacións, permisos e licenzas` as `p.h5` labels followed by values.
-`#taboaPeriodos` contains the saved start/end dates. Those values must match the
-selection before submission. The observed initial review state is `Borrador`.
+Its periods table has **no ID**, with headers `Dende`, `Ata`, and
+`Número de días`. Each row must match one selected date and exactly one full
+day before submission. USC labels the intermediate state `Borrador`, but this
+does not mean it has saved a durable draft: the wizard must finish in the same
+uninterrupted session.
 
 ## State and validation
 
@@ -63,14 +66,18 @@ only the launch ID, balance year, vacation-type ID, and dates. The bot validates
 these against server-held data and fresh USC data; client-provided labels or
 balances are not authoritative.
 
-Browser operations share a lock, so attendance jobs cannot navigate away while
-a vacation request is being read, filled, or submitted. Launch IDs and draft
-confirmation state live in Telegram's user data in memory. After a restart,
-existing USC drafts can still be opened through their review links, but old bot
-confirmation buttons expire.
+One browser lock covers fresh validation, filling the form, advancing to the
+summary, final submission, and reading the result. Attendance jobs cannot
+navigate away between those steps. The launch ID lives in Telegram's user data
+in memory and is consumed before browser work, preventing duplicate messages
+from submitting twice. Old launch IDs expire on restart.
 
 Submission is never automatically retried on an uncertain outcome. The bot
-reports the saved state or asks the user to inspect USC before repeating.
+reports USC's resulting state or asks the user to check their requests before
+repeating. It never reloads the temporary summary to resume the wizard or
+verify submission.
+
+Deploy the HTML and JavaScript together with the bot change.
 
 ## Validation
 
@@ -80,9 +87,13 @@ Run the unit tests without touching the production log:
 FICHAXE_LOG_DIR=/tmp/fichaxe-vacation-tests .venv/bin/python -m unittest discover -s tests -v
 ```
 
-A local Chrome integration check used the recorded first-form field contract,
-the downloaded datepicker resources, and the downloaded review HTML with sample
-balances/dates and a local server. It covered draft creation, full-day period
-values, review verification, final submission, repeated submission, calendar
-markings, selection limits, month navigation, and mobile layouts. It did not
-submit a request to the live USC website.
+The unit tests cover validation, the browser lock across the complete request,
+duplicate messages, unknown payload rejection, read-only mode, and uncertain
+submission without retry. The offline Chrome tests exercise the current Mini
+App script and a sanitized transient USC summary matching the recorded table
+structure. HTTP/HTTPS is blocked in those tests; they do not submit to live USC.
+
+```sh
+FICHAXE_LOG_DIR=/tmp/fichaxe-vacation-tests CHROMEDRIVER=/path/to/chromedriver \
+  .venv/bin/python -m unittest discover -s tests -p browser_vacation_flow.py -v
+```

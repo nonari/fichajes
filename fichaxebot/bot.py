@@ -4,7 +4,6 @@ from telegram import ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    CallbackQueryHandler,
     MessageHandler,
     ContextTypes,
     filters,
@@ -37,7 +36,6 @@ from fichaxebot.usc_api import UscWebSession
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import SchedulerManager
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
-from fichaxebot.webapp_controller.calendar_vacations import confirm_vacation_request
 
 logger = get_logger(__name__)
 
@@ -132,7 +130,6 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("vacaciones", show_vacations))
     app.add_handler(CommandHandler("vacaciones_info", show_vacations_info))
 
-    app.add_handler(CallbackQueryHandler(confirm_vacation_request, pattern=r"^vacation_submit:[1-9]\d*$"))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
 

@@ -41,7 +41,7 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 
 | Setting | Example/default behaviour |
 | --- | --- |
-| `read_only` | The example sets `true`: USC clock-ins, clock-outs, draft saves, and submissions are blocked. Set `false` only when you want those actions enabled. |
+| `read_only` | The example sets `true`: USC clock-ins, clock-outs, and vacation submissions are blocked. Set `false` only when you want those actions enabled. |
 | `daily_question_time` | `09:00`, in Europe/Madrid time. |
 | `auto_checkout_delay_minutes` | `420` minutes after clock-in; `0` disables automatic checkout. |
 | `auto_checkout_random_offset_minutes` | Random offset of up to `3` minutes either way; `0` disables it. |
@@ -101,7 +101,7 @@ Send commands in your private chat:
 | `/marcajes` | Show today's work records. |
 | `/calendario` | Open the calendar. |
 | `/vacaciones_info` | Open vacation balances. |
-| `/vacaciones` | Select a balance year, vacation type, and dates. Saving/submitting requires `read_only: false`. |
+| `/vacaciones` | Select a balance year, vacation type, and dates, then press **Solicitar en USC** to submit. Requires `read_only: false`. |
 | `/marcar entrada` or `/marcar salida` | Clock in/out; requires `read_only: false`. |
 | `/marcar entrada 09:00` | Schedule a mark for a future time today. |
 | `/pendientes` | List scheduled marks. |
