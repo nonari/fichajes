@@ -52,6 +52,8 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 
 Read-only mode runs each procedure up to the final USC action and then stops: clock-ins check the current state, and vacation, absence, and congress requests are filled, reviewed, and confirmed, but not submitted. Vacation and absence requests may leave a draft (*borrador*) in USC, because USC creates it when the form moves to the summary. Daily questions and scheduled-job handling still run.
 
+Scheduled marks survive restarts. Marks whose time passed while the bot was off are not executed; the startup message lists them, together with any mark that was interrupted mid-run (check USC before repeating it). The daily question is asked at most once per day, also after a restart. **Upgrading from a version before the task scheduler:** pending marks are not carried over — the old `.schedule.data` is moved to `.schedule.data.corrupt`; note and re-create them after deploying.
+
 The [congress permission API](docs/congress_api.md) supports optional PDF confirmation through a caller callback. It is not connected to chat; receipt verification remains pending.
 
 With vacation confirmation enabled, the Mini App shows **Revisar solicitud**. Telegram sends the screenshot as a document with **Confirmar y enviar** and **Cancelar** buttons. Only the person who started the request can decide. Cancellation, timeout, or failure to capture/deliver the image leaves the request unsubmitted; USC does not save a reusable draft. Open `/vacaciones` again to start over.

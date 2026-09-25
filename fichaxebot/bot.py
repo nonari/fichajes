@@ -30,14 +30,14 @@ from fichaxebot.config import get_config
 from fichaxebot.access_control import restrict_to_chat
 from fichaxebot.plugins import register_plugins
 from fichaxebot.utils import (
-    MADRID_TZ,
     cancel_reminder,
     get_madrid_now,
     is_galicia_holiday,
 )
 from fichaxebot.usc_api import UscWebSession
 from fichaxebot.logging_config import get_logger
-from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.scheduler import TaskScheduler
+from fichaxebot.tasks import marks
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
 from fichaxebot.webapp_controller.vacation_confirmation import (
     register_vacation_confirmation, stop_vacation_confirmation,
@@ -56,8 +56,7 @@ QUESTION_TIME = config.daily_question_time
 
 async def ask_for_check_in(context: ContextTypes.DEFAULT_TYPE) -> None:
     today = get_madrid_now().date()
-    scheduler_manager: SchedulerManager = context.application.scheduler_manager
-    if scheduler_manager.has_pending():
+    if marks.pending(context.application):
         logger.info("Skipping daily question because there are already scheduled marks.")
         cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
         return
@@ -116,16 +115,17 @@ async def send_check_in_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def _run_bot() -> None:
     appconfig = get_config()
-    scheduler_manager = SchedulerManager(
-        appconfig.telegram_chat_id,
-        appconfig.auto_checkout_delay,
-        appconfig.auto_checkout_random_offset_minutes,
+    scheduler = TaskScheduler(appconfig.telegram_chat_id)
+    marks.register(scheduler)
+    scheduler.register_daily(
+        "daily_question", ask_for_check_in,
+        at=QUESTION_TIME, weekdays=range(5), catch_up=True,
     )
     app = ApplicationBuilder().token(TOKEN).build()
     restrict_to_chat(app, appconfig.telegram_chat_id)
     register_vacation_confirmation(app)
     register_absences(app)
-    app.scheduler_manager = scheduler_manager
+    app.scheduler = scheduler
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("marcar", mark_command))
@@ -144,33 +144,6 @@ async def _run_bot() -> None:
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
 
-    app.job_queue.run_daily(
-        ask_for_check_in,
-        time=QUESTION_TIME.replace(tzinfo=MADRID_TZ),
-        days=(1, 2, 3, 4, 5), # Sunday-Saturday numeration
-    )
-
-    restaurados = scheduler_manager.load_from_disk(app)
-
-    now = get_madrid_now()
-    question_time = now.replace(
-        hour=QUESTION_TIME.hour,
-        minute=QUESTION_TIME.minute,
-        second=0,
-        microsecond=0,
-    )
-
-    if (
-        not scheduler_manager.has_pending()
-        and now >= question_time
-        and now.weekday() < 5 # Monday-Sunday numeration
-        and not is_galicia_holiday(now.date())
-    ):
-        logger.info("🤖 Bot started after 9:00 without scheduled marks. Triggering question.")
-        app.job_queue.run_once(ask_for_check_in, when=0)
-    else:
-        logger.info("🤖 Bot started. Waiting for question schedule.")
-
     stop_event = asyncio.Event()
 
     def handle_stop(*_):
@@ -183,15 +156,11 @@ async def _run_bot() -> None:
     await app.initialize()
     await app.start()
 
-    if restaurados:
-        lineas = []
-        for mark in restaurados:
-            fecha = mark.when.astimezone(MADRID_TZ)
-            lineas.append(f"• {mark.action.capitalize()} el {fecha.strftime('%d/%m %H:%M')}")
-        await app.bot.send_message(
-            chat_id=CHAT_ID,
-            text="♻️ Bot reiniciado. Marcajes restaurados:\n" + "\n".join(lineas),
-        )
+    report = scheduler.start(app)
+    startup_message = scheduler.startup_message(report)
+    if startup_message:
+        await app.bot.send_message(chat_id=CHAT_ID, text=startup_message)
+    logger.info("🤖 Bot started.")
 
     try:
         records = await asyncio.to_thread(web_session.get_today_records)

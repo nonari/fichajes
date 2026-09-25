@@ -4,7 +4,7 @@ from typing import Optional
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.tasks import marks
 from fichaxebot.config import get_config
 from fichaxebot.utils import (
     MADRID_TZ,
@@ -46,10 +46,9 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             )
             return
 
-    scheduler_manager: SchedulerManager = context.application.scheduler_manager
     if scheduled_time:
         try:
-            scheduler_manager.schedule(context.application, action, scheduled_time)
+            marks.schedule(context.application, action, scheduled_time)
         except ValueError as exc:  # pragma: no cover - validated earlier
             await update.message.reply_text(str(exc))
             return
@@ -70,9 +69,7 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             auto_delay = appconfig.auto_checkout_delay
             if auto_delay:
                 try:
-                    auto_mark = scheduler_manager.schedule_auto_checkout(
-                        context.application
-                    )
+                    auto_mark = marks.schedule_auto_checkout(context.application)
                 except ValueError:
                     await update.message.reply_text(
                         "⚠️ No se programó la salida porque la hora calculada no es válida."
@@ -94,7 +91,7 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     else:
         if result.success:
-            removed = scheduler_manager.cancel_by_action("salida")
+            removed = marks.cancel(context.application, "salida")
             if removed:
                 await update.message.reply_text(
                     "🗓️ Se cancelaron {} marcajes de salida programados.".format(removed)

@@ -62,7 +62,7 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
         self.app._initialized = True
         self.app.bot._bot_user = User(456, "Test", True, username="test_bot")
         self.app.web_session = object()
-        self.app.scheduler_manager = object()
+        self.app.scheduler = object()
         restrict_to_chat(self.app, "123")
         self.errors = []
 
@@ -86,7 +86,7 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
             async def run(update, context):
                 context.bot_data.setdefault("calls", []).append(({name!r}, context.args))
                 context.bot_data["services"] = (
-                    context.application.web_session, context.application.scheduler_manager,
+                    context.application.web_session, context.application.scheduler,
                 )
             COMMANDS = {{command: run for command in {commands!r}}}
         """)
@@ -101,6 +101,28 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
         message.set_bot(self.app.bot)
         await self.app.process_update(Update(1, message=message))
 
+    async def test_setup_hook_runs_after_commands_are_registered(self):
+        self.plugin("feature", """
+            async def run(update, context):
+                pass
+            COMMANDS = {"hello": run}
+            def setup(application):
+                application.bot_data["setup"] = [
+                    handler.commands for handlers in application.handlers.values()
+                    for handler in handlers if hasattr(handler, "commands")
+                ]
+        """)
+        register_plugins(self.app, ["feature"])
+        self.assertEqual(self.app.bot_data["setup"], [frozenset({"hello"})])
+
+    async def test_setup_must_be_callable_and_its_errors_name_the_plugin(self):
+        self.plugin("bad_setup", "COMMANDS = {}\nsetup = 1\n")
+        with self.assertRaisesRegex(ValueError, "bad_setup.*setup"):
+            register_plugins(self.app, ["bad_setup"])
+        self.plugin("failing_setup", 'COMMANDS = {}\ndef setup(application):\n    raise RuntimeError("no config")\n')
+        with self.assertRaisesRegex(ValueError, "failing_setup.*no config"):
+            register_plugins(self.app, ["failing_setup"])
+
     async def test_multiple_commands_dispatch_with_arguments_and_services(self):
         self.command_plugin("feature", ["hello", "echo"])
         register_plugins(self.app, ["feature"])
@@ -109,7 +131,7 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
         await self.dispatch("/echo@test_bot one two")
 
         self.assertEqual(self.app.bot_data["calls"], [("feature", []), ("feature", ["one", "two"])])
-        self.assertEqual(self.app.bot_data["services"], (self.app.web_session, self.app.scheduler_manager))
+        self.assertEqual(self.app.bot_data["services"], (self.app.web_session, self.app.scheduler))
 
     async def test_other_chats_cannot_invoke_plugins(self):
         self.command_plugin("feature", ["hello"])

@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.tasks import marks
 from fichaxebot.utils import MADRID_TZ
 
 
@@ -9,15 +9,14 @@ async def show_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not update.message:
         return
 
-    scheduler_manager: SchedulerManager = context.application.scheduler_manager
-    pending = scheduler_manager.list_pending()
+    pending = marks.pending(context.application)
     if not pending:
         await update.message.reply_text("No hay marcajes programados en el scheduler.")
         return
 
     lines = []
-    for mark in pending:
-        when = mark.when.astimezone(MADRID_TZ)
-        lines.append(f"• {mark.action.capitalize()} el {when.strftime('%d/%m a las %H:%M')}")
+    for task in pending:
+        when = task.when.astimezone(MADRID_TZ)
+        lines.append(f"• {task.payload['action'].capitalize()} el {when.strftime('%d/%m a las %H:%M')}")
 
     await update.message.reply_text("Marcajes pendientes:\n" + "\n".join(lines))

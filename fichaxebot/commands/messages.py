@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from fichaxebot.scheduler import SchedulerManager
+from fichaxebot.tasks import marks
 from fichaxebot.config import get_config
 from fichaxebot.utils import cancel_reminder, execute_check_in_async, get_madrid_now
 
@@ -20,11 +20,10 @@ async def process_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     response = update.message.text.lower().strip()
     today = get_madrid_now().date()
 
-    scheduler_manager: SchedulerManager = context.application.scheduler_manager
     session = context.application.web_session
     appconfig = get_config()
     if response in {"sí", "si"} and context.application.bot_data[AWAITING_RESPONSE_KEY]:
-        if scheduler_manager.has_pending():
+        if marks.pending(context.application):
             await update.message.reply_text(
                 "⚠️ Ya existen marcajes programados. Cancélalos con /cancelar si deseas reiniciar."
             )
@@ -45,9 +44,7 @@ async def process_response(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             auto_delay = appconfig.auto_checkout_delay
             if auto_delay:
                 try:
-                    auto_mark = scheduler_manager.schedule_auto_checkout(
-                        context.application
-                    )
+                    auto_mark = marks.schedule_auto_checkout(context.application)
                 except ValueError:
                     await update.message.reply_text(
                         "⚠️ La hora calculada para la salida ya no es válida."
