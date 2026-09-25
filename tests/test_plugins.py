@@ -15,6 +15,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 from fichaxebot.access_control import restrict_to_chat
 from fichaxebot.config import load_config
 from fichaxebot.plugins import register_plugins
+from fichaxebot.webapp_controller import router
 
 
 class PluginConfigTests(unittest.TestCase):
@@ -30,6 +31,13 @@ class PluginConfigTests(unittest.TestCase):
             path = Path(directory) / "config.json"
             path.write_text(json.dumps(data), encoding="utf-8")
             return load_config(path)
+
+    def test_plugin_config_defaults_to_empty_and_requires_objects(self):
+        self.assertEqual(self.load().plugin_config, {})
+        self.assertEqual(self.load(plugin_config={"x": {"a": 1}}).plugin_config, {"x": {"a": 1}})
+        for value in ([], "x", {"x": 1}, {"x": []}):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "plugin_config"):
+                self.load(plugin_config=value)
 
     def test_plugins_default_to_disabled(self):
         self.assertEqual(self.load().plugins, [])
@@ -122,6 +130,31 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
         self.plugin("failing_setup", 'COMMANDS = {}\ndef setup(application):\n    raise RuntimeError("no config")\n')
         with self.assertRaisesRegex(ValueError, "failing_setup.*no config"):
             register_plugins(self.app, ["failing_setup"])
+
+    async def test_webapp_controllers_are_merged_into_the_router(self):
+        self.plugin("feature", """
+            async def handle(update, context, data):
+                pass
+            COMMANDS = {}
+            WEBAPP_CONTROLLERS = {"feature_submit": handle}
+        """)
+        with patch.dict(router.WEBAPP_CONTROLLERS):
+            register_plugins(self.app, ["feature"])
+            self.assertIn("feature_submit", router.WEBAPP_CONTROLLERS)
+        self.assertNotIn("feature_submit", router.WEBAPP_CONTROLLERS)
+
+    async def test_invalid_or_colliding_webapp_controllers_are_rejected(self):
+        for index, source in enumerate((
+            "COMMANDS = {}\nWEBAPP_CONTROLLERS = []\n",
+            "async def h(u, c, d):\n    pass\nCOMMANDS = {}\nWEBAPP_CONTROLLERS = {'Bad Type': h}\n",
+            "def h(u, c, d):\n    pass\nCOMMANDS = {}\nWEBAPP_CONTROLLERS = {'feature_submit': h}\n",
+            "async def h(u, c, d):\n    pass\nCOMMANDS = {}\nWEBAPP_CONTROLLERS = {'absence_request_submit': h}\n",
+        )):
+            name = f"bad_controllers_{index}"
+            self.plugin(name, source)
+            with self.subTest(source=source), patch.dict(router.WEBAPP_CONTROLLERS), \
+                    self.assertRaisesRegex(ValueError, name):
+                register_plugins(self.app, [name])
 
     async def test_multiple_commands_dispatch_with_arguments_and_services(self):
         self.command_plugin("feature", ["hello", "echo"])

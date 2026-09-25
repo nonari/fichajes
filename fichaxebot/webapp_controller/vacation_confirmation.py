@@ -12,7 +12,7 @@ from fichaxebot.confirmation import Confirmation
 logger = get_logger(__name__)
 ACTIVE_KEY = 'active_vacation_request'
 STOPPING_KEY = 'vacation_requests_stopping'
-CALLBACK_PATTERN = r'^(?:vacation|absence)_(confirm|cancel):[0-9a-f]{32}$'
+CALLBACK_PATTERN = r'^(?:vacation|absence|congreso)_(confirm|cancel):[0-9a-f]{32}$'
 
 
 class PendingVacation(Confirmation):

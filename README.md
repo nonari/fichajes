@@ -56,6 +56,8 @@ Scheduled marks survive restarts. Marks whose time passed while the bot was off 
 
 The [congress permission API](docs/congress_api.md) supports optional PDF confirmation through a caller callback. It is not connected to chat; receipt verification remains pending.
 
+The optional [`congreso_dieta` plugin](docs/congreso_dieta.md) automates congress authorization, absence and the signed per-diem document (host installation only).
+
 With vacation confirmation enabled, the Mini App shows **Revisar solicitud**. Telegram sends the screenshot as a document with **Confirmar y enviar** and **Cancelar** buttons. Only the person who started the request can decide. Cancellation, timeout, or failure to capture/deliver the image leaves the request unsubmitted; USC does not save a reusable draft. Open `/vacaciones` again to start over.
 
 The same browser session stays locked while confirmation is pending. Scheduled marks wait and run after the transaction releases the browser; other chat actions receive a busy response. On graceful shutdown, pending confirmation is cancelled and the worker finishes before the browser closes. An already confirmed submission is allowed to finish. Restart the bot after changing these settings and deploy the updated `docs/vacaciones.html` and `docs/vacaciones.js` together with the bot.

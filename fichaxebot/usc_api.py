@@ -120,6 +120,11 @@ class UscWebSession:
         with self._lock:
             return fetch_absence_catalog(self)
 
+    def run(self, operation, *args, **kwargs):
+        """Run operation(session, *args) holding the browser lock; for plugin scrapers."""
+        with self._lock:
+            return operation(self, *args, **kwargs)
+
     def submit_absence_request(self, data: dict, confirm=None) -> dict:
         """Submit an absence; optional confirm receives PNG bytes and must return True.
 

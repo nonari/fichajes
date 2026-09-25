@@ -7,6 +7,8 @@ from collections.abc import Mapping, Sequence
 
 from telegram.ext import Application, CommandHandler
 
+from fichaxebot.webapp_controller.router import WEBAPP_CONTROLLERS
+
 
 def register_plugins(application: Application, names: Sequence[str]) -> None:
     """Register COMMANDS from configured plugins, or fail before adding any handlers.
@@ -14,7 +16,8 @@ def register_plugins(application: Application, names: Sequence[str]) -> None:
     Names are direct package names validated by load_config. Plugins export a
     mapping of command names (without '/') to async (update, context) callbacks,
     and may export setup(application), called after all commands are registered,
-    to register scheduler task kinds and recurring jobs.
+    to register scheduler task kinds and recurring jobs. Plugins may also export
+    WEBAPP_CONTROLLERS (web app data type -> async (update, context, data) handler).
     """
     used_commands = {
         command
@@ -23,6 +26,8 @@ def register_plugins(application: Application, names: Sequence[str]) -> None:
         if isinstance(handler, CommandHandler)
         for command in handler.commands
     }
+    used_types = set(WEBAPP_CONTROLLERS)
+    pending_controllers = {}
     pending = []
     setups = []
     for name in names:
@@ -47,6 +52,19 @@ def register_plugins(application: Application, names: Sequence[str]) -> None:
                 pending.append(CommandHandler(command, callback))
                 used_commands.add(command)
 
+            controllers = getattr(plugin, "WEBAPP_CONTROLLERS", {})
+            if not isinstance(controllers, Mapping):
+                raise ValueError("WEBAPP_CONTROLLERS must map web app data types to async handlers")
+            for data_type, handler in controllers.items():
+                if not isinstance(data_type, str) or not re.fullmatch(r"[a-z0-9_]{1,64}", data_type):
+                    raise ValueError(f"invalid web app data type: {data_type!r}")
+                if data_type in used_types:
+                    raise ValueError(f"web app data type '{data_type}' is already registered")
+                if not inspect.iscoroutinefunction(handler):
+                    raise ValueError(f"handler for web app data type '{data_type}' must be an async function")
+                pending_controllers[data_type] = handler
+                used_types.add(data_type)
+
             setup = getattr(plugin, "setup", None)
             if setup is not None:
                 if not callable(setup):
@@ -57,6 +75,7 @@ def register_plugins(application: Application, names: Sequence[str]) -> None:
 
     for handler in pending:
         application.add_handler(handler)
+    WEBAPP_CONTROLLERS.update(pending_controllers)
     for name, setup in setups:
         try:
             setup(application)

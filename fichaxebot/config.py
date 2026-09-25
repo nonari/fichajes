@@ -33,6 +33,7 @@ class AppConfig:
     absence_confirmation_timeout_seconds: int = 60
     read_only: bool = False
     plugins: list[str] = field(default_factory=list)
+    plugin_config: dict = field(default_factory=dict)
     vacation_confirmation_enabled: bool = False
     vacation_confirmation_timeout_seconds: int = 60
 
@@ -104,6 +105,12 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     if len(plugins) != len(set(plugins)):
         raise ValueError("'plugins' no puede contener nombres duplicados")
 
+    plugin_config = data.get("plugin_config", {})
+    if not isinstance(plugin_config, dict) or any(
+        not isinstance(name, str) or not isinstance(section, dict) for name, section in plugin_config.items()
+    ):
+        raise ValueError("'plugin_config' debe ser un objeto con una sección (objeto) por plugin")
+
     missing = {key for key in [
         "telegram_token",
         "telegram_chat_id",
@@ -166,7 +173,8 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         read_only=read_only,
         vacation_confirmation_enabled=confirmation_enabled,
         vacation_confirmation_timeout_seconds=confirmation_timeout,
-        plugins=plugins
+        plugins=plugins,
+        plugin_config=plugin_config,
     )
 
 
