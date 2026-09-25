@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitar ausencia · USC</title>
+  <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root { color-scheme: light; font-family: "Segoe UI", Roboto, sans-serif; color: #1f2933; background: #f5f7fb; }
+    * { box-sizing: border-box; } body { margin: 0; }
+    main { max-width: 960px; margin: auto; padding: 1.5rem 1rem 2rem; }
+    h1 { font-size: 1.6rem; margin-bottom: .4rem; } h2 { font-size: 1.2rem; }
+    p { line-height: 1.5; } .muted { color: #64748b; }
+    .panel { background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 8px 25px #0f172a0a; }
+    [hidden] { display: none !important; }
+    label { display: block; }
+    select, textarea, input[type=time] { padding: .7rem; font: inherit; border: 1px solid #cbd5e1; border-radius: 8px; background: white; }
+    select, textarea { width: 100%; margin: .6rem 0; } textarea { resize: vertical; }
+    button { padding: .8rem 1rem; border: 0; border-radius: 8px; font: inherit; cursor: pointer; background: #1d4ed8; color: white; }
+    button:disabled { cursor: not-allowed; opacity: .5; } button.secondary { background: #e2e8f0; color: #334155; }
+    .actions { display: flex; gap: .75rem; justify-content: space-between; margin-top: 1.25rem; }
+    .actions button:last-child { margin-left: auto; }
+    .type-option, .attachment-option { display: flex; align-items: center; gap: .75rem; padding: 1rem; margin: .6rem 0; border: 1px solid #cbd5e1; border-radius: 8px; }
+    .type-option:has(input:checked) { border-color: #1d4ed8; background: #eff6ff; }
+    .period { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; border-bottom: 1px solid #e2e8f0; padding: .8rem 0; }
+    .period strong { flex: 1 0 100%; } .period label { flex: 1; }
+    .period input { width: 100%; } .period button { padding: .5rem; }
+    .fc .fc-daygrid-day.dia-seleccionado { outline: 3px solid #b45309; outline-offset: -3px; background: #fffbeb; }
+    .fc .fc-daygrid-day:not(.fc-day-disabled) { cursor: pointer; }
+    #status { color: #b45309; min-height: 1.5rem; }
+    @media (max-width: 500px) {
+      main { padding: 1rem .6rem; } .panel { padding: .9rem; }
+      .fc .fc-toolbar-title { font-size: 1rem; } .fc .fc-button { font-size: .8rem; padding: .4rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Solicitar ausencia</h1>
+  <p class="muted">Ausencias autorizadas · USC</p>
+  <p class="muted">1. Año → 2. Tipo → 3. Fechas y documentos</p>
+  <section id="year-step" class="panel">
+    <h2>1. Elige el año</h2>
+    <p>Puedes solicitar fechas pasadas o futuras del año seleccionado. USC comprobará las condiciones de la solicitud.</p>
+    <label for="year">Año de la solicitud</label><select id="year" disabled></select>
+    <div class="actions"><button id="year-next" disabled>Elegir tipo</button></div>
+  </section>
+  <section id="type-step" class="panel" hidden>
+    <h2>2. Elige el tipo de ausencia</h2>
+    <div id="types" role="radiogroup" aria-label="Tipos de ausencia"></div>
+    <div class="actions"><button id="type-back" class="secondary">Atrás</button><button id="type-next" disabled>Elegir fechas</button></div>
+  </section>
+  <section id="calendar-step" class="panel" hidden>
+    <h2>3. Selecciona las fechas</h2>
+    <p id="selection-kind"></p>
+    <div id="calendar" aria-label="Calendario de ausencias"></div>
+    <p id="selection-count" aria-live="polite"></p>
+    <div id="periods"></div>
+    <label for="observations">Observaciones (opcional)</label><textarea id="observations" rows="3"></textarea>
+    <label class="attachment-option"><input id="attach-documents" type="checkbox">Quiero adjuntar documentos</label>
+    <p class="muted">Si marcas la casilla, enviarás los PDF en el chat después de continuar. Máximo 10 documentos de 1 MiB cada uno.</p>
+    <p id="submission-help" class="muted"></p>
+    <div class="actions"><button id="calendar-back" class="secondary">Atrás</button><button id="send" disabled>Continuar</button></div>
+  </section>
+  <p id="status" role="status" aria-live="polite"></p>
+</main>
+<script src="ausencias.js?v=1"></script>
+</body>
+</html>

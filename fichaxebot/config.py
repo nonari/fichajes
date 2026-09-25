@@ -28,6 +28,9 @@ class AppConfig:
     calendar_webapp_url: str
     vacations_webapp_url: str
     vacations_info_webapp_url: str
+    absences_webapp_url: str = ""
+    absence_confirmation_enabled: bool = True
+    absence_confirmation_timeout_seconds: int = 60
     read_only: bool = False
     plugins: list[str] = field(default_factory=list)
     vacation_confirmation_enabled: bool = False
@@ -84,6 +87,13 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     confirmation_timeout = data.get("vacation_confirmation_timeout_seconds", 60)
     if type(confirmation_timeout) is not int or confirmation_timeout <= 0:
         raise ValueError("'vacation_confirmation_timeout_seconds' debe ser un entero mayor que cero")
+
+    absence_confirmation = data.get("absence_confirmation_enabled", True)
+    if not isinstance(absence_confirmation, bool):
+        raise ValueError("'absence_confirmation_enabled' debe ser true o false")
+    absence_timeout = data.get("absence_confirmation_timeout_seconds", 60)
+    if type(absence_timeout) is not int or absence_timeout <= 0:
+        raise ValueError("'absence_confirmation_timeout_seconds' debe ser un entero mayor que cero")
 
     plugins = data.get("plugins", [])
     if not isinstance(plugins, list) or any(
@@ -150,6 +160,9 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         calendar_webapp_url=calendar_webapp_url,
         vacations_webapp_url=vacations_webapp_url,
         vacations_info_webapp_url=vacations_info_webapp_url,
+        absences_webapp_url=str(data.get("absences_webapp_url", "") or "").strip(),
+        absence_confirmation_enabled=absence_confirmation,
+        absence_confirmation_timeout_seconds=absence_timeout,
         read_only=read_only,
         vacation_confirmation_enabled=confirmation_enabled,
         vacation_confirmation_timeout_seconds=confirmation_timeout,

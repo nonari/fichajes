@@ -3,15 +3,21 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DOCS_DIR="../docs"
+DOCS_DIR="$SCRIPT_DIR/../docs"
 PORT=8000
 # Python expects True/False with capital letters
 USE_HTTPS="False"
+USE_NGROK="False"
+# Reserved ngrok domain; override with NGROK_URL=https://other.ngrok-free.dev
+NGROK_URL="${NGROK_URL:-https://nonrevertible-alene-sciential.ngrok-free.dev}"
 
-# Check for HTTPS flag
+# Check for HTTPS and ngrok flags
 for arg in "$@"; do
   if [ "$arg" == "--https" ] || [ "$arg" == "-s" ]; then
     USE_HTTPS="True"
+  fi
+  if [ "$arg" == "--ngrok" ] || [ "$arg" == "-n" ]; then
+    USE_NGROK="True"
   fi
 done
 
@@ -39,6 +45,27 @@ fi
 
 echo "📁 Serving directory: $DOCS_DIR"
 echo "🌐 $PROTOCOL://localhost:$PORT"
+
+# --- ngrok tunnel ---
+if [ "$USE_NGROK" = "True" ]; then
+  if ! command -v ngrok >/dev/null 2>&1; then
+    echo "❌ ngrok is not installed."
+    exit 1
+  fi
+  NGROK_LOG="$SCRIPT_DIR/ngrok.log"
+  ngrok http "$PROTOCOL://localhost:$PORT" --url="$NGROK_URL" \
+    --log="$NGROK_LOG" --log-format=logfmt >/dev/null &
+  NGROK_PID=$!
+  trap 'kill "$NGROK_PID" 2>/dev/null' EXIT
+  sleep 3
+  if ! kill -0 "$NGROK_PID" 2>/dev/null; then
+    echo "❌ ngrok failed to start:"
+    grep -E 'lvl=(eror|crit)' "$NGROK_LOG" | tail -1
+    exit 1
+  fi
+  echo "🚇 ngrok tunnel: $NGROK_URL (log: $NGROK_LOG)"
+fi
+
 echo "🛑 Press Ctrl+C to stop."
 echo
 

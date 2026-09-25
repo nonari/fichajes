@@ -7,7 +7,7 @@ Telegram bot for USC work records, calendars, and vacation requests. Run it on a
 ```bash
 git clone https://github.com/nonari/fichajes.git
 cd fichajes
-cp config.json.example config.json
+cp config.example.json config.json
 ```
 
 Edit `config.json` and replace these placeholders:
@@ -108,6 +108,7 @@ Send commands in your private chat:
 | `/start` | Show basic help. |
 | `/marcajes` | Show today's work records. |
 | `/calendario` | Open the calendar. |
+| `/ausencias` | Request authorized absences, optionally attach PDFs in chat, and confirm the USC screenshot. See [API and setup](docs/absence_api.md). |
 | `/vacaciones_info` | Open vacation balances. |
 | `/vacaciones` | Select a balance year, vacation type, and dates, then press **Solicitar en USC** to submit. Requires `read_only: false`. |
 | `/marcar entrada` or `/marcar salida` | Clock in/out; requires `read_only: false`. |

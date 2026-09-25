@@ -24,6 +24,8 @@ from fichaxebot.commands import (
     show_vacations_info,
     start,
 )
+from fichaxebot.commands.absences import show_absences
+from fichaxebot.webapp_controller.absences import register_absences
 from fichaxebot.config import get_config
 from fichaxebot.access_control import restrict_to_chat
 from fichaxebot.plugins import register_plugins
@@ -122,6 +124,7 @@ async def _run_bot() -> None:
     app = ApplicationBuilder().token(TOKEN).build()
     restrict_to_chat(app, appconfig.telegram_chat_id)
     register_vacation_confirmation(app)
+    register_absences(app)
     app.scheduler_manager = scheduler_manager
 
     app.add_handler(CommandHandler("start", start))
@@ -131,6 +134,7 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("pendientes", show_pending))
     app.add_handler(CommandHandler("calendario", show_calendar))
     app.add_handler(CommandHandler("vacaciones", show_vacations))
+    app.add_handler(CommandHandler("ausencias", show_absences))
     app.add_handler(CommandHandler("vacaciones_info", show_vacations_info))
     register_plugins(app, appconfig.plugins)
 

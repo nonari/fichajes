@@ -12,10 +12,13 @@ from fichaxebot.confirmation import Confirmation
 logger = get_logger(__name__)
 ACTIVE_KEY = 'active_vacation_request'
 STOPPING_KEY = 'vacation_requests_stopping'
-CALLBACK_PATTERN = r'^vacation_(confirm|cancel):[0-9a-f]{32}$'
+CALLBACK_PATTERN = r'^(?:vacation|absence)_(confirm|cancel):[0-9a-f]{32}$'
 
 
 class PendingVacation(Confirmation):
+    callback_prefix = 'vacation'
+    filename = 'solicitud-vacaciones.png'
+
     def __init__(self, application, *, chat_id, user_id, timeout):
         self.application = application
         self.chat_id = chat_id
@@ -28,11 +31,11 @@ class PendingVacation(Confirmation):
 
     async def _deliver(self, png):
         buttons = InlineKeyboardMarkup([[
-            InlineKeyboardButton('Confirmar y enviar', callback_data=f'vacation_confirm:{self.token}'),
-            InlineKeyboardButton('Cancelar', callback_data=f'vacation_cancel:{self.token}'),
+            InlineKeyboardButton('Confirmar y enviar', callback_data=f'{self.callback_prefix}_confirm:{self.token}'),
+            InlineKeyboardButton('Cancelar', callback_data=f'{self.callback_prefix}_cancel:{self.token}'),
         ]])
         self.message = await self.application.bot.send_document(
-            chat_id=self.chat_id, document=BytesIO(png), filename='solicitud-vacaciones.png',
+            chat_id=self.chat_id, document=BytesIO(png), filename=self.filename,
             caption=f'Revisa el resumen de USC. Tienes {self.timeout} segundos para confirmar el envío.',
             reply_markup=buttons,
         )
@@ -52,7 +55,9 @@ async def _handle_confirmation(update, context):
     query = update.callback_query
     pending = context.application.bot_data.get(ACTIVE_KEY)
     action, token = query.data.split(':', 1)
-    if (pending is None or token != pending.token or update.effective_chat is None
+    if (pending is None or token != pending.token
+            or action not in (f'{pending.callback_prefix}_confirm', f'{pending.callback_prefix}_cancel')
+            or update.effective_chat is None
             or update.effective_chat.id != pending.chat_id
             or update.effective_user is None or update.effective_user.id != pending.user_id):
         await query.answer('Esta confirmación no está disponible para ti.')
@@ -60,10 +65,10 @@ async def _handle_confirmation(update, context):
     if pending.deadline is None:
         await query.answer('La captura aún se está enviando. Inténtalo de nuevo.')
         return
-    if not pending.resolve(action == 'vacation_confirm'):
+    if not pending.resolve(action == f'{pending.callback_prefix}_confirm'):
         await query.answer('Esta confirmación ya ha terminado.')
         return
-    if action == 'vacation_confirm':
+    if action == f'{pending.callback_prefix}_confirm':
         await query.answer('Enviando la solicitud a USC…')
     else:
         await query.answer('Solicitud cancelada.')
@@ -74,10 +79,13 @@ async def _reject_while_busy(update, context):
     if not state.get(ACTIVE_KEY) and not state.get(STOPPING_KEY):
         return
     query = update.callback_query
+    pending = state.get(ACTIVE_KEY)
+    if not state.get(STOPPING_KEY) and getattr(pending, 'accepts_update', lambda update: False)(update):
+        return
     if not state.get(STOPPING_KEY) and query and re.fullmatch(CALLBACK_PATTERN, query.data or ''):
         return
     text = ('El bot se está apagando.' if state.get(STOPPING_KEY) else
-            'Hay una solicitud de vacaciones en curso. Termina su confirmación o espera a que finalice.')
+            'Hay una solicitud en curso. Termina su confirmación o espera a que finalice.')
     try:
         if query:
             await query.answer(text)

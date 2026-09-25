@@ -27,6 +27,10 @@ from fichaxebot.scrap_functions.vacation_request import (
     fetch_vacation_catalog, fill_vacation_request, validate_selection,
     submit_vacation_request as _submit_vacation_request,
 )
+from fichaxebot.scrap_functions.absence_request import (
+    fetch_absence_catalog, fill_absence_request, validate_selection as validate_absence_selection,
+    submit_absence_request as _submit_absence_request,
+)
 from fichaxebot.utils import get_madrid_now
 
 logger = get_logger(__name__)
@@ -112,6 +116,24 @@ class UscWebSession:
             return _submit_vacation_request(
                 self, selection, confirm=confirm if self.config.vacation_confirmation_enabled else None,
             )
+
+    def fetch_absence_selection_data(self) -> dict:
+        """Read available absence years/types without creating a USC request."""
+        with self._lock:
+            return fetch_absence_catalog(self)
+
+    def submit_absence_request(self, data: dict, confirm=None) -> dict:
+        """Submit an absence; optional confirm receives PNG bytes and must return True.
+
+        Attachments are local PDF paths. Run the whole synchronous call on one
+        worker in async applications; the callback must not use this browser.
+        """
+        self._require_writes_enabled()
+        with self._lock:
+            catalog = fetch_absence_catalog(self)
+            selection = validate_absence_selection(data, catalog)
+            fill_absence_request(self, selection)
+            return _submit_absence_request(self, selection, confirm=confirm)
 
     def submit_congress_request(self, data: dict, confirm=None) -> dict:
         """Complete the congress wizard; optional confirm receives the original PDF.
