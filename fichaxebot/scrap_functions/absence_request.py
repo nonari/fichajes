@@ -11,6 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 
+from fichaxebot.scrap_functions.commit import commit_click
 from fichaxebot.scrap_functions.vacation_request import REQUEST_URL, _capture_full_page
 from fichaxebot.utils import get_madrid_now
 
@@ -288,7 +289,7 @@ def submit_absence_request(session, selection, confirm=None):
                 or review["state"].casefold() != "borrador" or not review["canSubmit"]):
             raise AbsenceRequestError("El resumen cambió durante la confirmación. No se envió la solicitud.")
     try:
-        link.click()
+        commit_click(session, link)
         try:
             session.wait.until(EC.staleness_of(link))
         except TimeoutException:

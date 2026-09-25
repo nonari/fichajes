@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 
 from fichaxebot.logging_config import get_logger
+from fichaxebot.scrap_functions.commit import commit_click
 from fichaxebot.utils import get_madrid_now
 
 logger = get_logger(__name__)
@@ -287,7 +288,7 @@ def submit_review(session, confirm=None):
             raise CongressRequestError('La revisión de USC cambió durante la confirmación. No se envió la solicitud.')
     button = _next_button(session)
     try:
-        button.click()
+        commit_click(session, button)
     except WebDriverException:
         logger.warning('Congress submission action encountered a browser error; outcome unverified')
     # Pending: inspect a real receipt page before implementing success detection.

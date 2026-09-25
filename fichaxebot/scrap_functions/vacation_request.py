@@ -13,6 +13,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 
+from fichaxebot.scrap_functions.commit import commit_click
 from fichaxebot.utils import get_madrid_now
 
 REQUEST_URL = "https://fichaxe.usc.gal/pas/solicitude/0"
@@ -285,7 +286,7 @@ def submit_vacation_request(session, selection: dict, confirm=None) -> dict:
             raise VacationRequestError("El resumen de USC ya no está disponible. No se envió la solicitud.") from exc
     try:
         # From this point a browser error may occur after USC accepted the action.
-        link.click()
+        commit_click(session, link)
         try:
             session.wait.until(EC.staleness_of(link))
         except TimeoutException:

@@ -16,7 +16,7 @@ REVIEW = {'year':'2026','absenceTypeName':'Traslado de domicilio','requestType':
 class SubmissionTests(unittest.TestCase):
     def setUp(self):
         self.form, self.next, self.link = Mock(), Mock(), Mock()
-        self.session = SimpleNamespace(driver=Mock(), wait=Mock())
+        self.session = SimpleNamespace(driver=Mock(), wait=Mock(), config=SimpleNamespace(read_only=False))
         self.session.driver.current_url='https://fichaxe.usc.gal/pas/solicitude/123/resumo'
         self.link.get_attribute.return_value='https://fichaxe.usc.gal/pas/solicitude/123/resumo/solicitar'
         self.session.driver.find_element.side_effect=lambda by, selector: {

@@ -75,7 +75,7 @@ class ValidationTests(unittest.TestCase):
 
 class SubmissionTests(unittest.TestCase):
     def setUp(self):
-        self.session = SimpleNamespace(driver=Mock(), wait=Mock())
+        self.session = SimpleNamespace(driver=Mock(), wait=Mock(), config=SimpleNamespace(read_only=False))
         self.review = {'url': congress.REQUEST_URL + '?execution=current', 'execution': 'current',
                        'action': congress.REQUEST_URL + '?execution=current',
                        'pdf_url': congress.REQUEST_URL + '?execution=current&_eventId=obterSolicitudePdf'}

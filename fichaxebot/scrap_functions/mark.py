@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
 from fichaxebot.logging_config import get_logger
+from fichaxebot.scrap_functions.commit import ReadOnlyStop, commit_click
 
 logger = get_logger(__name__)
 
@@ -20,6 +21,7 @@ class CheckInResult:
     success: bool
     action: str
     message: str
+    dry_run: bool = False
 
 
 def _get_last_row_cells(driver) -> list[Any]:
@@ -59,7 +61,14 @@ def perform_check_in(session, action: str) -> CheckInResult:
         return CheckInResult(False, action, msg)
 
     btn = session.driver.find_element(By.ID, "novaMarcaxe")
-    btn.click()
+    try:
+        commit_click(session, btn)
+    except ReadOnlyStop:
+        return CheckInResult(
+            False, action,
+            f"🧪 Modo de solo lectura: el fichaje de {action} es posible, pero no se registró en USC.",
+            dry_run=True,
+        )
     time.sleep(3)
 
     session.driver.refresh()

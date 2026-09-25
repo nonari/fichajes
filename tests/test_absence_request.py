@@ -62,12 +62,6 @@ class SelectionTests(unittest.TestCase):
 
 
 class ApiTests(unittest.TestCase):
-    def test_read_only_rejects_without_browser_access(self):
-        session = UscWebSession.__new__(UscWebSession)
-        session.config = SimpleNamespace(read_only=True)
-        with self.assertRaises(PermissionError):
-            session.submit_absence_request({})
-
     def test_api_needs_no_telegram_and_forwards_explicit_callback(self):
         session = UscWebSession.__new__(UscWebSession)
         session.config = SimpleNamespace(read_only=False)

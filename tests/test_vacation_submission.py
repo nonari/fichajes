@@ -30,7 +30,7 @@ class SubmissionTests(unittest.TestCase):
         self.submit_link.get_attribute.return_value = (
             "https://fichaxe.usc.gal/pas/solicitude/123/resumo/solicitar"
         )
-        self.session = SimpleNamespace(driver=Mock(), wait=Mock())
+        self.session = SimpleNamespace(driver=Mock(), wait=Mock(), config=SimpleNamespace(read_only=False))
         self.session.driver.find_element.side_effect = lambda by, value: {
             (By.ID, "formularioSolicitude"): self.form,
             (By.ID, "seguinte"): self.next_button,

@@ -80,7 +80,6 @@ class UscWebSession:
         return person_id
 
     def perform_check_in(self, action: str) -> CheckInResult:
-        self._require_writes_enabled()
         with self._lock:
             return _perform_check_in(self, action)
 
@@ -104,7 +103,6 @@ class UscWebSession:
 
     def submit_vacation_request(self, data: dict, confirm=None) -> dict:
         """Validate and finish the USC wizard without releasing the browser lock."""
-        self._require_writes_enabled()
         if self.config.vacation_confirmation_enabled and confirm is None:
             raise ValueError("La confirmación visual requiere una función de confirmación.")
         with self._lock:
@@ -128,7 +126,6 @@ class UscWebSession:
         Attachments are local PDF paths. Run the whole synchronous call on one
         worker in async applications; the callback must not use this browser.
         """
-        self._require_writes_enabled()
         with self._lock:
             catalog = fetch_absence_catalog(self)
             selection = validate_absence_selection(data, catalog)
@@ -141,13 +138,8 @@ class UscWebSession:
         Run the entire call on one worker when used from an async application.
         The result remains unverified until USC receipt parsing is implemented.
         """
-        self._require_writes_enabled()
         with self._lock:
             return _submit_congress_request(self, data, confirm)
-
-    def _require_writes_enabled(self) -> None:
-        if self.config.read_only:
-            raise PermissionError("Modo de solo lectura: las escrituras en USC están desactivadas.")
 
     def close(self):
         try:

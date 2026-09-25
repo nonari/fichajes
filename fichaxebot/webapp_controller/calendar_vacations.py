@@ -4,6 +4,7 @@ import asyncio
 from fichaxebot.commands.vacations import VACATION_SELECTION_KEY
 from fichaxebot.config import get_config
 from fichaxebot.logging_config import get_logger
+from fichaxebot.scrap_functions.commit import ReadOnlyStop
 from fichaxebot.scrap_functions.vacation_request import (
     VacationRequestCancelled, VacationRequestError, VacationRequestUncertain, validate_selection,
 )
@@ -61,6 +62,11 @@ async def _submit_and_report(status, session, selection, pending=None):
             result = await asyncio.to_thread(session.submit_vacation_request, selection)
     except VacationRequestCancelled as exc:
         await status.edit_text(pending.reason if pending else str(exc))
+        return
+    except ReadOnlyStop:
+        await status.edit_text(
+            "🧪 Modo de solo lectura: la solicitud llegó al paso final, pero no se envió a USC."
+        )
         return
     except PermissionError as exc:
         await status.edit_text(f"❌ {exc}")

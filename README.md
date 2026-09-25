@@ -41,7 +41,7 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 
 | Setting | Example/default behaviour |
 | --- | --- |
-| `read_only` | The example sets `true`: USC clock-ins, clock-outs, and vacation submissions are blocked. Set `false` only when you want those actions enabled. |
+| `read_only` | The example sets `true`: clock-ins and requests run up to the final USC action, which is skipped. Set `false` only when you want those actions sent. |
 | `vacation_confirmation_enabled` | `false`: submit directly. Set `true` to receive a full-page PNG of USC's final summary in Telegram and confirm before submission. |
 | `vacation_confirmation_timeout_seconds` | `60`: positive integer seconds to decide, starting after the screenshot is delivered. |
 | `daily_question_time` | `09:00`, in Europe/Madrid time. |
@@ -50,7 +50,7 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 | `max_reminders` | Up to `3` reminders; `0` disables reminders. |
 | `reminder_interval_minutes` | `5` minutes between reminders. |
 
-Read-only mode blocks USC writes; daily questions and scheduled-job handling still run.
+Read-only mode runs each procedure up to the final USC action and then stops: clock-ins check the current state, and vacation, absence, and congress requests are filled, reviewed, and confirmed, but not submitted. Vacation and absence requests may leave a draft (*borrador*) in USC, because USC creates it when the form moves to the summary. Daily questions and scheduled-job handling still run.
 
 The [congress permission API](docs/congress_api.md) supports optional PDF confirmation through a caller callback. It is not connected to chat; receipt verification remains pending.
 
@@ -110,8 +110,8 @@ Send commands in your private chat:
 | `/calendario` | Open the calendar. |
 | `/ausencias` | Request authorized absences, optionally attach PDFs in chat, and confirm the USC screenshot. See [API and setup](docs/absence_api.md). |
 | `/vacaciones_info` | Open vacation balances. |
-| `/vacaciones` | Select a balance year, vacation type, and dates, then press **Solicitar en USC** to submit. Requires `read_only: false`. |
-| `/marcar entrada` or `/marcar salida` | Clock in/out; requires `read_only: false`. |
+| `/vacaciones` | Select a balance year, vacation type, and dates, then press **Solicitar en USC** to submit. With `read_only: true` it stops before the final submission. |
+| `/marcar entrada` or `/marcar salida` | Clock in/out; with `read_only: true` it only checks that the mark is allowed. |
 | `/marcar entrada 09:00` | Schedule a mark for a future time today. |
 | `/pendientes` | List scheduled marks. |
 | `/cancelar` | Cancel scheduled marks. |

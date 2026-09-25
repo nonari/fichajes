@@ -9,6 +9,7 @@ from telegram.ext import CallbackQueryHandler, MessageHandler, filters
 
 from fichaxebot.config import get_config
 from fichaxebot.logging_config import get_logger
+from fichaxebot.scrap_functions.commit import ReadOnlyStop
 from fichaxebot.scrap_functions.absence_request import (
     AbsenceRequestCancelled, AbsenceRequestError, AbsenceRequestUncertain,
     MAX_ATTACHMENTS, MAX_FILE_BYTES, validate_pdf, validate_selection,
@@ -216,6 +217,11 @@ async def _submit_and_report(pending):
     except AbsenceRequestCancelled as exc:
         if status:
             await status.edit_text(pending.reason if pending.decision.done() else str(exc))
+    except ReadOnlyStop:
+        if status:
+            await status.edit_text(
+                "🧪 Modo de solo lectura: la solicitud llegó al paso final, pero no se envió a USC."
+            )
     except (AbsenceRequestError, PermissionError) as exc:
         if status:
             await status.edit_text(f'{exc} Abre /ausencias para volver a intentarlo.')
