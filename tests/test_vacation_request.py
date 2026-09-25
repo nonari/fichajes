@@ -124,7 +124,7 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
     async def test_enabled_handler_returns_while_worker_waits_and_cleans_up(self):
         import asyncio
         from fichaxebot.scrap_functions.vacation_request import VacationRequestCancelled
-        from fichaxebot.webapp_controller.vacation_confirmation import ACTIVE_KEY, handle_confirmation
+        from fichaxebot.webapp_controller.vacation_confirmation import ACTIVE_KEY, _handle_confirmation
         self.config.vacation_confirmation_enabled = True
         delivered = asyncio.Event()
         document = SimpleNamespace(edit_reply_markup=AsyncMock())
@@ -144,9 +144,11 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
         pending = self.context.application.bot_data[ACTIVE_KEY]
         self.addAsyncCleanup(self.finish_pending, pending)
         await asyncio.wait_for(delivered.wait(), 1)
+        while pending.deadline is None and not pending.task.done():
+            await asyncio.sleep(0)
         self.assertFalse(pending.task.done())
         self.update.callback_query = SimpleNamespace(data=f'vacation_confirm:{pending.token}', answer=AsyncMock())
-        await handle_confirmation(self.update, self.context)
+        await _handle_confirmation(self.update, self.context)
         await asyncio.wait_for(pending.task, 1)
         self.assertNotIn(ACTIVE_KEY, self.context.application.bot_data)
         document.edit_reply_markup.assert_awaited_once_with(reply_markup=None)

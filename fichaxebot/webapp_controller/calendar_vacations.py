@@ -56,19 +56,7 @@ async def _run_confirmed_request(msg, session, selection, pending):
 async def _submit_and_report(status, session, selection, pending=None):
     try:
         if pending:
-            worker = asyncio.create_task(asyncio.to_thread(
-                session.submit_vacation_request, selection, confirm=pending.confirm_from_worker,
-            ))
-            try:
-                result = await asyncio.shield(worker)
-            except asyncio.CancelledError:
-                pending.abort('Solicitud cancelada al detener la tarea. No se envió a USC.')
-                # Keep the browser reserved until the underlying thread actually exits.
-                try:
-                    await worker
-                except Exception:
-                    logger.exception('Vacation worker finished during task cancellation')
-                raise
+            result = await pending.run(session.submit_vacation_request, selection)
         else:
             result = await asyncio.to_thread(session.submit_vacation_request, selection)
     except VacationRequestCancelled as exc:

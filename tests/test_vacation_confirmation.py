@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 from telegram.ext import ApplicationHandlerStop
 
 from fichaxebot.webapp_controller.vacation_confirmation import (
-    ACTIVE_KEY, PendingVacation, handle_confirmation, reject_while_busy, stop_vacation_confirmation,
+    ACTIVE_KEY, PendingVacation, _handle_confirmation, _reject_while_busy, stop_vacation_confirmation,
 )
 
 
@@ -28,9 +28,12 @@ class ConfirmationTests(unittest.IsolatedAsyncioTestCase):
                 data=f'vacation_{action}:{token or self.pending.token}', answer=AsyncMock()),
         )
 
-    async def start_wait(self):
+    async def start_wait(self, wait_for_delivery=True):
         task = asyncio.create_task(self.pending.request_confirmation(b'png'))
         await asyncio.sleep(0)
+        if wait_for_delivery:
+            while self.pending.deadline is None and not task.done():
+                await asyncio.sleep(0)
         return task
 
     async def test_first_owner_decision_wins_and_document_is_original(self):
@@ -38,17 +41,17 @@ class ConfirmationTests(unittest.IsolatedAsyncioTestCase):
         sent = self.app.bot.send_document.call_args.kwargs
         self.assertEqual(sent['document'].getvalue(), b'png')
         self.assertEqual(sent['filename'], 'solicitud-vacaciones.png')
-        await handle_confirmation(self.update(user=999), self.context)
-        await handle_confirmation(self.update(chat=999), self.context)
-        await handle_confirmation(self.update(token='old'), self.context)
+        await _handle_confirmation(self.update(user=999), self.context)
+        await _handle_confirmation(self.update(chat=999), self.context)
+        await _handle_confirmation(self.update(token='old'), self.context)
         self.assertFalse(task.done())
-        await handle_confirmation(self.update(), self.context)
-        await handle_confirmation(self.update(action='cancel'), self.context)
+        await _handle_confirmation(self.update(), self.context)
+        await _handle_confirmation(self.update(action='cancel'), self.context)
         self.assertTrue(await task)
 
     async def test_cancel_and_timeout(self):
         task = await self.start_wait()
-        await handle_confirmation(self.update(action='cancel'), self.context)
+        await _handle_confirmation(self.update(action='cancel'), self.context)
         self.assertFalse(await task)
         self.assertIn('cancelada', self.pending.reason)
         self.pending = PendingVacation(self.app, chat_id=123, user_id=456, timeout=0.01)
@@ -58,7 +61,7 @@ class ConfirmationTests(unittest.IsolatedAsyncioTestCase):
     async def test_deadline_checked_even_before_timeout_task_runs(self):
         task = await self.start_wait()
         self.pending.deadline = asyncio.get_running_loop().time() - 1
-        await handle_confirmation(self.update(), self.context)
+        await _handle_confirmation(self.update(), self.context)
         self.assertFalse(await task)
 
     async def test_timer_starts_only_after_delivery(self):
@@ -68,13 +71,14 @@ class ConfirmationTests(unittest.IsolatedAsyncioTestCase):
             return self.document
         self.app.bot.send_document.side_effect = slow_send
         self.pending.timeout = 0.01
-        task = await self.start_wait()
+        task = await self.start_wait(wait_for_delivery=False)
         await asyncio.sleep(0.02)
         self.assertIsNone(self.pending.deadline)
         self.assertFalse(task.done())
         delivered.set()
-        await asyncio.sleep(0)
-        await handle_confirmation(self.update(), self.context)
+        while self.pending.deadline is None and not task.done():
+            await asyncio.sleep(0)
+        await _handle_confirmation(self.update(), self.context)
         self.assertTrue(await task)
 
     async def test_send_failure_and_shutdown_abort_without_confirmation(self):
@@ -95,14 +99,14 @@ class ConfirmationTests(unittest.IsolatedAsyncioTestCase):
         self.app.bot.send_document.assert_not_called()
 
     async def test_gate_allows_confirmation_and_rejects_other_updates(self):
-        await reject_while_busy(self.update(), self.context)
+        await _reject_while_busy(self.update(), self.context)
         update = self.update()
         update.callback_query = None
         with self.assertRaises(ApplicationHandlerStop):
-            await reject_while_busy(update, self.context)
+            await _reject_while_busy(update, self.context)
         update.effective_message.reply_text.assert_awaited_once()
         self.app.bot_data.clear()
-        await reject_while_busy(update, self.context)
+        await _reject_while_busy(update, self.context)
 
 
 class TransactionLifecycleTests(unittest.IsolatedAsyncioTestCase):
@@ -141,6 +145,8 @@ class TransactionLifecycleTests(unittest.IsolatedAsyncioTestCase):
             message, SimpleNamespace(submit_vacation_request=submit), {}, self.pending))
         self.addAsyncCleanup(self.cleanup_transaction)
         await asyncio.wait_for(self.delivered.wait(), 1)
+        while self.pending.deadline is None and not self.pending.task.done():
+            await asyncio.sleep(0)
 
     async def cleanup_transaction(self):
         self.release.set()

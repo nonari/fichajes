@@ -21,6 +21,7 @@ from fichaxebot.scrap_functions.vacations_info import (
     fetch_vacations_info as _fetch_vacations_info,
 )
 from fichaxebot.scrap_functions.view_calendar import fetch_calendar_summary as _fetch_calendar_summary
+from fichaxebot.scrap_functions.congress_request import submit_congress_request as _submit_congress_request
 from fichaxebot.scrap_functions.vacation_request import (
     REQUEST_URL,
     fetch_vacation_catalog, fill_vacation_request, validate_selection,
@@ -111,6 +112,16 @@ class UscWebSession:
             return _submit_vacation_request(
                 self, selection, confirm=confirm if self.config.vacation_confirmation_enabled else None,
             )
+
+    def submit_congress_request(self, data: dict, confirm=None) -> dict:
+        """Complete the congress wizard; optional confirm receives the original PDF.
+
+        Run the entire call on one worker when used from an async application.
+        The result remains unverified until USC receipt parsing is implemented.
+        """
+        self._require_writes_enabled()
+        with self._lock:
+            return _submit_congress_request(self, data, confirm)
 
     def _require_writes_enabled(self) -> None:
         if self.config.read_only:
