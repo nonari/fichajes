@@ -14,7 +14,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 
 from fichaxebot.access_control import restrict_to_chat
 from fichaxebot.config import load_config
-from fichaxebot.plugins import register_plugins
+from fichaxebot.plugins import COMMAND_DESCRIPTIONS_KEY, PluginFailure, plugin_warning, register_plugins
 from fichaxebot.webapp_controller import router
 
 
@@ -82,6 +82,12 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.assertEqual(self.errors, [])
 
+    def load_failing(self, names, failing):
+        """Register plugins expecting exactly one failure, for `failing`; return it."""
+        failures = register_plugins(self.app, names)
+        self.assertEqual([failure.name for failure in failures], [failing])
+        return failures[0]
+
     def plugin(self, name, source):
         directory = self.plugin_dir / name
         directory.mkdir()
@@ -123,13 +129,57 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
         register_plugins(self.app, ["feature"])
         self.assertEqual(self.app.bot_data["setup"], [frozenset({"hello"})])
 
-    async def test_setup_must_be_callable_and_its_errors_name_the_plugin(self):
+    async def test_setup_must_be_callable_and_its_errors_are_reported(self):
         self.plugin("bad_setup", "COMMANDS = {}\nsetup = 1\n")
-        with self.assertRaisesRegex(ValueError, "bad_setup.*setup"):
-            register_plugins(self.app, ["bad_setup"])
+        self.assertIn("setup", self.load_failing(["bad_setup"], "bad_setup").message)
         self.plugin("failing_setup", 'COMMANDS = {}\ndef setup(application):\n    raise RuntimeError("no config")\n')
-        with self.assertRaisesRegex(ValueError, "failing_setup.*no config"):
-            register_plugins(self.app, ["failing_setup"])
+        failure = self.load_failing(["failing_setup"], "failing_setup")
+        self.assertIn("no config", failure.message)
+        self.assertIsInstance(failure.error, RuntimeError)
+
+    async def test_failed_setup_rolls_back_the_plugin_and_others_still_load(self):
+        self.plugin("broken", """
+            async def run(update, context):
+                context.bot_data["broken"] = True
+            async def handle(update, context, data):
+                pass
+            COMMANDS = {"broken": run}
+            COMMAND_DESCRIPTIONS = {"broken": "Roto"}
+            WEBAPP_CONTROLLERS = {"broken_submit": handle}
+            def setup(application):
+                from telegram.ext import CallbackQueryHandler
+                application.add_handler(CallbackQueryHandler(run, pattern="^broken$"))
+                raise ValueError("bad config")
+        """)
+        self.command_plugin("fine", ["hello"])
+        with patch.dict(router.WEBAPP_CONTROLLERS):
+            failure = self.load_failing(["broken", "fine"], "broken")
+            self.assertNotIn("broken_submit", router.WEBAPP_CONTROLLERS)
+        self.assertIn("bad config", failure.message)
+        self.assertEqual([type(handler).__name__ for handler in self.app.handlers[0]], ["CommandHandler"])
+        self.assertNotIn("broken", self.app.bot_data.get(COMMAND_DESCRIPTIONS_KEY, {}))
+        await self.dispatch("/broken")
+        await self.dispatch("/hello")
+        self.assertNotIn("broken", self.app.bot_data)
+        self.assertEqual(self.app.bot_data["calls"], [("fine", [])])
+
+    async def test_command_descriptions_are_stored_for_help(self):
+        self.plugin("feature", """
+            async def run(update, context):
+                pass
+            COMMANDS = {"Hello": run}
+            COMMAND_DESCRIPTIONS = {"Hello": "Saluda"}
+        """)
+        register_plugins(self.app, ["feature"])
+        self.assertEqual(self.app.bot_data[COMMAND_DESCRIPTIONS_KEY], {"hello": "Saluda"})
+
+    async def test_invalid_command_descriptions_are_rejected(self):
+        for index, descriptions in enumerate(({"other": "x"}, {"hello": ""}, {"hello": 1}, [])):
+            name = f"bad_descriptions_{index}"
+            self.plugin(name, f"async def run(u, c):\n    pass\nCOMMANDS = {{'hello': run}}\n"
+                              f"COMMAND_DESCRIPTIONS = {descriptions!r}\n")
+            with self.subTest(descriptions=descriptions):
+                self.load_failing([name], name)
 
     async def test_webapp_controllers_are_merged_into_the_router(self):
         self.plugin("feature", """
@@ -152,9 +202,8 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
         )):
             name = f"bad_controllers_{index}"
             self.plugin(name, source)
-            with self.subTest(source=source), patch.dict(router.WEBAPP_CONTROLLERS), \
-                    self.assertRaisesRegex(ValueError, name):
-                register_plugins(self.app, [name])
+            with self.subTest(source=source), patch.dict(router.WEBAPP_CONTROLLERS):
+                self.load_failing([name], name)
 
     async def test_multiple_commands_dispatch_with_arguments_and_services(self):
         self.command_plugin("feature", ["hello", "echo"])
@@ -214,31 +263,30 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
 
         self.app.add_handler(CommandHandler("start", builtin))
         self.command_plugin("feature", ["hello", "START"])
-        with self.assertRaisesRegex(ValueError, "feature.*start"):
-            register_plugins(self.app, ["feature"])
+        self.assertIn("start", self.load_failing(["feature"], "feature").message)
         await self.dispatch("/start")
         await self.dispatch("/hello")
         self.assertTrue(self.app.bot_data["builtin"])
         self.assertNotIn("calls", self.app.bot_data)
 
-    async def test_collisions_between_plugins_leave_no_partial_registration(self):
+    async def test_colliding_plugin_is_skipped_and_the_first_one_kept(self):
         self.command_plugin("first", ["hello"])
-        self.command_plugin("second", ["HELLO"])
-        with self.assertRaisesRegex(ValueError, "second.*hello"):
-            register_plugins(self.app, ["first", "second"])
-        self.assertNotIn(0, self.app.handlers)
+        self.command_plugin("second", ["HELLO", "other"])
+        self.assertIn("hello", self.load_failing(["first", "second"], "second").message)
+        await self.dispatch("/hello")
+        await self.dispatch("/other")
+        self.assertEqual(self.app.bot_data["calls"], [("first", [])])
 
     async def test_case_insensitive_collision_within_one_plugin(self):
         self.command_plugin("feature", ["hello", "HELLO"])
-        with self.assertRaisesRegex(ValueError, "feature.*hello"):
-            register_plugins(self.app, ["feature"])
+        self.assertIn("hello", self.load_failing(["feature"], "feature").message)
 
     async def test_invalid_command_names_are_rejected(self):
         for index, name in enumerate(("", "/hello", "two words", "ñ", "x" * 33, "hello\n", 1, ("a", "b"))):
             plugin_name = f"invalid_{index}"
             self.command_plugin(plugin_name, [name])
-            with self.subTest(name=name), self.assertRaisesRegex(ValueError, plugin_name):
-                register_plugins(self.app, [plugin_name])
+            with self.subTest(name=name):
+                self.load_failing([plugin_name], plugin_name)
 
     async def test_malformed_command_exports_are_rejected(self):
         for index, source in enumerate((
@@ -248,27 +296,35 @@ class PluginLoaderTests(unittest.IsolatedAsyncioTestCase):
         )):
             name = f"malformed_{index}"
             self.plugin(name, source)
-            with self.subTest(source=source), self.assertRaisesRegex(ValueError, name):
-                register_plugins(self.app, [name])
+            with self.subTest(source=source):
+                self.load_failing([name], name)
 
-    async def test_import_errors_identify_plugin_and_preserve_cause(self):
+    async def test_import_errors_are_reported_with_their_cause(self):
         self.plugin("broken", 'raise RuntimeError("plugin failed to import")')
         for name, cause in (("missing", ModuleNotFoundError), ("broken", RuntimeError)):
-            with self.subTest(name=name), self.assertRaisesRegex(ValueError, name) as caught:
-                register_plugins(self.app, [name])
-            self.assertIsInstance(caught.exception.__cause__, cause)
+            with self.subTest(name=name):
+                self.assertIsInstance(self.load_failing([name], name).error, cause)
 
     async def test_plugin_must_be_a_package(self):
         (self.plugin_dir / "loose.py").write_text("COMMANDS = {}", encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "loose"):
-            register_plugins(self.app, ["loose"])
+        self.assertIn("package", self.load_failing(["loose"], "loose").message)
 
-    async def test_startup_rejects_invalid_plugin_before_opening_browser(self):
+    def test_warning_names_each_failed_plugin(self):
+        self.assertIsNone(plugin_warning([]))
+        text = plugin_warning([PluginFailure("congreso_dieta", "falta line1", ValueError())])
+        self.assertIn("congreso_dieta: falta line1", text)
+        self.assertIn("config.json", text)
+
+    async def test_startup_continues_past_a_broken_plugin(self):
         config = PluginConfigTests().load(plugins=["missing"])
         with patch("fichaxebot.config.get_config", return_value=config):
             bot = importlib.import_module("fichaxebot.bot")
+
+        class ReachedBrowser(Exception):
+            pass
+
         with patch.object(bot, "get_config", return_value=config), \
-             patch.object(bot, "UscWebSession") as browser:
-            with self.assertRaisesRegex(ValueError, "missing"):
+             patch.object(bot, "UscWebSession", side_effect=ReachedBrowser):
+            with self.assertRaises(ReachedBrowser):
                 await bot._run_bot()
-            browser.assert_not_called()
+

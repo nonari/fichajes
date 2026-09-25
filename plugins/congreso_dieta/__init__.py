@@ -28,6 +28,7 @@ async def _cancel_request(update, context, data):
 
 
 COMMANDS = {"congreso_dieta": congreso_dieta}
+COMMAND_DESCRIPTIONS = {"congreso_dieta": "Congreso: autorización, ausencia y documento de dieta firmado"}
 WEBAPP_CONTROLLERS = {"congreso_dieta_new": _new_request, "congreso_dieta_cancel": _cancel_request}
 
 

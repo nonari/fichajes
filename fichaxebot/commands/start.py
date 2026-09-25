@@ -14,5 +14,5 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "👋 Bot de fichaje USC listo.\n"
         f"Preguntaré cada día laborable a las {ask_time} (hora de Madrid).\n"
-        "Comandos: /marcar entrada|salida [HH:MM], /marcajes, /pendientes, /cancelar, /vacaciones y /ausencias."
+        "Usa /ayuda para ver todos los comandos disponibles."
     )

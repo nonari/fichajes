@@ -214,7 +214,11 @@ def _fill_supervisor(session, query):
     if len(choices) != 1:
         raise CongressRequestError('La búsqueda del supervisor es ambigua. Usa su nombre completo o documento.')
     choices[0].click()
-    session.wait.until(lambda driver: driver.find_element(By.ID, 'autoCompletarNid0').get_attribute('value'))
+    # uscAutocomplete stores the chosen person's id only in its blur handler; leave the field like a person would.
+    field = session.driver.find_element(By.ID, 'autoCompletarNome0')
+    session.driver.execute_script("jQuery(arguments[0]).trigger('blur');", field)
+    session.wait.until(lambda driver: driver.find_element(By.ID, 'autoCompletarNid0').get_attribute('value'),
+                       message='USC no asignó el supervisor elegido.')
 
 
 def _fill_attachments(session, attachments):
@@ -300,25 +304,48 @@ def submit_congress_request(session, data, confirm=None):
     data = validate_request(data, get_madrid_now().date())
     if confirm is not None and not callable(confirm):
         raise CongressRequestError('confirm debe ser una función o None.')
+    # `step` names the wizard page being filled or submitted, for logs and error messages.
+    step = 'apertura del formulario'
     try:
+        logger.info('Congress wizard: %s', step)
         session._ensure_access_to(REQUEST_URL)
         session.wait.until(EC.presence_of_element_located((By.ID, 'autorizacionDatos')))
+        step = 'consentimiento'
+        logger.info('Congress wizard: %s', step)
         consent = _field(session, '#autorizacionDatos')
         if not consent.is_selected():
             consent.click()
         _advance(session, 'input[name="email"]')
+        step = 'contacto'
+        logger.info('Congress wizard: %s', step)
         for key, name in (('email', 'email'), ('phone', 'telefono')):
             if key in data['contact']:
                 _fill(session, f'input[name="{name}"]', data['contact'][key])
         _advance(session, '#idPais')
+        step = 'dirección'
+        logger.info('Congress wizard: %s', step)
         _fill_address(session, data['address'])
         _advance(session, _detail_selector(0))
+        step = 'datos del congreso'
+        logger.info('Congress wizard: %s', step)
         _fill_details(session, data)
         _advance(session, '#autoCompletarNome0')
+        step = 'supervisor'
+        logger.info('Congress wizard: %s', step)
         _fill_supervisor(session, data['supervisor_query'])
         _advance(session, '#divEngadirAnexos')
+        step = 'anexos'
+        logger.info('Congress wizard: %s', step)
         _fill_attachments(session, data['attachments'])
         _advance(session, '#pdf')
+        step = 'revisión'
+        logger.info('Congress wizard: %s', step)
         return submit_review(session, confirm)
+    except CongressRequestError as exc:
+        logger.warning('Congress wizard stopped at step %r: %s', step, exc)
+        raise CongressRequestError(f'Paso «{step}»: {exc}') from exc
     except WebDriverException as exc:
-        raise CongressRequestError('No se pudo completar el formulario de USC. No se envió la solicitud.') from exc
+        logger.exception('Congress wizard failed at step %r', step)
+        detail = ((getattr(exc, 'msg', None) or type(exc).__name__).strip().splitlines() or [type(exc).__name__])[0][:200]
+        raise CongressRequestError(f'No se pudo completar el formulario de USC en el paso «{step}» ({detail}). '
+                                   'No se envió la solicitud.') from exc

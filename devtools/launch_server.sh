@@ -81,7 +81,13 @@ PORT = $PORT
 # Now this will correctly inject True or False
 USE_HTTPS = $USE_HTTPS
 
-handler = http.server.SimpleHTTPRequestHandler
+class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+    # Mini Apps change often during development; make webviews always revalidate.
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        super().end_headers()
+
+handler = NoCacheHandler
 
 # Allow port reuse so you don't get "Address already in use" errors on restart
 socketserver.TCPServer.allow_reuse_address = True

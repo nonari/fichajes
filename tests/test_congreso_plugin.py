@@ -50,7 +50,12 @@ class PluginWiringTests(unittest.IsolatedAsyncioTestCase):
         self.app.scheduler.start(started)
         self.assertEqual([job.name for job in started.job_queue.of("daily")], [flow.DAILY_JOB])
 
-    async def test_invalid_config_stops_startup(self):
+    async def test_invalid_config_skips_the_plugin_with_a_reported_failure(self):
         self.configure({})
-        with patch.dict(router.WEBAPP_CONTROLLERS), self.assertRaisesRegex(ValueError, "congreso_dieta"):
-            register_plugins(self.app, ["congreso_dieta"])
+        with patch.dict(router.WEBAPP_CONTROLLERS):
+            failures = register_plugins(self.app, ["congreso_dieta"])
+            self.assertNotIn("congreso_dieta_new", router.WEBAPP_CONTROLLERS)
+        self.assertEqual([failure.name for failure in failures], ["congreso_dieta"])
+        self.assertIn("plugin_config.congreso_dieta", failures[0].message)
+        self.assertNotIn(plugin_module.PLUGIN_KEY, self.app.bot_data)
+        self.assertEqual(dict(self.app.handlers), {})

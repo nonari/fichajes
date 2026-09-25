@@ -180,3 +180,78 @@ class SessionTests(unittest.TestCase):
             result = session.submit_congress_request(deepcopy(DATA), confirm)
         self.assertEqual(result['status'], 'unverified')
         self.assertFalse(session._lock._is_owned())
+
+
+class WizardFailureTests(unittest.TestCase):
+    def setUp(self):
+        self.session = SimpleNamespace(driver=Mock(), wait=Mock(), _ensure_access_to=Mock(),
+                                       config=SimpleNamespace(read_only=False))
+        today = patch.object(congress, 'get_madrid_now',
+                             return_value=SimpleNamespace(date=lambda: date(2026, 9, 26)))
+        today.start()
+        self.addCleanup(today.stop)
+        for name in ('_field', '_fill', '_advance', '_fill_details', '_fill_supervisor', '_fill_attachments'):
+            patcher = patch.object(congress, name)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_browser_error_names_the_step_and_is_logged(self):
+        with patch.object(congress, '_fill_address', side_effect=WebDriverException('element not interactable')), \
+             self.assertLogs('fichaxebot.scrap_functions.congress_request', 'ERROR'), \
+             self.assertRaisesRegex(congress.CongressRequestError, 'dirección.*element not interactable'):
+            congress.submit_congress_request(self.session, deepcopy(DATA))
+
+    def test_usc_rejection_names_the_step(self):
+        # The third "next" submits the address page, where USC validates the postal code.
+        congress._advance.side_effect = [None, None, congress.CongressRequestError('Código postal inválido')]
+        with patch.object(congress, '_fill_address'), \
+             self.assertRaisesRegex(congress.CongressRequestError, 'dirección.*Código postal inválido'):
+            congress.submit_congress_request(self.session, deepcopy(DATA))
+
+
+class SupervisorTests(unittest.TestCase):
+    """USC's uscAutocomplete stores the chosen person's id only in the field's blur handler."""
+
+    def page(self, suggestions):
+        self.nid = ''
+        field = Mock()
+        field.get_attribute.return_value = ''
+        nid_field = Mock()
+        nid_field.get_attribute.side_effect = lambda name: self.nid
+        driver = Mock()
+        driver.find_element.side_effect = lambda by, value: {'autoCompletarNome0': field,
+                                                             'autoCompletarNid0': nid_field}[value]
+        driver.find_elements.return_value = suggestions
+
+        def execute_script(script, *args):
+            if 'blur' in script:
+                self.nid = '12345'
+
+        driver.execute_script.side_effect = execute_script
+
+        def until(condition, message=None):
+            result = condition(driver)
+            if not result:
+                raise congress.TimeoutException(message)
+            return result
+
+        return SimpleNamespace(driver=driver, wait=SimpleNamespace(until=until))
+
+    def suggestion(self, text):
+        option = Mock(text=text)
+        option.is_displayed.return_value = True
+        return option
+
+    def test_single_suggestion_is_chosen_and_blurred_so_usc_stores_the_id(self):
+        option = self.suggestion('MERA PÉREZ, DAVID')
+        session = self.page([option])
+        with patch.object(congress, '_fill'):
+            congress._fill_supervisor(session, 'David Mera Pérez')
+        option.click.assert_called_once_with()
+        self.assertEqual(self.nid, '12345')
+
+    def test_several_suggestions_without_an_exact_match_are_ambiguous(self):
+        session = self.page([self.suggestion('MERA PÉREZ, DAVID'), self.suggestion('MERA LÓPEZ, ANA')])
+        with patch.object(congress, '_fill'), self.assertRaisesRegex(congress.CongressRequestError, 'ambigua'):
+            congress._fill_supervisor(session, 'Mera')
+

@@ -51,7 +51,9 @@ function renderCases() {
   }));
 }
 try {
-  data = JSON.parse(decodeURIComponent(location.hash.replace(/^#data=/, '')));
+  // Telegram appends its own tgWebApp* parameters to the fragment; read only ours.
+  const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+  data = JSON.parse(params.get('data'));
 } catch {
   el('status').textContent = 'No se pudieron leer los datos. Abre /congreso_dieta de nuevo.';
 }

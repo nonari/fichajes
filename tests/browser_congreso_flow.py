@@ -25,11 +25,14 @@ class CongresoBrowserTests(unittest.TestCase):
         cls.browser.execute_cdp_cmd("Network.enable", {})
         cls.browser.execute_cdp_cmd("Network.setBlockedURLs", {"urls": ["http://*", "https://*"]})
 
+    # Telegram appends its own parameters to the Mini App URL fragment.
+    TELEGRAM_PARAMS = "&tgWebAppData=query_id%3DAAA%26user%3D%257B%257D&tgWebAppVersion=7.10&tgWebAppPlatform=android"
+
     def open_app(self, cases=()):
         html = re.sub(r"<script\b[^>]*src=[^>]+>\s*</script>", "", (ROOT / "docs/congreso.html").read_text())
         data = {"token": "launch", "today": "2026-10-01", "minStart": "2026-10-06", "cases": list(cases)}
         self.browser.get("about:blank")
-        self.browser.get("data:text/html;charset=utf-8," + quote(html) + "#data=" + quote(json.dumps(data)))
+        self.browser.get("data:text/html;charset=utf-8," + quote(html) + "#data=" + quote(json.dumps(data)) + self.TELEGRAM_PARAMS)
         self.browser.execute_script("""
             window.sent = [];
             window.Telegram = {WebApp: {ready(){}, expand(){}, sendData(value){window.sent.push(JSON.parse(value));}}};

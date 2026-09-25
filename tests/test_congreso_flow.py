@@ -202,7 +202,9 @@ class NewRequestTests(FlowTestCase):
 
     async def test_rejected_request_creates_no_case(self):
         self.session.congress_result = CongressRequestError("Supervisor ambiguo")
-        message = await self.submit()
+        with self.assertLogs("plugins.congreso_dieta.flow", "WARNING") as logs:
+            message = await self.submit()
+        self.assertIn("Supervisor ambiguo", logs.output[0])
         self.assertEqual(self.store.open_cases(), [])
         self.assertIn("Supervisor ambiguo", self.status_text(message))
 

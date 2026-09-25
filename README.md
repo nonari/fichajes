@@ -112,6 +112,7 @@ Send commands in your private chat:
 | Command | Action |
 | --- | --- |
 | `/start` | Show basic help. |
+| `/ayuda` | List every available command, including enabled plugins; the same list is Telegram's `/` menu. |
 | `/marcajes` | Show today's work records. |
 | `/calendario` | Open the calendar. |
 | `/ausencias` | Request authorized absences, optionally attach PDFs in chat, and confirm the USC screenshot. See [API and setup](docs/absence_api.md). |
@@ -161,10 +162,11 @@ imports such as `from .commands import COMMANDS`. Access app services inside
 callbacks, since plugins are imported before the USC browser session starts.
 
 Commands contain 1–32 ASCII letters, digits, or underscores and are
-case-insensitive. Invalid exports, import failures, or names colliding with
-built-in commands or another enabled plugin stop startup with an error naming
-the plugin. Plugin commands inherit the existing restriction to
-`telegram_chat_id`.
+case-insensitive. A plugin with invalid exports, an import failure, names
+colliding with built-in commands or another enabled plugin, or a failing
+`setup()` (for example an invalid `plugin_config`) is skipped: the rest of the bot
+starts normally and a Telegram message at startup names the plugin and the error.
+Plugin commands inherit the existing restriction to `telegram_chat_id`.
 
 Plugins run as trusted local Python code in the bot process; the folder is an
 organizational boundary, not a sandbox. Install any extra plugin dependencies

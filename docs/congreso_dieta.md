@@ -45,7 +45,8 @@ The global `congress_confirmation_enabled` (default `true`) and `congress_confir
 whether USC's preview PDF is confirmed in Telegram before the congress request is submitted.
 
 `congress` accepts the fields of [the congress API](congress_api.md) except the dates. The absence type is matched
-by name against USC. Invalid settings stop the bot at startup with a message naming the setting.
+by name against USC. Invalid settings disable the plugin (the rest of the bot keeps working); a Telegram message at
+startup names the setting to fix.
 
 ## Known gap
 

@@ -174,6 +174,9 @@ class UscWebSession:
             1. Try to access `url`
             2. If redirected to CAS → login
             3. Reload `url`
+            4. If CAS asks again (services such as the requests intranet demand
+               renew=true re-authentication) → log in on that page, which then
+               redirects back to the service
         """
 
         logger.info(f"Requesting protected resource: {url}")
@@ -192,25 +195,17 @@ class UscWebSession:
         else:
             logger.info("Session active — no login needed.")
 
+        if CAS_LOGIN_URL in self.driver.current_url:
+            logger.info("Service requires re-authentication → logging in on its CAS page.")
+            self._submit_credentials()
+            self.wait.until(lambda driver: CAS_LOGIN_URL not in driver.current_url,
+                            message="USC no volvió al servicio tras la reautenticación.")
+            logger.info(f"Re-authenticated; now at {self.driver.current_url}")
+
     def _perform_login(self):
-        user = self.config.usc_user
-        password = self.config.usc_pass
-
-        if not user or not password:
-            raise ValueError("Las credenciales de USC no están configuradas correctamente.")
-
         logger.info("Opening CAS login page...")
         self.driver.get(CAS_LOGIN_URL)
-
-        # CAS form fields
-        user_input = self.wait.until(EC.presence_of_element_located((By.ID, "username-input")))
-        password_input = self.driver.find_element(By.ID, "password")
-
-        user_input.send_keys(user)
-        password_input.send_keys(password)
-
-        self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        logger.info("Credentials submitted")
+        self._submit_credentials()
 
         self.wait.until(
             EC.presence_of_element_located(
@@ -219,3 +214,21 @@ class UscWebSession:
         )
 
         logger.info("Login successful")
+
+    def _submit_credentials(self):
+        """Fill and submit the CAS form on the current page."""
+        user = self.config.usc_user
+        password = self.config.usc_pass
+
+        if not user or not password:
+            raise ValueError("Las credenciales de USC no están configuradas correctamente.")
+
+        user_input = self.wait.until(EC.presence_of_element_located((By.ID, "username-input")))
+        password_input = self.driver.find_element(By.ID, "password")
+
+        user_input.clear()
+        user_input.send_keys(user)
+        password_input.send_keys(password)
+
+        self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+        logger.info("Credentials submitted")

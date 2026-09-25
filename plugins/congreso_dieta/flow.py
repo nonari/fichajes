@@ -226,6 +226,7 @@ class CongresoDieta:
             if status:
                 await status.edit_text(pending.reason if pending and pending.decision.done() else str(exc))
         except CongressRequestError as exc:
+            logger.warning("Congress request not submitted: %s", exc, exc_info=exc)
             if status:
                 await status.edit_text(f"❌ {exc}")
         except Exception:
@@ -344,9 +345,11 @@ class CongresoDieta:
         except ReadOnlyStop:
             outcome, text = "simulated", "🧪 Modo de solo lectura: la ausencia llegó al paso final, pero no se envió a USC."
         except AbsenceRequestCancelled as exc:
+            logger.info("Congress absence request cancelled: %s", exc)
             await self._ask_again(case, f"{exc} Te lo volveré a preguntar.")
             return
         except AbsenceRequestError as exc:
+            logger.warning("Congress absence request rejected: %s", exc, exc_info=exc)
             await self._ask_again(case, f"❌ {exc} Te lo volveré a preguntar.")
             return
         except AbsenceRequestUncertain as exc:

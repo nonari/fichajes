@@ -25,10 +25,12 @@ from fichaxebot.commands import (
     start,
 )
 from fichaxebot.commands.absences import show_absences
+from fichaxebot.commands.help import publish_command_menu, show_help
 from fichaxebot.webapp_controller.absences import register_absences
 from fichaxebot.config import get_config
 from fichaxebot.access_control import restrict_to_chat
-from fichaxebot.plugins import register_plugins
+from fichaxebot.plugins import plugin_warning, register_plugins
+from fichaxebot.update_log import register_update_logging
 from fichaxebot.utils import (
     cancel_reminder,
     get_madrid_now,
@@ -122,12 +124,14 @@ async def _run_bot() -> None:
         at=QUESTION_TIME, weekdays=range(5), catch_up=True,
     )
     app = ApplicationBuilder().token(TOKEN).build()
+    register_update_logging(app)
     restrict_to_chat(app, appconfig.telegram_chat_id)
     register_vacation_confirmation(app)
     register_absences(app)
     app.scheduler = scheduler
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ayuda", show_help))
     app.add_handler(CommandHandler("marcar", mark_command))
     app.add_handler(CommandHandler("cancelar", cancel))
     app.add_handler(CommandHandler("marcajes", show_records))
@@ -136,7 +140,7 @@ async def _run_bot() -> None:
     app.add_handler(CommandHandler("vacaciones", show_vacations))
     app.add_handler(CommandHandler("ausencias", show_absences))
     app.add_handler(CommandHandler("vacaciones_info", show_vacations_info))
-    register_plugins(app, appconfig.plugins)
+    plugin_failures = register_plugins(app, appconfig.plugins)
 
     web_session = UscWebSession()
     app.web_session = web_session
@@ -155,6 +159,15 @@ async def _run_bot() -> None:
 
     await app.initialize()
     await app.start()
+
+    warning = plugin_warning(plugin_failures)
+    if warning:
+        await app.bot.send_message(chat_id=CHAT_ID, text=warning)
+
+    try:
+        await publish_command_menu(app)
+    except Exception:  # noqa: BLE001 - the menu is a convenience; the bot works without it
+        logger.exception("Could not publish the Telegram command menu")
 
     report = scheduler.start(app)
     startup_message = scheduler.startup_message(report)
