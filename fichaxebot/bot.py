@@ -4,7 +4,6 @@ from telegram import ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    CallbackQueryHandler,
     MessageHandler,
     ContextTypes,
     filters,
@@ -38,7 +37,9 @@ from fichaxebot.usc_api import UscWebSession
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import SchedulerManager
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
-from fichaxebot.webapp_controller.calendar_vacations import confirm_vacation_request
+from fichaxebot.webapp_controller.vacation_confirmation import (
+    register_vacation_confirmation, stop_vacation_confirmation,
+)
 
 logger = get_logger(__name__)
 
@@ -120,6 +121,7 @@ async def _run_bot() -> None:
     )
     app = ApplicationBuilder().token(TOKEN).build()
     restrict_to_chat(app, appconfig.telegram_chat_id)
+    register_vacation_confirmation(app)
     app.scheduler_manager = scheduler_manager
 
     app.add_handler(CommandHandler("start", start))
@@ -135,7 +137,6 @@ async def _run_bot() -> None:
     web_session = UscWebSession()
     app.web_session = web_session
 
-    app.add_handler(CallbackQueryHandler(confirm_vacation_request, pattern=r"^vacation_submit:[1-9]\d*$"))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
 
@@ -210,6 +211,7 @@ async def _run_bot() -> None:
     await stop_event.wait()
 
     await app.updater.stop()
+    await stop_vacation_confirmation(app)
     await app.stop()
     await app.shutdown()
 

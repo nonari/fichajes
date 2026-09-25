@@ -13,8 +13,8 @@ class ReadOnlyTests(unittest.TestCase):
         for method, argument in [
             (session.perform_check_in, "entrada"),
             (session.perform_check_in, "salida"),
-            (session.prepare_vacation_request, {}),
             (session.submit_vacation_request, {}),
+            (session.submit_congress_request, {}),
         ]:
             with self.subTest(method=method.__name__, argument=argument):
                 with self.assertRaises(PermissionError):

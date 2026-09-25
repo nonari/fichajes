@@ -1,0 +1,136 @@
+<!doctype html><meta charset="utf-8"><title>Offline USC congress fixture</title>
+<!-- Sanitized controls from resources/congress_auth; all navigation stays local. -->
+<main id="content"></main>
+<template id="step1"><input id="autorizacionDatos" name="autorizacion" type="checkbox"></template>
+<template id="step2">
+  <p>Applicant identity supplied by USC</p>
+  <input name="telefono" value="original phone"><input name="email" value="original@example.test">
+</template>
+<template id="step3">
+  <select id="idPais" name="idPais">
+    <option value="1" data-codigo="108">España</option><option value="2" data-codigo="110">Francia</option>
+  </select>
+  <div id="divProvincias"><select id="idProvincia" name="idProvincia">
+    <option value="0"></option><option value="15">Coruña, A</option></select></div>
+  <div id="divConcellos"><select id="idConcello" name="idConcello"><option value="0"></option></select></div>
+  <div id="divDepart" hidden><input name="departamento"></div>
+  <input name="codigoPostal"><input name="enderezoLina1"><input name="enderezoLina2">
+  <textarea name="observacions"></textarea>
+</template>
+<template id="step4">
+  <textarea name="datos[Motivo da solicitude.datosXenericos0.0][Motivo da solicitude.datosXenericos0.0].nome"></textarea>
+  <input name="datos[Razón social.datosXenericos0.1][Razón social.datosXenericos0.1].nome">
+  <input type="radio" id="simple-seleccion_4" name="datos[Elexir opción.datosXenericos0.3][Elexir opción.datosXenericos0.3].codigo" value="PREDOUTORAIS">
+  <input type="radio" id="simple-seleccion_4" name="datos[Elexir opción.datosXenericos0.3][Elexir opción.datosXenericos0.3].codigo" value="Proxectos">
+  <input type="hidden" name="datos[Elexir opción.datosXenericos0.3][Elexir opción.datosXenericos0.3].nome">
+  <input type="radio" id="simple-seleccion_6" name="datos[Ten asignada docencia .datosXenericos0.5][Ten asignada docencia .datosXenericos0.5].codigo" value="1">
+  <input type="radio" id="simple-seleccion_6" name="datos[Ten asignada docencia .datosXenericos0.5][Ten asignada docencia .datosXenericos0.5].codigo" value="0">
+  <input type="hidden" name="datos[Ten asignada docencia .datosXenericos0.5][Ten asignada docencia .datosXenericos0.5].nome">
+  <div id="div_datos_6" hidden><textarea name="datos[Xustifique como queda atendida#PUNTO# .datosXenericos0.6][Xustifique como queda atendida#PUNTO# .datosXenericos0.6].nome">-</textarea></div>
+  <input readonly name="datos[Data inicial.datosXenericos0.8][Data inicial.datosXenericos0.8].nome">
+  <input readonly name="datos[Data final.datosXenericos0.9][Data final.datosXenericos0.9].nome">
+</template>
+<template id="step5">
+  <input id="autoCompletarNome0" name="asinantes[0].nome">
+  <input id="autoCompletarNid0" name="asinantes[0].nid" type="hidden">
+  <input id="autoCompletarEmail0" name="asinantes[0].email" type="hidden">
+  <ul class="ui-autocomplete"></ul>
+</template>
+<template id="step6"><div id="divDocumentos"></div><div id="divEngadirAnexos"><a href="#">Engadir anexo</a></div></template>
+<template id="step7"><div id="pdf"></div></template>
+<script>
+window.submissions = 0;
+window.saved = {};
+window.pdfMode = 'pdf';
+const field = suffix => document.querySelector(`[name$=".datosXenericos0.${suffix}"]`);
+const input = (name, value) => `<input type="hidden" name="${name}" value="${value}">`;
+let page = 0;
+function show() {
+  ++page;
+  const action = `${location.pathname}?execution=live${page}`;
+  history.replaceState(null, '', action);
+  document.getElementById('content').innerHTML = `<form id="formulario" action="${action}">
+    ${input('execution', `live${page}`)}${input('_flowExecutionKey', `live${page}`)}${input('id', '141')}
+    ${document.getElementById(`step${page}`).innerHTML}
+    <button name="_eventId_seguinte" type="submit">Seguinte</button></form>`;
+  const form = document.getElementById('formulario');
+  form.onsubmit = event => {
+    event.preventDefault();
+    if (window.formErrorAt === page) {
+      form.insertAdjacentHTML('beforeend', '<p class="alert-danger">USC rejected these values</p>'); return;
+    }
+    window.saved[page] = Object.fromEntries(new FormData(form));
+    if (page === 7) {
+      window.submissions++;
+      document.getElementById('content').innerHTML = '<p>Unknown response deliberately not interpreted as success</p>';
+    } else show();
+  };
+  if (page === 3) {
+    const towns = () => setTimeout(() => {
+      document.getElementById('divConcellos').innerHTML = '<select id="idConcello" name="idConcello"><option value="0"></option><option value="78">Santiago de Compostela</option></select>';
+    }, 20);
+    const hookProvince = () => document.getElementById('idProvincia').onchange = towns;
+    document.getElementById('idPais').onchange = () => {
+      const foreign = document.getElementById('idPais').value !== '1';
+      document.getElementById('divDepart').hidden = !foreign;
+      document.getElementById('divProvincias').hidden = foreign;
+      document.getElementById('divConcellos').hidden = foreign;
+      setTimeout(() => {
+        document.getElementById('divProvincias').innerHTML = '<select id="idProvincia" name="idProvincia"><option value="0"></option><option value="15">Coruña, A</option></select>';
+        hookProvince(); towns();
+      }, 20);
+    };
+    hookProvince();
+  }
+  if (page === 4) {
+    document.querySelectorAll('[name$=".datosXenericos0.3].codigo"]').forEach(radio => radio.onchange = () => {
+      field('3].nome').value = radio.value === 'Proxectos' ? 'Contratados de Contratos e Proxectos' : 'Contratados predoutorais';
+    });
+    document.querySelectorAll('[name$=".datosXenericos0.5].codigo"]').forEach(radio => radio.onchange = () => {
+      document.getElementById('div_datos_6').hidden = radio.value !== '1';
+      field('5].nome').value = radio.value === '1' ? 'Si' : 'Non';
+      field('6].nome').value = radio.value === '1' ? '' : '-';
+    });
+    // Minimal datepicker contract; the production call must respect readonly fields and constraints.
+    window.jQuery = node => ({
+      datepicker(command, key) {
+        if (command === 'setDate') {node.value = key; return this;}
+        if (key === 'minDate') return node === field('9].nome') && field('8].nome').value || window.minimumDate || '30/09/2026';
+        if (key === 'maxDate') return null;
+        if (key === 'onClose') return () => {};
+      },
+      trigger(name) {node.dispatchEvent(new Event(name));}
+    });
+    jQuery.datepicker = {parseDate(format, value) {
+      const [day, month, year] = value.split('/').map(Number); return new Date(year, month - 1, day);
+    }};
+  }
+  if (page === 5) {
+    const field = document.getElementById('autoCompletarNome0');
+    field.oninput = () => {
+      const menu = document.querySelector('.ui-autocomplete'); menu.replaceChildren();
+      const names = field.value === 'ambiguous' ? ['First Supervisor', 'Second Supervisor'] : ['Example Supervisor'];
+      for (const name of names) {
+        const li = document.createElement('li'); li.className = 'ui-menu-item'; li.textContent = name;
+        li.onclick = () => {
+          field.value = name; document.getElementById('autoCompletarNid0').value = 'directory-id';
+          document.getElementById('autoCompletarEmail0').value = 'supervisor@example.test'; menu.replaceChildren();
+        }; menu.append(li);
+      }
+    };
+  }
+  if (page === 6) {
+    let index = 0;
+    document.querySelector('#divEngadirAnexos a').onclick = event => {
+      event.preventDefault();
+      document.getElementById('divDocumentos').insertAdjacentHTML('beforeend',
+        `<input name="anexos[${index}].asunto"><input type="file" id="anexos_arquivo${index}" name="anexos[${index}].arquivo">`);
+      index++;
+    };
+  }
+  if (page === 7) {
+    document.getElementById('pdf').innerHTML = `<a href="${action}&_eventId=obterSolicitudePdf&mode=${window.pdfMode}">Solicitude</a>`;
+  }
+}
+show();
+</script>

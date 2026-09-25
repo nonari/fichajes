@@ -12,5 +12,8 @@
   "max_reminders": 3,
   "reminder_interval_minutes": 5,
   "read_only": true,
-  "plugins": []
+  "plugins": [],
+  "read_only": true,
+  "vacation_confirmation_enabled": false,
+  "vacation_confirmation_timeout_seconds": 60
 }

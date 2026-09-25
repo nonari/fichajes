@@ -15,7 +15,7 @@ const dateLabel = value => new Date(`${value}T12:00:00`).toLocaleDateString('es'
 const sortedDays = () => [...selectedDays].sort();
 
 function showStep(name) {
-  for (const step of ['year', 'type', 'calendar', 'summary']) el(`${step}-step`).hidden = step !== name;
+  for (const step of ['year', 'type', 'calendar']) el(`${step}-step`).hidden = step !== name;
   el('status').textContent = '';
   if (name === 'calendar') { calendar?.render(); calendar?.updateSize(); }
 }
@@ -27,7 +27,7 @@ function updateSelection() {
     cell.classList.toggle('dia-seleccionado', selectedDays.has(cell.dataset.date));
   });
   el('selection-count').textContent = `${selectedDays.size} días seleccionados · ${number(selectedType.remainingDays - selectedDays.size)} días quedarían`;
-  el('calendar-next').disabled = selectedDays.size === 0;
+  el('send').disabled = selectedDays.size === 0;
 }
 function renderTypes() {
   selectedYear = data.years.find(item => item.year === Number(el('year').value));
@@ -93,18 +93,11 @@ function openCalendar() {
   }
   updateSelection();
 }
-function showSummary() {
-  el('summary-type').textContent = `${selectedType.name} · Saldo de ${selectedYear.year}`;
-  el('summary-count').textContent = `${selectedDays.size} días · Quedarían ${number(selectedType.remainingDays - selectedDays.size)} días`;
-  el('summary-days').replaceChildren(...sortedDays().map(value => {
-    const item = document.createElement('li'); item.textContent = dateLabel(value); return item;
-  }));
-  showStep('summary');
-}
 function sendSelection() {
+  if (el('send').disabled) return;
   if (!tg?.sendData) { el('status').textContent = 'Abre esta selección desde el botón del bot en Telegram.'; return; }
   const payload = {
-    type: 'vacation_request', requestId: data.requestId, year: selectedYear.year,
+    type: 'vacation_request_submit', requestId: data.requestId, year: selectedYear.year,
     vacationTypeId: selectedType.id, days: sortedDays()
   };
   el('send').disabled = true;
@@ -115,6 +108,10 @@ try {
   const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
   data = JSON.parse(params.get('data'));
   if (!data || !Array.isArray(data.years) || !Array.isArray(data.entries) || !data.requestId) throw new Error();
+  if (data.confirmationRequired) {
+    el('send').textContent = 'Revisar solicitud';
+    el('submission-help').textContent = 'Recibirás una captura del resumen en Telegram para confirmar el envío a USC.';
+  }
   data.years = data.years.filter(item => data.today < `${item.year + 1}-03-01` &&
     (item.year === data.currentYear ||
     (item.year === data.currentYear - 1 && item.types.some(kind => kind.remainingDays > 0))));
@@ -128,9 +125,8 @@ try {
   el('type-back').onclick = () => showStep('year');
   el('type-next').onclick = openCalendar;
   el('calendar-back').onclick = () => showStep('type');
-  el('calendar-next').onclick = showSummary;
-  el('summary-back').onclick = openCalendar;
   el('send').onclick = sendSelection;
 } catch {
+  el('send').disabled = true;
   el('status').textContent = 'No se pudo cargar la selección. Abre /vacaciones de nuevo en el bot.';
 }

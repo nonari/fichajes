@@ -43,14 +43,11 @@
     .fc .dia-no-laboral, .fc .dia-vacaciones { cursor: not-allowed !important; }
     #status { color: #b45309; min-height: 1.5rem; }
     #selection-count { font-weight: 600; }
-    #summary-days { padding-left: 1.4rem; columns: 2; }
-    #summary-days li { padding: .25rem; }
     @media (max-width: 500px) {
       #app { padding: 1rem .6rem; } .panel { padding: .9rem; }
       .fc .fc-toolbar-title { font-size: 1rem; }
       .fc .fc-button { font-size: .8rem; padding: .4rem; }
       .type-option { padding: .8rem .5rem; font-size: .9rem; }
-      #summary-days { columns: 1; }
     }
   </style>
 </head>
@@ -58,7 +55,7 @@
 <main id="app">
   <h1>Solicitar vacaciones</h1>
   <p class="muted">Vacacións, permisos e licenzas</p>
-  <p id="progress" aria-live="polite">1. Año del saldo → 2. Tipo → 3. Fechas → 4. Resumen</p>
+  <p id="progress" aria-live="polite">1. Año del saldo → 2. Tipo → 3. Fechas</p>
   <section id="year-step" class="panel">
     <h2>1. Elige el año del saldo</h2>
     <p>El año indica de qué saldo se descuentan los días. Puedes usar un saldo anterior para fechas del calendario actual si USC lo permite.</p>
@@ -81,16 +78,11 @@
     </div>
     <div id="calendar" aria-label="Calendario de vacaciones"></div>
     <p id="selection-count" aria-live="polite"></p>
-    <div class="actions"><button id="calendar-back" class="secondary">Atrás</button><button id="calendar-next" disabled>Revisar selección</button></div>
-  </section>
-  <section id="summary-step" class="panel" hidden>
-    <h2>4. Revisa la selección</h2>
-    <p id="summary-type"></p><p id="summary-count"></p><ul id="summary-days"></ul>
-    <p class="muted">Se guardará un borrador con un período por día. Después podrás enviarlo desde Telegram pulsando «Solicitar en USC».</p>
-    <div class="actions"><button id="summary-back" class="secondary">Cambiar fechas</button><button id="send">Crear borrador en USC</button></div>
+    <p id="submission-help" class="muted">Al pulsar «Solicitar en USC» se enviará la solicitud para las fechas seleccionadas.</p>
+    <div class="actions"><button id="calendar-back" class="secondary">Atrás</button><button id="send" disabled>Solicitar en USC</button></div>
   </section>
   <p id="status" role="status" aria-live="polite"></p>
 </main>
-<script src="vacaciones.js"></script>
+<script src="vacaciones.js?v=3"></script>
 </body>
 </html>

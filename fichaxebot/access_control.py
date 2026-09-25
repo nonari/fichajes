@@ -12,4 +12,4 @@ def restrict_to_chat(application, chat_id):
         if chat is None or chat.id != allowed_chat_id:
             raise ApplicationHandlerStop
 
-    application.add_handler(TypeHandler(Update, check_chat, block=True), group=-1)
+    application.add_handler(TypeHandler(Update, check_chat, block=True), group=-2)

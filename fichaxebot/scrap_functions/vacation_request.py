@@ -1,10 +1,14 @@
 """Read USC vacation allowances and prepare one full-day period per date."""
 from __future__ import annotations
 
+import base64
 import math
+import re
 from datetime import date
 from typing import Any
+from urllib.parse import urlsplit
 
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
@@ -190,11 +194,16 @@ def fill_vacation_request(session, selection: dict) -> None:
 
 
 class VacationRequestUncertain(RuntimeError):
-    """USC may have saved a change; check its state instead of repeating it."""
+    """Submission may have reached USC; check its state instead of repeating it."""
 
 
 def _read_review(session) -> dict:
-    session.wait.until(EC.presence_of_element_located((By.ID, "taboaPeriodos")))
+    # The summary uses an unlabelled table, unlike the editable first form.
+    table = session.wait.until(EC.presence_of_element_located((By.XPATH,
+        "//table[thead/tr/th[normalize-space(.)='Dende']"
+        " and thead/tr/th[normalize-space(.)='Ata']"
+        " and thead/tr/th[normalize-space(.)='Número de días']]"
+    )))
     return session.driver.execute_script("""
         const field = label => {
             const node = [...document.querySelectorAll('p.h5')].find(p => p.textContent.trim() === label);
@@ -203,11 +212,11 @@ def _read_review(session) -> dict:
         return {
             state: field('Estado'), year: field('Ano'), requestType: field('Tipo de solicitude'),
             vacationTypeName: field('Tipo de vacacións, permisos e licenzas'),
-            periods: [...document.querySelectorAll('#taboaPeriodos tbody tr')].map(row =>
-                [...row.querySelectorAll('td')].slice(0, 4).map(cell => cell.textContent.trim())),
+            periods: [...arguments[0].querySelectorAll('tbody tr')].map(row =>
+                [...row.querySelectorAll('td')].map(cell => cell.textContent.trim())),
             canSubmit: !!document.querySelector('a[href$="/resumo/solicitar"]')
         };
-    """)
+    """, table)
 
 
 def _verify_review(review: dict, selection: dict) -> None:
@@ -216,66 +225,76 @@ def _verify_review(review: dict, selection: dict) -> None:
     if (review.get("year") != str(selection["year"])
             or review.get("requestType") != "Vacacións, permisos e licenzas"
             or review.get("vacationTypeName") != selection["vacationTypeName"]
-            or sorted(row[0] for row in periods if len(row) >= 2) != expected
-            or any(len(row) < 2 or row[0] != row[1]
-                   or any(value not in ("", "-") for value in row[2:4]) for row in periods)):
+            or sorted(row[0] for row in periods if len(row) == 3) != expected
+            or any(len(row) != 3 or row[0] != row[1] or _number(row[2]) != 1 for row in periods)):
         raise VacationRequestError("El resumen de USC no coincide con el año, tipo o fechas seleccionados.")
 
 
-def save_vacation_draft(session, selection: dict) -> dict:
-    """Seguinte saves a draft and redirects to /solicitude/{id}/resumo."""
-    import re
-    from urllib.parse import urlsplit
-    from selenium.common.exceptions import TimeoutException
+class VacationRequestCancelled(RuntimeError):
+    """The transient request was abandoned before the final USC action."""
 
+
+def _capture_full_page(session) -> bytes:
+    size = session.driver.execute_cdp_cmd("Page.getLayoutMetrics", {})["cssContentSize"]
+    screenshot = session.driver.execute_cdp_cmd("Page.captureScreenshot", {
+        "format": "png", "captureBeyondViewport": True,
+        "clip": {"x": 0, "y": 0, "width": size["width"], "height": size["height"], "scale": 1},
+    })
+    return base64.b64decode(screenshot["data"], validate=True)
+
+
+def submit_vacation_request(session, selection: dict, confirm=None) -> dict:
+    """Advance and submit the filled wizard in place, without reopening its pages."""
     form = session.driver.find_element(By.ID, "formularioSolicitude")
     session.driver.find_element(By.ID, "seguinte").click()
     try:
         session.wait.until(EC.staleness_of(form))
         session.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
-        parts = urlsplit(session.driver.current_url)
-        match = re.fullmatch(r"/pas/solicitude/([1-9]\d*)/resumo/?", parts.path)
-        if not match:
-            errors = [element.text.strip() for element in session.driver.find_elements(
-                By.CSS_SELECTOR, '.fielderrloc, .alert-danger') if element.is_displayed() and element.text.strip()]
-            if errors and session.driver.find_elements(By.ID, "formularioSolicitude"):
-                raise VacationRequestError("USC no aceptó las fechas: " + " · ".join(errors))
-            raise VacationRequestUncertain("No se pudo confirmar el borrador. Revisa las solicitudes en USC antes de repetirlo.")
         review = _read_review(session)
-        _verify_review(review, selection)
-        if review["state"].casefold() != "borrador" or not review["canSubmit"]:
-            raise VacationRequestUncertain("USC no mostró el borrador esperado. Revisa la solicitud en USC.")
-        return {**selection, "id": match.group(1),
-                "reviewUrl": f"https://fichaxe.usc.gal/pas/solicitude/{match.group(1)}/resumo"}
     except TimeoutException as exc:
-        raise VacationRequestUncertain("USC no confirmó si guardó el borrador. Revisa las solicitudes antes de repetirlo.") from exc
-
-
-def submit_vacation_draft(session, draft: dict) -> str:
-    """Only called after the user presses the bot's final Solicitar button."""
-    from selenium.common.exceptions import TimeoutException
-
-    session._ensure_access_to(draft["reviewUrl"])
-    review = _read_review(session)
-    _verify_review(review, draft)
-    if not review["state"]:
-        raise VacationRequestError("No se pudo leer el estado de la solicitud en USC.")
-    if review["state"].casefold() != "borrador":
-        return review["state"]  # Already processed: never click Solicitar again.
-    if not review["canSubmit"]:
-        raise VacationRequestError("USC no permite solicitar este borrador.")
+        errors = [element.text.strip() for element in session.driver.find_elements(
+            By.CSS_SELECTOR, '.fielderrloc, .alert-danger') if element.is_displayed() and element.text.strip()]
+        detail = " · ".join(errors) or "No se pudo verificar el resumen de USC. No se ha enviado la solicitud."
+        raise VacationRequestError(detail) from exc
+    _verify_review(review, selection)
+    if review["state"].casefold() != "borrador" or not review["canSubmit"]:
+        raise VacationRequestError("USC no permite enviar la solicitud desde este paso.")
     link = session.driver.find_element(By.CSS_SELECTOR, 'a[href$="/resumo/solicitar"]')
-    link.click()
+    match = re.fullmatch(r"/pas/solicitude/([1-9]\d*)/resumo/solicitar", urlsplit(link.get_attribute("href")).path)
+    if not match:
+        raise VacationRequestError("No se pudo identificar la acción de envío de USC.")
+    if confirm is not None:
+        review_url = session.driver.current_url
+        action_url = link.get_attribute("href")
+        try:
+            screenshot = _capture_full_page(session)
+        except Exception as exc:
+            raise VacationRequestError("No se pudo capturar el resumen. No se envió la solicitud.") from exc
+        if not confirm(screenshot):
+            raise VacationRequestCancelled("Solicitud cancelada. No se envió a USC.")
+        # Inspect the same live wizard, without navigating or retrying the request.
+        try:
+            review = _read_review(session)
+            _verify_review(review, selection)
+            link = session.driver.find_element(By.CSS_SELECTOR, 'a[href$="/resumo/solicitar"]')
+            if (session.driver.current_url != review_url
+                    or link.get_attribute("href") != action_url
+                    or review["state"].casefold() != "borrador" or not review["canSubmit"]):
+                raise VacationRequestError("El resumen de USC cambió durante la confirmación. No se envió la solicitud.")
+        except WebDriverException as exc:
+            raise VacationRequestError("El resumen de USC ya no está disponible. No se envió la solicitud.") from exc
     try:
-        session.wait.until(EC.staleness_of(link))
-    except TimeoutException:
-        pass  # Read the saved state; do not repeat the action on a timeout.
-    try:
-        session._ensure_access_to(draft["reviewUrl"])
+        # From this point a browser error may occur after USC accepted the action.
+        link.click()
+        try:
+            session.wait.until(EC.staleness_of(link))
+        except TimeoutException:
+            pass  # Inspect the current page, but never repeat the click or reload.
+        session.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
         updated = _read_review(session)
-        _verify_review(updated, draft)
-        if not updated["state"] or updated["state"].casefold() == "borrador":
-            raise VacationRequestUncertain("USC no confirmó el envío. Revisa el borrador antes de volver a solicitarlo.")
-        return updated["state"]
-    except TimeoutException as exc:
-        raise VacationRequestUncertain("No se pudo comprobar el estado tras solicitar. Revisa la solicitud en USC.") from exc
+        _verify_review(updated, selection)
+        if not updated["state"] or updated["state"].casefold() == "borrador" or updated["canSubmit"]:
+            raise VacationRequestUncertain("USC no confirmó el envío. Comprueba tus solicitudes antes de repetirlo.")
+        return {**selection, "id": match.group(1), "state": updated["state"]}
+    except (WebDriverException, VacationRequestError) as exc:
+        raise VacationRequestUncertain("No se pudo confirmar el envío. Comprueba tus solicitudes en USC antes de repetirlo.") from exc

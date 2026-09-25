@@ -3,13 +3,10 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from fichaxebot.config import get_config
-from fichaxebot.webapp_controller.calendar_vacations import handle_legacy_selection, handle_vacation_request
+from fichaxebot.webapp_controller.calendar_vacations import handle_vacation_request
 
 WEBAPP_CONTROLLERS = {
-    "vacation_request": handle_vacation_request,
-    "calendar_selection": handle_legacy_selection,
-    "calendar_final": handle_legacy_selection,
-    "calendar_final_submit": handle_legacy_selection,
+    "vacation_request_submit": handle_vacation_request,
 }
 
 

@@ -1,14 +1,12 @@
 import unittest
 from datetime import date
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from fichaxebot.scrap_functions.vacation_request import (
-    VacationRequestError, build_catalog, validate_selection, _verify_review,
+    VacationRequestError, VacationRequestUncertain, build_catalog, validate_selection, _verify_review,
 )
-from fichaxebot.webapp_controller.calendar_vacations import (
-    handle_vacation_request, confirm_vacation_request, VACATION_DRAFTS_KEY,
-)
+from fichaxebot.webapp_controller.calendar_vacations import handle_vacation_request
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
 from fichaxebot.commands.vacations import VACATION_SELECTION_KEY, _build_vacations_url
 from urllib.parse import urlsplit, parse_qs
@@ -105,40 +103,87 @@ class VacationRequestTests(unittest.TestCase):
 
 class ControllerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        self.config = SimpleNamespace(vacation_confirmation_enabled=False, vacation_confirmation_timeout_seconds=60)
+        config_patch = patch('fichaxebot.webapp_controller.calendar_vacations.get_config', return_value=self.config)
+        config_patch.start()
+        self.addCleanup(config_patch.stop)
         self.message = SimpleNamespace(reply_text=AsyncMock())
         self.message.reply_text.return_value = SimpleNamespace(edit_text=AsyncMock())
-        self.update = SimpleNamespace(effective_message=self.message, effective_chat=SimpleNamespace(id=123))
+        self.update = SimpleNamespace(effective_message=self.message, effective_chat=SimpleNamespace(id=123),
+                                      effective_user=SimpleNamespace(id=456))
         self.snapshot = {**build_catalog(FORM, balances(), TODAY), "entries": [], "requestId": "valid"}
         self.context = SimpleNamespace(user_data={VACATION_SELECTION_KEY: self.snapshot},
-                                       application=SimpleNamespace(web_session=object()))
-        self.payload = {"type": "vacation_request", "requestId": "valid", "year": 2025,
+                                       application=SimpleNamespace(web_session=object(), bot_data={}))
+        self.payload = {"type": "vacation_request_submit", "requestId": "valid", "year": 2025,
                         "vacationTypeId": "16", "days": ["2026-01-12"]}
 
     async def test_stale_launch_does_not_touch_browser(self):
         await handle_vacation_request(self.update, self.context, {**self.payload, "requestId": "old"})
         self.assertIn("caducado", self.message.reply_text.call_args.args[0])
 
+    async def test_enabled_handler_returns_while_worker_waits_and_cleans_up(self):
+        import asyncio
+        from fichaxebot.scrap_functions.vacation_request import VacationRequestCancelled
+        from fichaxebot.webapp_controller.vacation_confirmation import ACTIVE_KEY, _handle_confirmation
+        self.config.vacation_confirmation_enabled = True
+        delivered = asyncio.Event()
+        document = SimpleNamespace(edit_reply_markup=AsyncMock())
+        async def send_document(**kwargs):
+            delivered.set()
+            return document
+        self.context.application.bot = SimpleNamespace(send_document=send_document)
+        self.context.application.create_task = lambda coro, **kwargs: asyncio.create_task(coro)
+        def submit(selection, confirm):
+            if not confirm(b'png'):
+                raise VacationRequestCancelled()
+            return {**selection, 'id': '123', 'state': 'Solicitada'}
+        self.context.application.web_session = SimpleNamespace(submit_vacation_request=submit)
+        with patch('fichaxebot.webapp_controller.calendar_vacations.get_madrid_now') as now:
+            now.return_value.date.return_value = TODAY
+            await asyncio.wait_for(handle_vacation_request(self.update, self.context, self.payload), 1)
+        pending = self.context.application.bot_data[ACTIVE_KEY]
+        self.addAsyncCleanup(self.finish_pending, pending)
+        await asyncio.wait_for(delivered.wait(), 1)
+        while pending.deadline is None and not pending.task.done():
+            await asyncio.sleep(0)
+        self.assertFalse(pending.task.done())
+        self.update.callback_query = SimpleNamespace(data=f'vacation_confirm:{pending.token}', answer=AsyncMock())
+        await _handle_confirmation(self.update, self.context)
+        await asyncio.wait_for(pending.task, 1)
+        self.assertNotIn(ACTIVE_KEY, self.context.application.bot_data)
+        document.edit_reply_markup.assert_awaited_once_with(reply_markup=None)
+        self.assertIn('Solicitada', self.message.reply_text.return_value.edit_text.call_args.args[0])
+
+    async def finish_pending(self, pending):
+        pending.abort('test cleanup')
+        await pending.task
+
     async def test_success_consumes_token_and_duplicate_is_rejected(self):
         selection = {**validate_selection(self.payload, self.snapshot, [], TODAY),
-                     "id": "123", "reviewUrl": "https://fichaxe.usc.gal/pas/solicitude/123/resumo"}
-        session = SimpleNamespace(prepare_vacation_request=lambda data: selection)
+                     "id": "123", "state": "Solicitada"}
+        session = SimpleNamespace(submit_vacation_request=Mock(return_value=selection))
         self.context.application.web_session = session
         with patch('fichaxebot.webapp_controller.calendar_vacations.get_madrid_now') as now:
             now.return_value.date.return_value = TODAY
             await handle_vacation_request(self.update, self.context, self.payload)
         self.assertNotIn(VACATION_SELECTION_KEY, self.context.user_data)
-        self.assertEqual(self.context.user_data[VACATION_DRAFTS_KEY]['123']['draft'], selection)
+        self.assertEqual(self.context.user_data, {})
+        result = self.message.reply_text.return_value.edit_text.call_args
+        self.assertIn("Solicitada", result.args[0])
+        self.assertIn("123", result.args[0])
+        self.assertNotIn("reply_markup", result.kwargs)
         await handle_vacation_request(self.update, self.context, self.payload)
         self.assertIn("caducado", self.message.reply_text.call_args.args[0])
+        session.submit_vacation_request.assert_called_once()
 
     async def test_updated_usc_balance_rejection_is_reported(self):
-        def prepare(data):
+        def submit(data):
             raise VacationRequestError("Solo quedan 0 días")
-        self.context.application.web_session = SimpleNamespace(prepare_vacation_request=prepare)
+        self.context.application.web_session = SimpleNamespace(submit_vacation_request=submit)
         with patch('fichaxebot.webapp_controller.calendar_vacations.get_madrid_now') as now:
             now.return_value.date.return_value = TODAY
             await handle_vacation_request(self.update, self.context, self.payload)
-        self.assertNotIn(VACATION_DRAFTS_KEY, self.context.user_data)
+        self.assertEqual(self.context.user_data, {})
         self.assertIn('Solo quedan 0 días', self.message.reply_text.return_value.edit_text.call_args.args[0])
 
     async def test_router_rejects_nonobject_json_and_other_chats(self):
@@ -151,41 +196,53 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
             await dispatch_webapp_reply(self.update, self.context)
         self.message.reply_text.assert_not_awaited()
 
+    async def test_uncertain_submission_is_not_retried(self):
+        session = SimpleNamespace(submit_vacation_request=Mock(
+            side_effect=VacationRequestUncertain("No se pudo confirmar el envío.")))
+        self.context.application.web_session = session
+        with patch('fichaxebot.webapp_controller.calendar_vacations.get_madrid_now') as now:
+            now.return_value.date.return_value = TODAY
+            await handle_vacation_request(self.update, self.context, self.payload)
+            await handle_vacation_request(self.update, self.context, self.payload)
+        session.submit_vacation_request.assert_called_once()
+        self.assertIn('solicitudesPropias', self.message.reply_text.return_value.edit_text.call_args.args[0])
+
+    async def test_read_only_is_reported_without_claiming_submission(self):
+        self.context.application.web_session = SimpleNamespace(submit_vacation_request=Mock(
+            side_effect=PermissionError("Modo de solo lectura")))
+        with patch('fichaxebot.webapp_controller.calendar_vacations.get_madrid_now') as now:
+            now.return_value.date.return_value = TODAY
+            await handle_vacation_request(self.update, self.context, self.payload)
+        self.assertIn('solo lectura', self.message.reply_text.return_value.edit_text.call_args.args[0])
+
+    async def test_unknown_payload_is_rejected_without_using_selection(self):
+        self.message.web_app_data = SimpleNamespace(data=json.dumps({**self.payload, 'type': 'unknown'}))
+        with patch('fichaxebot.webapp_controller.router.get_config', return_value=SimpleNamespace(telegram_chat_id='123')):
+            await dispatch_webapp_reply(self.update, self.context)
+        self.assertIn('/vacaciones', self.message.reply_text.call_args.args[0])
+        self.assertIn(VACATION_SELECTION_KEY, self.context.user_data)
+
+    async def test_explicit_submit_payload_is_routed_to_submission(self):
+        result = {**validate_selection(self.payload, self.snapshot, [], TODAY), 'id': '123', 'state': 'Solicitada'}
+        session = SimpleNamespace(submit_vacation_request=Mock(return_value=result))
+        self.context.application.web_session = session
+        self.message.web_app_data = SimpleNamespace(data=json.dumps(self.payload))
+        with patch('fichaxebot.webapp_controller.router.get_config', return_value=SimpleNamespace(telegram_chat_id='123')), \
+             patch('fichaxebot.webapp_controller.calendar_vacations.get_madrid_now') as now:
+            now.return_value.date.return_value = TODAY
+            await dispatch_webapp_reply(self.update, self.context)
+        session.submit_vacation_request.assert_called_once()
+
 
 class ReviewTests(unittest.TestCase):
-    def test_saved_review_must_match_year_type_and_individual_full_days(self):
+    def test_transient_summary_must_match_year_type_and_individual_full_days(self):
         selection = {"year": 2025, "vacationTypeName": "Vacacións", "days": ["2026-01-12", "2026-01-14"]}
         review = {"year": "2025", "vacationTypeName": "Vacacións", "requestType": "Vacacións, permisos e licenzas",
-                  "periods": [["12/01/2026", "12/01/2026", "-", "-"], ["14/01/2026", "14/01/2026", "-", "-"]]}
+                  "periods": [["12/01/2026", "12/01/2026", "1"], ["14/01/2026", "14/01/2026", "1,0"]]}
         _verify_review(review, selection)
         for change in [{"year":"2026"}, {"vacationTypeName":"Different"}, {"periods":[]},
-                       {"periods":[["12/01/2026", "14/01/2026", "-", "-"]]},
-                       {"periods":[["12/01/2026", "12/01/2026", "09:00", "10:00"],review['periods'][1]]}]:
+                       {"periods":[["12/01/2026", "14/01/2026", "2"]]},
+                       {"periods":[["12/01/2026", "12/01/2026", "0,5"],review['periods'][1]]},
+                       {"periods":[["12/01/2026", "12/01/2026", "unknown"],review['periods'][1]]}]:
             with self.subTest(change=change), self.assertRaises(VacationRequestError):
                 _verify_review({**review, **change}, selection)
-
-
-class ConfirmationTests(unittest.IsolatedAsyncioTestCase):
-    async def test_final_submit_requires_pending_draft_and_cannot_repeat(self):
-        from unittest.mock import Mock
-        draft = {"id":"123", "reviewUrl":"https://fichaxe.usc.gal/pas/solicitude/123/resumo",
-                 "vacationTypeName":"Vacacións", "year":2025, "days":["2026-01-12"]}
-        session = SimpleNamespace(submit_vacation_request=Mock(return_value="Solicitada"))
-        context = SimpleNamespace(user_data={VACATION_DRAFTS_KEY:{"123":{"draft":draft,"status":"pending"}}},
-                                  application=SimpleNamespace(web_session=session))
-        query = SimpleNamespace(data="vacation_submit:123", answer=AsyncMock(), edit_message_text=AsyncMock())
-        update = SimpleNamespace(callback_query=query, effective_chat=SimpleNamespace(id=123))
-        with patch('fichaxebot.webapp_controller.calendar_vacations.get_config', return_value=SimpleNamespace(telegram_chat_id='123')):
-            await confirm_vacation_request(update, context)
-            await confirm_vacation_request(update, context)
-        session.submit_vacation_request.assert_called_once_with(draft)
-        self.assertIn('Solicitada', query.edit_message_text.call_args.args[0])
-        self.assertEqual(context.user_data[VACATION_DRAFTS_KEY]['123']['status'], 'done')
-
-    async def test_expired_confirmation_does_not_open_browser(self):
-        context = SimpleNamespace(user_data={})
-        query = SimpleNamespace(data="vacation_submit:123", answer=AsyncMock())
-        update = SimpleNamespace(callback_query=query, effective_chat=SimpleNamespace(id=123))
-        with patch('fichaxebot.webapp_controller.calendar_vacations.get_config', return_value=SimpleNamespace(telegram_chat_id='123')):
-            await confirm_vacation_request(update, context)
-        self.assertIn('caducado', query.answer.call_args.args[0])

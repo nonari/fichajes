@@ -41,7 +41,9 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 
 | Setting | Example/default behaviour |
 | --- | --- |
-| `read_only` | The example sets `true`: USC clock-ins, clock-outs, draft saves, and submissions are blocked. Set `false` only when you want those actions enabled. |
+| `read_only` | The example sets `true`: USC clock-ins, clock-outs, and vacation submissions are blocked. Set `false` only when you want those actions enabled. |
+| `vacation_confirmation_enabled` | `false`: submit directly. Set `true` to receive a full-page PNG of USC's final summary in Telegram and confirm before submission. |
+| `vacation_confirmation_timeout_seconds` | `60`: positive integer seconds to decide, starting after the screenshot is delivered. |
 | `daily_question_time` | `09:00`, in Europe/Madrid time. |
 | `auto_checkout_delay_minutes` | `420` minutes after clock-in; `0` disables automatic checkout. |
 | `auto_checkout_random_offset_minutes` | Random offset of up to `3` minutes either way; `0` disables it. |
@@ -49,6 +51,12 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 | `reminder_interval_minutes` | `5` minutes between reminders. |
 
 Read-only mode blocks USC writes; daily questions and scheduled-job handling still run.
+
+The [congress permission API](docs/congress_api.md) supports optional PDF confirmation through a caller callback. It is not connected to chat; receipt verification remains pending.
+
+With vacation confirmation enabled, the Mini App shows **Revisar solicitud**. Telegram sends the screenshot as a document with **Confirmar y enviar** and **Cancelar** buttons. Only the person who started the request can decide. Cancellation, timeout, or failure to capture/deliver the image leaves the request unsubmitted; USC does not save a reusable draft. Open `/vacaciones` again to start over.
+
+The same browser session stays locked while confirmation is pending. Scheduled marks wait and run after the transaction releases the browser; other chat actions receive a busy response. On graceful shutdown, pending confirmation is cancelled and the worker finishes before the browser closes. An already confirmed submission is allowed to finish. Restart the bot after changing these settings and deploy the updated `docs/vacaciones.html` and `docs/vacaciones.js` together with the bot.
 
 The three `*_webapp_url` settings in the example point to this project's GitHub Pages viewers. Keep them to use the supplied pages, or replace them with your own HTTPS URLs. Open the viewers using the bot's buttons so they receive the calendar data.
 
@@ -101,7 +109,7 @@ Send commands in your private chat:
 | `/marcajes` | Show today's work records. |
 | `/calendario` | Open the calendar. |
 | `/vacaciones_info` | Open vacation balances. |
-| `/vacaciones` | Select a balance year, vacation type, and dates. Saving/submitting requires `read_only: false`. |
+| `/vacaciones` | Select a balance year, vacation type, and dates, then press **Solicitar en USC** to submit. Requires `read_only: false`. |
 | `/marcar entrada` or `/marcar salida` | Clock in/out; requires `read_only: false`. |
 | `/marcar entrada 09:00` | Schedule a mark for a future time today. |
 | `/pendientes` | List scheduled marks. |

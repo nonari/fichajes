@@ -42,6 +42,7 @@ async def show_vacations(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await status_message.edit_text("ℹ️ USC no ofrece años de saldo disponibles para esta solicitud.")
         return
     payload["requestId"] = uuid4().hex
+    payload["confirmationRequired"] = config.vacation_confirmation_enabled
     context.user_data[VACATION_SELECTION_KEY] = payload
     keyboard = ReplyKeyboardMarkup(
         [[KeyboardButton("Seleccionar vacaciones", web_app=WebAppInfo(url=_build_vacations_url(webapp_url, payload)))]],
