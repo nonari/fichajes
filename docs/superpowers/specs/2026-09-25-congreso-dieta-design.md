@@ -17,7 +17,9 @@ join both PDFs, sign the result with AutoFirma and deliver it.
     year). The congress request uses start/end. The absence request uses every day in the range except weekends,
     Galicia holidays and USC non-working days.
 - After the selection, the bot builds the congress request from the plugin configuration plus the dates,
-  sends USC's preview PDF to Telegram and submits **only after the user confirms** (existing `Confirmation` flow).
+  sends USC's preview PDF to Telegram and submits **only after the user confirms** (existing `Confirmation` flow),
+  unless the global `congress_confirmation_enabled` is `false` (then it submits directly); the timeout is
+  `congress_confirmation_timeout_seconds`.
 - **N days before the start date**, at a configured time, the bot asks in Telegram whether to request the absence,
   with inline buttons ("Solicitar ausencia" / "Ahora no").
   - If the trip starts sooner than N days away, the first prompt is sent at the next slot inside the window.
@@ -227,6 +229,9 @@ autofirma sign -i joined.pdf -o signed.pdf -format pades -store <store> -alias "
 
 - `-store` is **configurable**: `mozilla` (Firefox NSS store) or `pkcs12:/path/cert.p12`; optional password.
 - `autofirma listaliases -store mozilla` works headless and lists the personal certificate without a password prompt.
+- AutoFirma prints the aliases on **stderr** and decodes UTF-8 nicknames as Latin-1 (`Ñ` → `Ã` + U+0091), so the
+  correctly spelled alias is rejected. The plugin runs `listaliases` first, repairs each name and signs with
+  AutoFirma's raw spelling of the configured one (verified 2026-09-25: valid PAdES signature per `pdfsig`).
 - AutoFirma reads the legacy `~/.mozilla/firefox` profile, not the snap profile in use. The certificate is currently
   identical in both (valid until 2027-08-25); after renewal it must be re-imported or the store switched to pkcs12.
 - Joining PDFs: `pdfunite` (poppler) is available.

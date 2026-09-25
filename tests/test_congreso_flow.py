@@ -36,6 +36,7 @@ class FakeSession:
 
     def submit_congress_request(self, data, confirm=None):
         self.congress_calls.append(data)
+        self.congress_confirm = confirm
         if isinstance(self.congress_result, Exception):
             raise self.congress_result
         return self.congress_result
@@ -79,7 +80,7 @@ class FlowTestCase(unittest.IsolatedAsyncioTestCase):
         self.store = CaseStore(self.root / "cases.json", self.root / "files")
         self.global_config = SimpleNamespace(
             telegram_chat_id="123", absence_confirmation_enabled=False, absence_confirmation_timeout_seconds=60,
-            vacation_confirmation_timeout_seconds=60)
+            congress_confirmation_enabled=True, congress_confirmation_timeout_seconds=60)
         patcher = patch.object(flow, "get_config", return_value=self.global_config)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -178,6 +179,18 @@ class NewRequestTests(FlowTestCase):
                          [datetime(2026, 10, 17, 9, 0, tzinfo=MADRID_TZ)])
         self.assertIn("enviada", self.status_text(message))
         self.assertIsNone(self.plugin.launch_token)
+        self.assertNotIn(ACTIVE_KEY, self.app.bot_data)
+
+    async def test_confirmation_enabled_offers_the_preview_pdf(self):
+        await self.submit()
+        self.assertTrue(callable(self.session.congress_confirm))
+
+    async def test_confirmation_disabled_submits_directly(self):
+        self.global_config.congress_confirmation_enabled = False
+        message = await self.submit()
+        self.assertIsNone(self.session.congress_confirm)
+        self.assertEqual(len(self.store.open_cases()), 1)
+        self.assertIn("enviada", self.status_text(message))
         self.assertNotIn(ACTIVE_KEY, self.app.bot_data)
 
     async def test_read_only_creates_a_simulated_case(self):

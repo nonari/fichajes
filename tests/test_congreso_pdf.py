@@ -63,24 +63,69 @@ class SignTests(PdfTestCase):
         self.assertEqual(pdf.sign_command(Path("in.pdf"), Path("out.pdf"),
                                           SigningConfig("pkcs12:/c.p12", "A", "pw"))[-2:], ["-password", "pw"])
 
-    def test_sign_success_and_failures(self):
-        out = self.root / "firmado.pdf"
+    def fake_autofirma(self, aliases=("as-logins-key", "Alias"), sign=None):
+        """Answer listaliases with the given aliases and sign with `sign` (default: write a PDF)."""
+        calls = []
 
-        def ok(command, timeout):
+        def runner(command, timeout):
+            calls.append(command)
+            if command[1] == "listaliases":  # AutoFirma prints the aliases on stderr
+                return completed(err="".join(f"{alias}\n" for alias in aliases))
+            if sign:
+                return sign(command, timeout)
             Path(command[5]).write_bytes(b"%PDF-signed")
             return completed()
 
-        self.assertEqual(pdf.sign_pdf(self.root / "unido.pdf", out, SIGNING, runner=ok), out)
+        return runner, calls
+
+    def test_sign_success_and_failures(self):
+        out = self.root / "firmado.pdf"
+        runner, _ = self.fake_autofirma()
+        self.assertEqual(pdf.sign_pdf(self.root / "unido.pdf", out, SIGNING, runner=runner), out)
         java = "Exception in thread main\n    at es.gob.Foo(Foo.java:1)\nNo se encontro el alias"
+        runner, _ = self.fake_autofirma(sign=lambda command, timeout: completed(0, out=java))
         with self.assertRaisesRegex(pdf.PdfError, "No se encontro el alias"):
-            pdf.sign_pdf(self.root / "unido.pdf", out, SIGNING, runner=lambda command, timeout: completed(0, out=java))
+            pdf.sign_pdf(self.root / "unido.pdf", out, SIGNING, runner=runner)
         self.assertFalse(out.exists())
 
         def hang(command, timeout):
             raise subprocess.TimeoutExpired(command, timeout)
 
+        runner, _ = self.fake_autofirma(sign=hang)
         with self.assertRaisesRegex(pdf.PdfError, "no respondió"):
-            pdf.sign_pdf(self.root / "unido.pdf", out, SIGNING, runner=hang)
+            pdf.sign_pdf(self.root / "unido.pdf", out, SIGNING, runner=runner)
+
+
+class AliasResolutionTests(SignTests):
+    CORRECT = "BUDIÑO REGUEIRA ALEJANDRO - 00000000T"
+    # AutoFirma decodes the UTF-8 certificate nickname as Latin-1: "Ñ" (C3 91) becomes "Ã" + U+0091.
+    GARBLED = "BUDIÃ\u0091O REGUEIRA ALEJANDRO - 00000000T"
+
+    def test_misencoded_alias_is_matched_and_signed_with_autofirmas_raw_name(self):
+        runner, calls = self.fake_autofirma(aliases=("as-logins-key", self.GARBLED))
+        signing = SigningConfig("mozilla", self.CORRECT, None)
+        pdf.sign_pdf(self.root / "unido.pdf", self.root / "firmado.pdf", signing, runner=runner)
+        self.assertEqual(calls[0], ["autofirma", "listaliases", "-store", "mozilla"])
+        self.assertEqual(calls[1][calls[1].index("-alias") + 1], self.GARBLED)
+
+    def test_correctly_encoded_alias_is_used_as_is(self):
+        runner, calls = self.fake_autofirma(aliases=(self.CORRECT,))
+        pdf.sign_pdf(self.root / "unido.pdf", self.root / "firmado.pdf",
+                     SigningConfig("pkcs12:/c.p12", self.CORRECT, "pw"), runner=runner)
+        self.assertEqual(calls[0], ["autofirma", "listaliases", "-store", "pkcs12:/c.p12", "-password", "pw"])
+        self.assertEqual(calls[1][calls[1].index("-alias") + 1], self.CORRECT)
+
+    def test_unknown_alias_lists_the_available_certificates(self):
+        runner, calls = self.fake_autofirma(aliases=("as-logins-key", self.GARBLED))
+        with self.assertRaisesRegex(pdf.PdfError, "Otra Persoa.*BUDIÑO REGUEIRA"):
+            pdf.sign_pdf(self.root / "unido.pdf", self.root / "firmado.pdf",
+                         SigningConfig("mozilla", "Otra Persoa", None), runner=runner)
+        self.assertEqual(len(calls), 1)
+
+    def test_listaliases_failure(self):
+        with self.assertRaisesRegex(pdf.PdfError, "almacén"):
+            pdf.sign_pdf(self.root / "unido.pdf", self.root / "firmado.pdf", SIGNING,
+                         runner=lambda command, timeout: completed(1, err="Error al abrir el almacen"))
 
 
 @unittest.skipUnless(os.environ.get("CONGRESO_SIGN_ALIAS"), "Set CONGRESO_SIGN_ALIAS to sign a dummy PDF with AutoFirma")

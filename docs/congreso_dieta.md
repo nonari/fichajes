@@ -10,6 +10,9 @@ spreadsheet PDF with the authorization, signs the result with AutoFirma, sends i
 - LibreOffice with `python3-uno`; the virtualenv must be created with `--system-site-packages` (`install.sh` does it).
 - `pdfunite` (poppler-utils) and the AutoFirma command line (`autofirma`).
 - A certificate in the Firefox store AutoFirma reads (`autofirma listaliases -store mozilla`) or a `.p12` file.
+  Write `signing.alias` with the certificate name as Firefox or `certutil` show it (e.g. with `Ñ`). AutoFirma
+  lists accented names mis-encoded (`Ñ` → `Ã` + an invisible character); the plugin matches and uses that form
+  itself, and a wrong name fails with the list of available certificates.
 
 ## Configuration
 
@@ -37,6 +40,9 @@ Add `"congreso_dieta"` to `plugins` and a `plugin_config` section:
   }
 }
 ```
+
+The global `congress_confirmation_enabled` (default `true`) and `congress_confirmation_timeout_seconds` decide
+whether USC's preview PDF is confirmed in Telegram before the congress request is submitted.
 
 `congress` accepts the fields of [the congress API](congress_api.md) except the dates. The absence type is matched
 by name against USC. Invalid settings stop the bot at startup with a message naming the setting.

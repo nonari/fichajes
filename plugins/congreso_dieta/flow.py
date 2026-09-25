@@ -188,10 +188,15 @@ class CongresoDieta:
         if self.app.bot_data.get(ACTIVE_KEY) or self.app.bot_data.get(STOPPING_KEY):
             await message.reply_text("Hay otra solicitud en curso. Espera a que termine.")
             return
-        pending = PendingCongress(self.app, chat_id=update.effective_chat.id, user_id=update.effective_user.id,
-                                  timeout=get_config().vacation_confirmation_timeout_seconds)
-        self.app.bot_data[ACTIVE_KEY] = pending
-        pending.task = self.app.create_task(self._submit_congress(message, pending, start, end), update=update)
+        global_config = get_config()
+        pending = None
+        if global_config.congress_confirmation_enabled:
+            pending = PendingCongress(self.app, chat_id=update.effective_chat.id, user_id=update.effective_user.id,
+                                      timeout=global_config.congress_confirmation_timeout_seconds)
+            self.app.bot_data[ACTIVE_KEY] = pending
+        task = self.app.create_task(self._submit_congress(message, pending, start, end), update=update)
+        if pending:
+            pending.task = task
 
     async def _submit_congress(self, message, pending, start: date, end: date) -> None:
         status = None
@@ -199,7 +204,10 @@ class CongresoDieta:
             status = await message.reply_text("🔄 Preparando la solicitud de congreso en USC…")
             request = {**self.config.congress, "start_date": start.isoformat(), "end_date": end.isoformat()}
             try:
-                await pending.run(self.session.submit_congress_request, request)
+                if pending:
+                    await pending.run(self.session.submit_congress_request, request)
+                else:
+                    await asyncio.to_thread(self.session.submit_congress_request, request)
                 simulated = False
             except ReadOnlyStop:
                 simulated = True
@@ -216,7 +224,7 @@ class CongresoDieta:
             await status.edit_text(text)
         except CongressRequestCancelled as exc:
             if status:
-                await status.edit_text(pending.reason if pending.decision.done() else str(exc))
+                await status.edit_text(pending.reason if pending and pending.decision.done() else str(exc))
         except CongressRequestError as exc:
             if status:
                 await status.edit_text(f"❌ {exc}")
@@ -226,8 +234,9 @@ class CongresoDieta:
                 await status.edit_text("❌ No se pudo completar la solicitud de congreso. Comprueba USC antes "
                                        f"de repetirla: {usc.REQUESTS_LIST_URL}")
         finally:
-            pending.abort("Solicitud cancelada. No se envió a USC.")
-            await pending.finish()
+            if pending:
+                pending.abort("Solicitud cancelada. No se envió a USC.")
+                await pending.finish()
 
     async def handle_cancel(self, update, context, data: dict) -> None:
         message = update.effective_message

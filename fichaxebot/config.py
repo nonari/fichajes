@@ -31,6 +31,8 @@ class AppConfig:
     absences_webapp_url: str = ""
     absence_confirmation_enabled: bool = True
     absence_confirmation_timeout_seconds: int = 60
+    congress_confirmation_enabled: bool = True
+    congress_confirmation_timeout_seconds: int = 60
     read_only: bool = False
     plugins: list[str] = field(default_factory=list)
     plugin_config: dict = field(default_factory=dict)
@@ -95,6 +97,13 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     absence_timeout = data.get("absence_confirmation_timeout_seconds", 60)
     if type(absence_timeout) is not int or absence_timeout <= 0:
         raise ValueError("'absence_confirmation_timeout_seconds' debe ser un entero mayor que cero")
+
+    congress_confirmation = data.get("congress_confirmation_enabled", True)
+    if not isinstance(congress_confirmation, bool):
+        raise ValueError("'congress_confirmation_enabled' debe ser true o false")
+    congress_timeout = data.get("congress_confirmation_timeout_seconds", 60)
+    if type(congress_timeout) is not int or congress_timeout <= 0:
+        raise ValueError("'congress_confirmation_timeout_seconds' debe ser un entero mayor que cero")
 
     plugins = data.get("plugins", [])
     if not isinstance(plugins, list) or any(
@@ -170,6 +179,8 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         absences_webapp_url=str(data.get("absences_webapp_url", "") or "").strip(),
         absence_confirmation_enabled=absence_confirmation,
         absence_confirmation_timeout_seconds=absence_timeout,
+        congress_confirmation_enabled=congress_confirmation,
+        congress_confirmation_timeout_seconds=congress_timeout,
         read_only=read_only,
         vacation_confirmation_enabled=confirmation_enabled,
         vacation_confirmation_timeout_seconds=confirmation_timeout,

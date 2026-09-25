@@ -44,6 +44,8 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 | `read_only` | The example sets `true`: clock-ins and requests run up to the final USC action, which is skipped. Set `false` only when you want those actions sent. |
 | `vacation_confirmation_enabled` | `false`: submit directly. Set `true` to receive a full-page PNG of USC's final summary in Telegram and confirm before submission. |
 | `vacation_confirmation_timeout_seconds` | `60`: positive integer seconds to decide, starting after the screenshot is delivered. |
+| `congress_confirmation_enabled` | `true`: the `congreso_dieta` plugin sends USC's congress request PDF to Telegram and submits only after you confirm. `false` submits directly. |
+| `congress_confirmation_timeout_seconds` | `60`: positive integer seconds to decide, starting after the PDF is delivered. |
 | `daily_question_time` | `09:00`, in Europe/Madrid time. |
 | `auto_checkout_delay_minutes` | `420` minutes after clock-in; `0` disables automatic checkout. |
 | `auto_checkout_random_offset_minutes` | Random offset of up to `3` minutes either way; `0` disables it. |

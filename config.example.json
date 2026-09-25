@@ -6,16 +6,18 @@
   "calendar_webapp_url": "https://nonari.github.io/fichajes/show_calendar.html",
   "vacations_webapp_url": "https://nonari.github.io/fichajes/vacaciones.html",
   "vacations_info_webapp_url": "https://nonari.github.io/fichajes/vacations_info.html",
+  "absences_webapp_url": "https://nonari.github.io/fichajes/ausencias.html",
   "daily_question_time": "09:00",
   "auto_checkout_delay_minutes": 420,
   "auto_checkout_random_offset_minutes": 3,
   "max_reminders": 3,
   "reminder_interval_minutes": 5,
   "read_only": true,
-  "plugins": [],
   "vacation_confirmation_enabled": false,
   "vacation_confirmation_timeout_seconds": 60,
-  "absences_webapp_url": "https://nonari.github.io/fichajes/ausencias.html",
   "absence_confirmation_enabled": true,
-  "absence_confirmation_timeout_seconds": 60
+  "absence_confirmation_timeout_seconds": 60,
+  "congress_confirmation_enabled": true,
+  "congress_confirmation_timeout_seconds": 60,
+  "plugins": []
 }
