@@ -36,6 +36,9 @@ from fichaxebot.usc_api import UscWebSession
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import SchedulerManager
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
+from fichaxebot.webapp_controller.vacation_confirmation import (
+    register_vacation_confirmation, stop_vacation_confirmation,
+)
 
 logger = get_logger(__name__)
 
@@ -117,6 +120,7 @@ async def _run_bot() -> None:
     )
     app = ApplicationBuilder().token(TOKEN).build()
     restrict_to_chat(app, appconfig.telegram_chat_id)
+    register_vacation_confirmation(app)
     app.scheduler_manager = scheduler_manager
     web_session = UscWebSession()
     app.web_session = web_session
@@ -204,6 +208,7 @@ async def _run_bot() -> None:
     await stop_event.wait()
 
     await app.updater.stop()
+    await stop_vacation_confirmation(app)
     await app.stop()
     await app.shutdown()
 

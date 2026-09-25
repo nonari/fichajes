@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import struct
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,7 +13,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
-from fichaxebot.scrap_functions.vacation_request import submit_vacation_request
+from fichaxebot.scrap_functions.vacation_request import _capture_full_page, submit_vacation_request
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,11 +66,29 @@ class VacationBrowserTests(unittest.TestCase):
         self.assertEqual(result, {**selection, "id": "123", "state": "Solicitada"})
         self.assertEqual(self.browser.execute_script("return window.submissions"), 1)
 
-    def open_mini_app(self):
+    def test_full_page_screenshot_keeps_native_resolution_including_bottom(self):
+        self.browser.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', {
+            'width': 800, 'height': 600, 'deviceScaleFactor': 2, 'mobile': False,
+        })
+        try:
+            self.open_html('<!doctype html><html><body style="margin:0;width:800px"><div style="height:3000px">Tall summary</div></body></html>')
+            png = _capture_full_page(SimpleNamespace(driver=self.browser))
+            self.assertEqual(png[:8], b'\x89PNG\r\n\x1a\n')
+            self.assertEqual(struct.unpack('>II', png[16:24]), (1600, 6000))
+        finally:
+            self.browser.execute_cdp_cmd('Emulation.clearDeviceMetricsOverride', {})
+
+    def test_enabled_selection_invites_review_before_submission(self):
+        self.open_mini_app(confirmation=True)
+        self.assertEqual(self.browser.find_element(By.ID, 'send').get_attribute('textContent'), 'Revisar solicitud')
+        self.assertIn('Telegram', self.browser.find_element(By.ID, 'submission-help').get_attribute('textContent'))
+
+    def open_mini_app(self, confirmation=False):
         html = (ROOT / "docs/vacaciones.html").read_text(encoding="utf-8")
         html = re.sub(r'<script\b[^>]*src=[^>]+>\s*</script>', '', html)
         data = {
             "today": "2026-09-24", "currentYear": 2026, "entries": [], "requestId": "test",
+            "confirmationRequired": confirmation,
             "years": [{"year": 2026, "types": [
                 {"id": "16", "name": "Vacacións", "remainingDays": 10, "remainingHours": 0},
             ]}],

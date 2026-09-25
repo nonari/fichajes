@@ -103,18 +103,58 @@ class VacationRequestTests(unittest.TestCase):
 
 class ControllerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        self.config = SimpleNamespace(vacation_confirmation_enabled=False, vacation_confirmation_timeout_seconds=60)
+        config_patch = patch('fichaxebot.webapp_controller.calendar_vacations.get_config', return_value=self.config)
+        config_patch.start()
+        self.addCleanup(config_patch.stop)
         self.message = SimpleNamespace(reply_text=AsyncMock())
         self.message.reply_text.return_value = SimpleNamespace(edit_text=AsyncMock())
-        self.update = SimpleNamespace(effective_message=self.message, effective_chat=SimpleNamespace(id=123))
+        self.update = SimpleNamespace(effective_message=self.message, effective_chat=SimpleNamespace(id=123),
+                                      effective_user=SimpleNamespace(id=456))
         self.snapshot = {**build_catalog(FORM, balances(), TODAY), "entries": [], "requestId": "valid"}
         self.context = SimpleNamespace(user_data={VACATION_SELECTION_KEY: self.snapshot},
-                                       application=SimpleNamespace(web_session=object()))
+                                       application=SimpleNamespace(web_session=object(), bot_data={}))
         self.payload = {"type": "vacation_request_submit", "requestId": "valid", "year": 2025,
                         "vacationTypeId": "16", "days": ["2026-01-12"]}
 
     async def test_stale_launch_does_not_touch_browser(self):
         await handle_vacation_request(self.update, self.context, {**self.payload, "requestId": "old"})
         self.assertIn("caducado", self.message.reply_text.call_args.args[0])
+
+    async def test_enabled_handler_returns_while_worker_waits_and_cleans_up(self):
+        import asyncio
+        from fichaxebot.scrap_functions.vacation_request import VacationRequestCancelled
+        from fichaxebot.webapp_controller.vacation_confirmation import ACTIVE_KEY, handle_confirmation
+        self.config.vacation_confirmation_enabled = True
+        delivered = asyncio.Event()
+        document = SimpleNamespace(edit_reply_markup=AsyncMock())
+        async def send_document(**kwargs):
+            delivered.set()
+            return document
+        self.context.application.bot = SimpleNamespace(send_document=send_document)
+        self.context.application.create_task = lambda coro, **kwargs: asyncio.create_task(coro)
+        def submit(selection, confirm):
+            if not confirm(b'png'):
+                raise VacationRequestCancelled()
+            return {**selection, 'id': '123', 'state': 'Solicitada'}
+        self.context.application.web_session = SimpleNamespace(submit_vacation_request=submit)
+        with patch('fichaxebot.webapp_controller.calendar_vacations.get_madrid_now') as now:
+            now.return_value.date.return_value = TODAY
+            await asyncio.wait_for(handle_vacation_request(self.update, self.context, self.payload), 1)
+        pending = self.context.application.bot_data[ACTIVE_KEY]
+        self.addAsyncCleanup(self.finish_pending, pending)
+        await asyncio.wait_for(delivered.wait(), 1)
+        self.assertFalse(pending.task.done())
+        self.update.callback_query = SimpleNamespace(data=f'vacation_confirm:{pending.token}', answer=AsyncMock())
+        await handle_confirmation(self.update, self.context)
+        await asyncio.wait_for(pending.task, 1)
+        self.assertNotIn(ACTIVE_KEY, self.context.application.bot_data)
+        document.edit_reply_markup.assert_awaited_once_with(reply_markup=None)
+        self.assertIn('Solicitada', self.message.reply_text.return_value.edit_text.call_args.args[0])
+
+    async def finish_pending(self, pending):
+        pending.abort('test cleanup')
+        await pending.task
 
     async def test_success_consumes_token_and_duplicate_is_rejected(self):
         selection = {**validate_selection(self.payload, self.snapshot, [], TODAY),

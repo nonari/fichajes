@@ -28,6 +28,8 @@ class AppConfig:
     vacations_webapp_url: str
     vacations_info_webapp_url: str
     read_only: bool = False
+    vacation_confirmation_enabled: bool = False
+    vacation_confirmation_timeout_seconds: int = 60
 
 
 _config: Optional[AppConfig] = None
@@ -74,6 +76,12 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     read_only = data.get("read_only", False)
     if not isinstance(read_only, bool):
         raise ValueError("'read_only' debe ser true o false")
+    confirmation_enabled = data.get("vacation_confirmation_enabled", False)
+    if not isinstance(confirmation_enabled, bool):
+        raise ValueError("'vacation_confirmation_enabled' debe ser true o false")
+    confirmation_timeout = data.get("vacation_confirmation_timeout_seconds", 60)
+    if type(confirmation_timeout) is not int or confirmation_timeout <= 0:
+        raise ValueError("'vacation_confirmation_timeout_seconds' debe ser un entero mayor que cero")
 
     missing = {key for key in [
         "telegram_token",
@@ -132,6 +140,8 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         vacations_webapp_url=vacations_webapp_url,
         vacations_info_webapp_url=vacations_info_webapp_url,
         read_only=read_only,
+        vacation_confirmation_enabled=confirmation_enabled,
+        vacation_confirmation_timeout_seconds=confirmation_timeout,
     )
 
 

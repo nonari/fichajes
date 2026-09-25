@@ -108,6 +108,10 @@ try {
   const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
   data = JSON.parse(params.get('data'));
   if (!data || !Array.isArray(data.years) || !Array.isArray(data.entries) || !data.requestId) throw new Error();
+  if (data.confirmationRequired) {
+    el('send').textContent = 'Revisar solicitud';
+    el('submission-help').textContent = 'Recibirás una captura del resumen en Telegram para confirmar el envío a USC.';
+  }
   data.years = data.years.filter(item => data.today < `${item.year + 1}-03-01` &&
     (item.year === data.currentYear ||
     (item.year === data.currentYear - 1 && item.types.some(kind => kind.remainingDays > 0))));

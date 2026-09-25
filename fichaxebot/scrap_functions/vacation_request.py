@@ -1,6 +1,7 @@
 """Read USC vacation allowances and prepare one full-day period per date."""
 from __future__ import annotations
 
+import base64
 import math
 import re
 from datetime import date
@@ -229,7 +230,20 @@ def _verify_review(review: dict, selection: dict) -> None:
         raise VacationRequestError("El resumen de USC no coincide con el año, tipo o fechas seleccionados.")
 
 
-def submit_vacation_request(session, selection: dict) -> dict:
+class VacationRequestCancelled(RuntimeError):
+    """The transient request was abandoned before the final USC action."""
+
+
+def _capture_full_page(session) -> bytes:
+    size = session.driver.execute_cdp_cmd("Page.getLayoutMetrics", {})["cssContentSize"]
+    screenshot = session.driver.execute_cdp_cmd("Page.captureScreenshot", {
+        "format": "png", "captureBeyondViewport": True,
+        "clip": {"x": 0, "y": 0, "width": size["width"], "height": size["height"], "scale": 1},
+    })
+    return base64.b64decode(screenshot["data"], validate=True)
+
+
+def submit_vacation_request(session, selection: dict, confirm=None) -> dict:
     """Advance and submit the filled wizard in place, without reopening its pages."""
     form = session.driver.find_element(By.ID, "formularioSolicitude")
     session.driver.find_element(By.ID, "seguinte").click()
@@ -249,6 +263,26 @@ def submit_vacation_request(session, selection: dict) -> dict:
     match = re.fullmatch(r"/pas/solicitude/([1-9]\d*)/resumo/solicitar", urlsplit(link.get_attribute("href")).path)
     if not match:
         raise VacationRequestError("No se pudo identificar la acción de envío de USC.")
+    if confirm is not None:
+        review_url = session.driver.current_url
+        action_url = link.get_attribute("href")
+        try:
+            screenshot = _capture_full_page(session)
+        except Exception as exc:
+            raise VacationRequestError("No se pudo capturar el resumen. No se envió la solicitud.") from exc
+        if not confirm(screenshot):
+            raise VacationRequestCancelled("Solicitud cancelada. No se envió a USC.")
+        # Inspect the same live wizard, without navigating or retrying the request.
+        try:
+            review = _read_review(session)
+            _verify_review(review, selection)
+            link = session.driver.find_element(By.CSS_SELECTOR, 'a[href$="/resumo/solicitar"]')
+            if (session.driver.current_url != review_url
+                    or link.get_attribute("href") != action_url
+                    or review["state"].casefold() != "borrador" or not review["canSubmit"]):
+                raise VacationRequestError("El resumen de USC cambió durante la confirmación. No se envió la solicitud.")
+        except WebDriverException as exc:
+            raise VacationRequestError("El resumen de USC ya no está disponible. No se envió la solicitud.") from exc
     try:
         # From this point a browser error may occur after USC accepted the action.
         link.click()

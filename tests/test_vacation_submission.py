@@ -1,6 +1,7 @@
 import unittest
 from datetime import date
-from threading import Lock
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event, Lock, RLock, get_ident
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -40,9 +41,44 @@ class SubmissionTests(unittest.TestCase):
         self.session.driver.get.side_effect = AssertionError("Do not reload the request")
         self.session._ensure_access_to = Mock(side_effect=AssertionError("Do not reopen the request"))
 
-    def submit(self, summaries):
+    def submit(self, summaries, **kwargs):
         with patch.object(requests, "_read_review", side_effect=summaries):
-            return requests.submit_vacation_request(self.session, SELECTION)
+            return requests.submit_vacation_request(self.session, SELECTION, **kwargs)
+
+    def test_confirmation_precedes_single_submit_and_revalidates(self):
+        def confirm(png):
+            self.assertEqual(png, b'png')
+            self.submit_link.click.assert_not_called()
+            return True
+        with patch.object(requests, '_capture_full_page', return_value=b'png'):
+            self.submit([SUMMARY, SUMMARY, {**SUMMARY, 'state': 'Solicitada', 'canSubmit': False}],
+                        confirm=confirm)
+        self.submit_link.click.assert_called_once()
+
+    def test_cancel_and_capture_failure_never_submit(self):
+        with patch.object(requests, '_capture_full_page', return_value=b'png'):
+            with self.assertRaises(requests.VacationRequestCancelled):
+                self.submit([SUMMARY], confirm=lambda png: False)
+        with patch.object(requests, '_capture_full_page', side_effect=WebDriverException()):
+            with self.assertRaises(requests.VacationRequestError):
+                self.submit([SUMMARY], confirm=Mock())
+        self.submit_link.click.assert_not_called()
+
+    def test_changed_summary_or_request_after_confirmation_never_submits(self):
+        with patch.object(requests, '_capture_full_page', return_value=b'png'):
+            with self.assertRaises(requests.VacationRequestError):
+                self.submit([SUMMARY, {**SUMMARY, 'year': '2025'}], confirm=lambda png: True)
+            def change_request(png):
+                self.submit_link.get_attribute.return_value = 'https://fichaxe.usc.gal/pas/solicitude/456/resumo/solicitar'
+                return True
+            with self.assertRaises(requests.VacationRequestError):
+                self.submit([SUMMARY, SUMMARY], confirm=change_request)
+        self.submit_link.click.assert_not_called()
+
+    def test_direct_submission_never_captures(self):
+        with patch.object(requests, '_capture_full_page') as capture:
+            self.submit([SUMMARY, {**SUMMARY, 'state': 'Solicitada', 'canSubmit': False}])
+        capture.assert_not_called()
 
     def test_submits_from_current_summary_without_reopening(self):
         result = self.submit([SUMMARY, {**SUMMARY, "state": "Solicitada", "canSubmit": False}])
@@ -83,9 +119,53 @@ class SubmissionTests(unittest.TestCase):
 
 
 class SessionSubmissionTests(unittest.TestCase):
+    def test_enabled_requires_callback_before_browser_use(self):
+        session = UscWebSession.__new__(UscWebSession)
+        session.config = SimpleNamespace(read_only=False, vacation_confirmation_enabled=True)
+        with self.assertRaises(ValueError):
+            session.submit_vacation_request(SELECTION)
+
+    def test_waiting_confirmation_holds_lock_on_same_thread_and_mark_runs_after(self):
+        session = UscWebSession.__new__(UscWebSession)
+        session.config = SimpleNamespace(read_only=False, vacation_confirmation_enabled=True)
+        session._lock = RLock()
+        waiting, release, marked, mark_started = Event(), Event(), Event(), Event()
+        threads = []
+        def confirm(png):
+            threads.append(get_ident())
+            waiting.set()
+            if not release.wait(2):
+                raise AssertionError('confirmation was not released')
+            return False
+        def submit(current, selection, confirm):
+            threads.append(get_ident())
+            self.assertFalse(confirm(b'png'))
+        def mark():
+            mark_started.set()
+            session.perform_check_in('salida')
+        with patch('fichaxebot.usc_api.fetch_vacation_catalog'), \
+             patch('fichaxebot.usc_api._fetch_calendar_summary'), \
+             patch('fichaxebot.usc_api.validate_selection', return_value=SELECTION), \
+             patch('fichaxebot.usc_api.fill_vacation_request'), \
+             patch('fichaxebot.usc_api._submit_vacation_request', side_effect=submit), \
+             patch('fichaxebot.usc_api._perform_check_in', side_effect=lambda *args: marked.set()), \
+             ThreadPoolExecutor(max_workers=2) as pool:
+            vacation = pool.submit(session.submit_vacation_request, SELECTION, confirm)
+            try:
+                self.assertTrue(waiting.wait(1))
+                scheduled = pool.submit(mark)
+                self.assertTrue(mark_started.wait(1))
+                self.assertFalse(marked.wait(0.05))
+            finally:
+                release.set()
+            vacation.result(timeout=1)
+            scheduled.result(timeout=1)
+        self.assertEqual(threads[0], threads[1])
+        self.assertTrue(marked.is_set())
+
     def test_revalidation_through_final_submit_holds_one_lock(self):
         session = UscWebSession.__new__(UscWebSession)
-        session.config = SimpleNamespace(read_only=False)
+        session.config = SimpleNamespace(read_only=False, vacation_confirmation_enabled=False)
         session._lock = Lock()
         calls = []
         catalog = {"years": [{"year": 2026, "types": [

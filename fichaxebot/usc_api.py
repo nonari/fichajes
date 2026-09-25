@@ -97,16 +97,20 @@ class UscWebSession:
             entries = _fetch_calendar_summary(self, for_vacation_selection=True)
             return {**catalog, "entries": entries}
 
-    def submit_vacation_request(self, data: dict) -> dict:
+    def submit_vacation_request(self, data: dict, confirm=None) -> dict:
         """Validate and finish the USC wizard without releasing the browser lock."""
         self._require_writes_enabled()
+        if self.config.vacation_confirmation_enabled and confirm is None:
+            raise ValueError("La confirmación visual requiere una función de confirmación.")
         with self._lock:
             # Balances and calendar may have changed while the Mini App was open.
             catalog = fetch_vacation_catalog(self)
             entries = _fetch_calendar_summary(self, for_vacation_selection=True)
             selection = validate_selection(data, catalog, entries, get_madrid_now().date())
             fill_vacation_request(self, selection)
-            return _submit_vacation_request(self, selection)
+            return _submit_vacation_request(
+                self, selection, confirm=confirm if self.config.vacation_confirmation_enabled else None,
+            )
 
     def _require_writes_enabled(self) -> None:
         if self.config.read_only:
