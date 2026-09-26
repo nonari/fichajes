@@ -116,7 +116,7 @@ The compact entries use inclusive dates: `P2026-09-11` for one day or
 
 The partial-day mapping follows the user’s identification of the light-blue
 underline and the shift/color mapping above. The saved USC renderer in
-`resources/calendar.html` underlines `QUENDA_PRIMARIA` and
+`resources/calendar/calendar.html` underlines `QUENDA_PRIMARIA` and
 `QUENDA_ALTERNATIVA` using each entry’s `color`. This change was not verified
 against a live authenticated Chrome session.
 

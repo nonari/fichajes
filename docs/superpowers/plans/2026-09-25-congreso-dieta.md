@@ -1388,7 +1388,7 @@ Expected: PASS; `LibreOfficeIntegrationTests` skipped.
 
 - [ ] **Step 5: Run the integration test against the real workbook**
 
-Run: `CONGRESO_TEMPLATE="$PWD/resources/GL_VISITAS_PLANTA_FINSA_04_03_2026.xlsm" .venv/bin/python -m unittest tests.test_congreso_spreadsheet.LibreOfficeIntegrationTests -v`
+Run: `CONGRESO_TEMPLATE="$PWD/resources/per_diem/GL_VISITAS_PLANTA_FINSA_04_03_2026.xlsm" .venv/bin/python -m unittest tests.test_congreso_spreadsheet.LibreOfficeIntegrationTests -v`
 Expected: PASS (reproduces the 2026-09-25 spike through the plugin code; the template file is unchanged afterwards — check with `git status resources/` showing no new files besides the untracked template itself).
 
 - [ ] **Step 6: Commit** (only with user approval)

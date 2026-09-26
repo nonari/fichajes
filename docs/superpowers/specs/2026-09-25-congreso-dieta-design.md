@@ -177,10 +177,10 @@ generation, signing, delivery) **retry at the next daily check**.
 
 ### USC requests pages
 
-- List: `resources/Solicitudes.html`. Each entry links to
+- List: `resources/requests/Solicitudes.html`. Each entry links to
   `https://aplicacions.usc.es/intranet/solicitudes/solicitude/{id}/ver.htm`; congress entries have identifier
   `RRHH_InvAsistenciaCongresos/{year}/{n}` and a "Código da solicitude" equal to `{id}`.
-- Detail: `resources/Solicitude.html`. Shows the state (`Tramitada` when signed) and an **Autorización** link:
+- Detail: `resources/requests/Solicitude.html`. Shows the state (`Tramitada` when signed) and an **Autorización** link:
   `https://aplicacions.usc.es/intranet/solicitudes/documento/csv.htm?solicitudeId={id}&csv={code}`.
 - States that will not become signed are recognised by the words deneg/anulad/desist/rexeit/rechaz/arquiv/revogad;
   any other state is treated as in progress. Only `Tramitada` has been observed on a real page.
@@ -188,7 +188,7 @@ generation, signing, delivery) **retry at the next daily check**.
   `submit_congress_request` currently returns `{"status": "unverified"}` without an id. Until then the daily check
   cannot target the case's request.
 
-### Spreadsheet (`resources/GL_VISITAS_PLANTA_FINSA_04_03_2026.xlsm`, sheet `FormularioCL`)
+### Spreadsheet (`resources/per_diem/GL_VISITAS_PLANTA_FINSA_04_03_2026.xlsm`, sheet `FormularioCL`)
 
 - Cells updated per case (as real dates): **I17** "Data de ida" = first day, **N17** "Data de volta" = last day,
   **Q78** "DECLARO … con data" = generation day.

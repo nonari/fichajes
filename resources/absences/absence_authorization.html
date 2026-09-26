@@ -1,0 +1,949 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--<html lang="gl">-->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="gl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+        
+        <title>Rexistro horario PAS - ARH - Solicitude</title>
+
+        <link rel="stylesheet" href="/pas/bootstrap/css/bootstrap.min.css" />
+        
+        <link rel="stylesheet" href="/pas/sistema/css/styles.css" />
+        
+
+        
+        <meta charset="UTF-8" />
+        
+        
+			<link rel="stylesheet"
+				href="/pas/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css" />
+			<link rel="stylesheet" href="/pas/plantillas/css/jasny-bootstrap.min.css" />
+			<link rel="stylesheet" type="text/css" media="all" href="/pas/comun/css/comun.css" />
+		
+    </head>
+    <body>
+        <header class="navbar navbar-default">
+            <div class="container">
+                <nav>
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                                aria-expanded="false">
+                            <span class="sr-only">Trocar navegación</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span
+                                class="icon-bar"></span>
+                        </button>
+                        <a class="navbar-brand" href="/pas/accionPanel/marcaxes">Rexistro horario PAS - ARH</a>
+                        
+                    </div>
+
+                    <div class="collapse navbar-collapse" id="navbar">
+                        <ul class="nav navbar-nav">
+                            <li><a href="/pas/accionPanel/marcaxes">Marcaxes</a></li>
+                            <li class="active"><a href="/pas/accionPanel/solicitudes-pas">Solicitudes</a></li>
+                            <li><a href="/pas/accionPanel/informacion-pas">Información</a></li>
+                            <li><a href="/pas/accionPanel/notificacions">Configuración</a></li>
+                        </ul>
+                        
+                            <ul class="nav navbar-nav navbar-right">
+                                <li class="dropdown">
+                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"> 
+                                        <span class="glyphicon glyphicon-user"></span>
+                                        <span class="caret"></span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li class="dropdown-header"><h6>PERSOA PROBA EXEMPLO (persoa.proba@usc.es)</h6></li>
+                                        <li class="dropdown-header">Idiomas</li>
+                                        <li class="active"><a href="/pas/?setUserLocaleTo=gl">Galego</a></li>
+                                        <li><a href="/pas/?setUserLocaleTo=es">Español</a></li>
+                                        <li><a href="#">Perfil</a></li>
+                                        
+                                        <li><a href="/pas/j_spring_security_logout">Saír</a></li>                                           
+                                        
+                                            
+                                    </ul>
+                                </li>
+                            </ul>
+                        
+                    </div>
+                    <!-- /.navbar-collapse -->
+                </nav>
+            </div>
+            <!-- /.container-fluid -->
+        </header>
+
+        <!-- Contido -->
+        <div class="container">
+            <div class="col-md-9">
+                
+
+                <main>
+            <h2>Solicitude</h2>
+			
+				<div class="cabeceira">
+	<div class="row ">
+		<div class="col-xs-12 col-sm-2">
+			<p class="h5">Documento</p>
+			<p>00000000T</p>
+		</div>
+		<div class="col-xs-12 col-sm-4">
+			<p class="h5">Nome e apelidos</p>
+			<p>PERSOA PROBA EXEMPLO</p>
+		</div>	
+		<div class="col-xs-12 col-sm-6">
+			<p class="h5" >Relación laboral</p>
+			<p>
+			 	<p>PI-INVESTIGADOR COLABORADOR</p>
+			</p>
+		</div>
+	</div>	
+</div>
+    		
+        	<form action="/pas/solicitude/0" id="formularioSolicitude" method="post" enctype="multipart/form-data">
+                
+				
+					
+						<div class="jsErros alert alert-danger boxerr" role="alert" style="display:none">
+							<span>A información introducida é incorrecta</span>
+							<ul>
+								
+							</ul>
+						</div>
+					
+				
+                
+                <div class="jsErros alert alert-danger boxerr jsFileTotalLengthError" role="alert" style="display: none;">
+                    <span>Superado o tamaño máximo total dos arquivos a subir: 10485760B</span>
+                </div>
+			
+                <fieldset>
+                    <legend>Datos xerais</legend>					
+					
+					<div class="row">
+						<div id="selectorTipoSolicitude" class="col-md-5">
+				
+					<div class="form-group">
+						<label class="control-label">Tipo de solicitude</label> <select class="form-control" id="idTipoSolicitude" name="idTipoSolicitude">
+							<option value=""></option>
+							<option value="4">Vacacións, permisos e licenzas</option>
+							<option value="5">Ausencias autorizadas</option>
+							<option value="6">Marcaxes esquecidas</option>
+							<option value="7">Compensación de incrumprimento do horario</option>
+							
+							
+							
+							
+						</select> 
+					</div>
+				
+			</div>
+						<div id="selectorAnoSolicitude" class="col-md-2">
+				
+					<div class="form-group">
+						<label class="control-label">Ano</label> <select class="form-control" id="ano" name="ano">
+							<option value=""></option>
+							
+							
+						</select> 
+					</div>
+				
+			</div>
+						<input id="anoForm" class="form-control" type="hidden" value="" name="ano" />
+						<div id="selectorTipoAusencia" class="col-md-5">
+				
+					<div class="form-group">
+						<label class="control-label">Tipo de ausencia</label> <select class="form-control" id="idTipoAusencia" name="idTipoAusencia">
+							<option value=""></option>
+							<option value="3">Asistencia a curso de formación</option>
+							<option value="4">Falecemento, accidente ou enfermidade de familiar</option>
+							<option value="5">Exames finais e probas</option>
+							<option value="6">Traslado de domicilio</option>
+							<option value="7">Desprazamentos autorizados</option>
+							<option value="8">Desprazamento comision servizos autorizada</option>
+							<option value="9">Deberes persoais inescusables</option>
+							<option value="10">Funcións sindicais</option>
+							<option value="11">Outras ausencias</option>
+							<option value="12">Ausencia recuperable</option>
+							<option value="13">Compensación por traballar en festivos</option>
+							
+							
+							
+							
+							
+							
+							
+							
+							
+							
+							
+						</select> 
+					</div>
+				
+			</div>
+						<div id="selectorTipoVacacions" class="col-md-5">
+				
+					<div class="form-group">
+						<label class="control-label">Tipo de vacacións, permisos e licenzas</label> <select class="form-control" id="idTipoVacacions" name="idTipoVacacions">
+							<option value=""></option>
+							<option value="11">Asuntos particulares vinculados a festas locais</option>
+							<option value="13">Asuntos particulares xerais</option>
+							<option value="14">Asuntos parti. persoal centros sen festividade</option>
+							<option value="15">Asuntos parti. por festivos fin de semana</option>
+							<option value="16">Vacacións</option>
+							
+							
+							
+							
+							
+						</select> 
+					</div>
+				
+			</div>
+						<div id="selectorMesCompensar" class="col-md-5">
+	
+		<div class="form-group">
+			<label class="control-label">Mes a compensar</label>
+			<select class="form-control" id="mesCompensar" name="mesCompensar">
+				
+				
+				<option value="AGOSTO">Agosto</option>
+				<option value="SETEMBRO">Setembro</option>
+			</select> 
+			
+		</div>
+	
+</div>
+						<div class="row" id="divDataHora">
+							<div class="col-md-5">
+								<div class="form-group form-group">
+									<label class="control-label" for="solicitudeFormDto.dataHoraMarcaxe">Data e hora da marcaxe</label>
+									<div class='input-group date'>
+										<input type="text" class="form-control dateTimePickerMarcaxe" placeholder="Data e hora da marcaxe" autocomplete="off" id="dataHoraMarcaxe" name="dataHoraMarcaxe" value=""/>
+										<span class="input-group-addon"> <span class="glyphicon glyphicon-calendar"></span>
+										</span>
+									</div>
+									
+								</div>
+							</div>
+						</div>
+<!-- 						<div id="selectorCausa" class="col-md-6" th:include="sistema/fragmentos/formulario :: selectFragment('causa','cadea.arh.vistas.solicitude.campo.idCausa',${listaxeCausaMarcaxeEsquecida},'elemento','elemento.getClaveMensaxe()')" ></div> -->
+<!-- 						<div id="selectorCausa" class="col-md-6" th:include="sistema/fragmentos/formulario :: selectFragment('idCausa','cadea.arh.vistas.solicitude.campo.idCausa',${listaxeCausaMarcaxeEsquecida},'elemento.id','elemento.cargaTraducion(datosVista.idioma).nomeAbreviado')" th:with="usarArquivoMensaxes=false"></div> -->
+					</div>					
+					<div class="row" id="divDias">
+						<div class="col-md-4">
+							<p class="h5" style="font-weight:bold">Núm. de días concedidos</p>
+							<p>
+							 	<span id="numeroDiasConcedidos">-</span>
+							 	<span id="numeroHorasConcedidas"></span>
+							</p>
+						</div>
+						<div class="col-md-4">
+							<p class="h5" style="font-weight:bold">Núm. de días pendentes de concesión</p>
+							<p>
+								<span id="numeroDiasPendentesConcesion">-</span>
+								<span id="numeroHorasPendentesConcesion"></span>
+							</p>
+						</div>
+						<div class="col-md-4">
+							<p class="h5" style="font-weight:bold">Núm. de días dispoñibles</p>
+							<p>
+								<span id="numeroDiasDisponhibles">-</span>
+								<span id="numeroHorasDisponhibles"></span>
+							</p>
+						</div>
+					</div>
+					
+					<div id="advertenciaVacacionsInv" class="alert alert-danger boxerr" style="display: none;" role="alert">
+	                    <button type="button" id="btn-close-inv" class="close"><span aria-hidden="true">&times;</span></button>
+	                    <span>Os días dipoñibles amosados poden ser incorrectos xa que non contemplan as solicitudes feitas con anterioridade a abril do 2022. Revise as solicitudes concedidas previamente para obter o valor real.</span>
+	                </div>	
+					<div id="advertenciaVacacions" class="alert alert-danger boxerr" style="display: none;" role="alert">
+	                    <button type="button" id="btn-close" class="close"><span aria-hidden="true">&times;</span></button>
+	                    <span>Debido aos cambios no ano escollido nesta relación laboral, os días dispoñibles amosados son só unha estimación que deberá ser contrastada coa normativa que lle é de aplicación. Ante calquera dúbida póñase en contacto co seu responsable directo.</span>
+	                </div>				
+					<input class="form-control" type="hidden" value="BORRADOR" id="estado" name="estado" />
+					<input id="idSolicitante" class="form-control" type="hidden" value="10000" name="idSolicitante" />
+					<input class="form-control" type="hidden" value="0" id="diasDisponhibles" name="diasDisponhibles"/>
+					<input class="form-control" type="hidden" id="realizadaAdministrador" name="realizadaAdministrador" value="false" />
+
+					<div id="divPeriodos">					
+						<legend>Días que se solicitan</legend>
+						<table class="table table-condensed" id="taboaPeriodos">
+							<thead> 
+	                        	<tr>
+									<th class="col-md-2">Dende</th>
+									<th class="col-md-2">Ata</th>
+									<th class="col-md-1 campoFraccionamento">Fraccionamento</th>
+									<th class="col-md-2 campoFraccionamento">Hora de inicio</th>
+									<th class="col-md-2 campoFraccionamento">Hora de fin</th>
+									<th class="col-md-1 text-right">Accións</th>
+								</tr>
+	                        </thead>				
+							<tbody>
+								
+							</tbody>
+						</table>
+						<p id="mensaxePeriodo">Non hai periodos que amosar.</p>			
+						<div class="form-group">
+							<button class="btn btn-default" id="engadePeriodo" name="engadePeriodo">Engadir días á solicitude</button>	
+						</div>
+					</div>
+					<div id="divXustificantes">
+						<legend>Documentos xustificativos</legend>
+						<table class="table table-condensed" id="taboaXustificantes">
+							<thead>
+	                        	<tr>
+									<th class="col-md-10">Documento</th>
+									<th class="col-md-2 text-right">Accións</th>
+								</tr>
+	                        </thead>
+							<tbody>
+								
+							</tbody>
+						</table>
+						<p id="mensaxeXustificante">Non hai documentos que amosar.</p>
+						<div class="form-group col-md-3">
+							<button class="btn btn-default" id="engadeXustificante" name="engadeXustificante">Engadir documento</button>
+						</div>
+						<div class="form-group col-md-9">
+							<p>Lembre que non debe engadir documentos que conteñan información sensible como datos de saúde ou diagnósticos médicos. Os xustificantes de asistencia a consultas son admisibles sempre que fagan constar a data e hora, sen incluír información sensible.</p>
+						</div>
+					</div>					
+					<div class="row" id="divObservacions">
+						<div class="form-group col-sm-12">
+							<label class="control-label" for="observacions">Observacións</label>
+								<textarea class="form-control" placeholder="Observacións" rows="5" id="observacions" name="observacions"></textarea>
+							
+						</div>
+					</div>
+					<div>						
+						<button id="seguinte" type="submit" class="botonera-solicitude-fin btn btn-primary">Seguinte</button>
+					</div>
+                </fieldset>
+            </form>
+            <div style="display: none;" class="jsBorrarTemplate alert alert-danger top15 alert-dismissible fade in" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+        <h4>Confirmación</h4>
+        <p>Está vostede seguro de eliminar este elemento?</p>
+
+        <form action="/pas/solicitude/0" method="post">
+            <input type="hidden" name="accion" value="borrar" />
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <button type="button" class="btn btn-default" data-dismiss="alert">Cancelar</button>
+        </form>
+    </div>
+        </main>
+            </div>
+            
+            
+            <div class="col-md-3" >
+                <nav class="bd-sidebar">
+                    <div class="bd-toc-item">
+            
+				
+	    <style>
+	        nav.bd-sidebar div.bd-toc-item a.bd-toc-link + ul li a {
+	            padding-left: 2em !important;
+	        }
+	    </style>
+    
+				
+            	
+					<a class="bd-toc-link">
+		                <h5>Solicitudes</h5>
+		            </a>
+	                <ul class="nav bd-sidenav">
+	                    <li><a href="/pas/solicitudesPropias">Solicitudes propias</a></li>
+	                    
+		            </ul>	  
+	                      
+			
+        </div>
+
+                    <!--<div th:if="${datosVista.panelActivo.panel!=null &amp;&amp; datosVista.panelActivo.panel.accions.size() > 0}" class="bd-toc-item">
+                        <a class="bd-toc-link">
+                            <h5 th:text="#{cadea.templates.sistema.layouts.outrasAccions}">Outras accións</h5>
+                        </a>
+                        <ul class="nav bd-sidenav">
+                            <li th:each="accion : ${datosVista.panelActivo.panel.accions}"><a href="#" th:href="@{/accionPanel/{codigo}(codigo=${accion.codigo})}" th:text="${accion.nome}">Editar grupos da aplicaciÃ³n</a></li>
+                        </ul>
+                    </div>
+
+                    <div th:if="${datosVista.modulo.modulos.size()>0}" class="bd-toc-item">
+                        <a class="bd-toc-link">
+                            <h5 th:text="#{cadea.templates.sistema.layouts.modulos}">Módulos</h5>
+                        </a>
+                        <ul class="nav bd-sidenav">
+                            <li th:each="modulo :  ${datosVista.modulo.modulos}" class="active"><a href="#" th:href="@{/accionPanel/{codigo}(codigo=${modulo.accionInicial.codigo})}" th:text="${modulo.nome}">Sistema</a></li>
+                        </ul>
+                    </div> -->
+                </nav>
+            </div>
+            
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; Universidade de Santiago de Compostela, versión 1.61.0. Para a resolución de dúbidas e problemas	con esta aplicación, contacte co <a href="https://www.usc.gal/cau">CAU</a> da USC.</p>
+                <a href="https://www.usc.es/atic"> <img src="/pas/sistema/images/footer-logo.png"
+                                                        alt="Universidade de Santiago de Compostela"/>
+                </a>
+            </div>
+        </footer>
+        <script type="text/javascript" src="/pas/jquery/js/jquery-1.12.4.min.js"></script>
+        <script type="text/javascript" src="/pas/bootstrap/js/bootstrap.min.js"></script>
+        
+            <script type="text/javascript">
+		/*<![CDATA[*/
+        var fileTotalMaxSize =  10485760;
+        /*]]>*/
+
+		$(function() {
+			var camposConMensaxe = {};
+			$('.help-block.fielderrloc').each(function() {
+				camposConMensaxe['campo-' + $(this).data("errorfield").replace(/\[/g, "_").replace(/\]/g, "_")] = true;
+			});
+			$('.fielderr').each(function() {
+				if (camposConMensaxe['campo-' + $(this).data("errorfield").replace(/\[/g, "_").replace(/\]/g, "_")] == true)
+					$(this).remove();
+				else
+					$(this).show();
+			});
+
+			/*INIT: Soporte js para control de lonxitude de arquivos.*/
+			$('.jsArquivo').on("change", function(e) {
+				showFileErro(this);
+			});
+
+			$('form').submit(function(e) {
+				if (!window.FileReader)
+					return;
+
+				$('jsFileTotalLengthError').hide();
+				var erro = false;
+				var auxTotalSize = 0;
+				$(this).find('.jsArquivo').each(function() {
+                    if (!this.files[0]) return;
+					auxTotalSize += this.files[0].size;
+					if (showFileErro(this))
+						erro = true;
+				});
+				if (auxTotalSize >= fileTotalMaxSize) {
+					$(".jsFileTotalLengthError").show();
+					erro = true;
+				}
+				if (erro)
+					e.preventDefault();
+			});
+			/*FIN: Soporte js para control de lonxitude de arquivos.*/
+		});
+
+		function showFileErro(fileInput) {
+			var divfileInput = $(fileInput).parents("div .fileinput").first();
+			divfileInput.parent().removeClass("has-error");
+			divfileInput.next('.fileLengthError').hide();
+
+			if (!fileInput.files[0])
+				return false;
+			var size = fileInput.files[0].size;
+
+			var fileMaxSize = $(fileInput).data('filemaxsize');
+
+			if (size >= fileMaxSize) {
+				divfileInput.next('.fileLengthError:first').show();
+				divfileInput.parent().addClass("has-error");
+				return true;
+			} else
+				return false;
+		}
+
+	</script>
+            <script type="text/javascript" src="/pas/moment/js/moment-with-locales.min.js"></script>
+            <script type="text/javascript" src="/pas/bootstrap-datetimepicker/js/bootstrap-datetimepicker.min.js"></script>
+            <script type="text/javascript">
+        $(function() {
+            $(" .jsBorrar").click(function() {
+                $("#jsConfirmacionAccion").remove();
+                var confirm = $(".jsBorrarTemplate").clone();
+                confirm.attr("id", "jsConfirmacionAccion")
+                $(this).parents("form").after(confirm);
+                $("#jsConfirmacionAccion").show();                
+            });
+        });
+    </script>
+            <script type="text/javascript" src="/pas/plantillas/js/jasny-bootstrap.min.js"></script>
+            <script type="text/javascript" src="/pas/plantillas/js/bootstrap3-typeahead.min.js"></script>
+			<script type="text/javascript">
+				/*<![CDATA[*/
+				var fraccionamento = true;
+				var urlGardarSolicitude="/pas/solicitude/0";
+				var estado = "BORRADOR";
+				var anoSolicitude = "";
+				var idPersoa = "13156";
+				var idTipoSolicitudeAusencias = "5";
+				var idTipoSolicitudeVacacions = "4";
+				var idTipoSolicitudeMarcaxes = "6";
+				var idTipoSolicitudeCompensacion = "7";
+				var isAdvertenciaVacacionsInv = "false";
+ 				var mapTipoSolicitudeEAnos = "{&quot;4&quot;:[&quot;2026&quot;],&quot;5&quot;:[&quot;2026&quot;],&quot;6&quot;:[&quot;2026&quot;],&quot;7&quot;:[&quot;2026&quot;]}";
+ 				var codigoColectivo = "INV";
+				
+				var isNovo = "true";
+				$(document).ready(function() {
+					$('.documentoXustificante').prop('accept', 'application/pdf');
+					
+					$('.dateTimePicker').datetimepicker({
+						locale: 'gl',
+						format: 'DD/MM/YYYY',
+						useCurrent: false
+					}).on('dp.change',function(event){
+						autocompletarDataFin(event.target.id)
+					  });	
+					
+					$('.dateTimePickerMarcaxe').datetimepicker({
+						locale: 'gl',
+						format: 'DD/MM/YYYY HH:mm',
+						useCurrent: false
+					});
+					$('.timePicker').datetimepicker({
+						locale: 'gl',
+						format: 'HH:mm',
+						useCurrent: false
+					});
+										
+					mostrarTaboaXustificantes();
+					mostrarTaboaPeriodos();		
+					evaluarTipoSolicitude($("#idTipoSolicitude").children("option:selected").val());
+					
+					$("#idTipoSolicitude").change(function(){
+						evaluarTipoSolicitude($("#idTipoSolicitude").children("option:selected").val());
+					});
+					$("#idTipoVacacions").change(function(){
+						actualizarDias();
+						mostrarFraccionamentoTipoVacacions();
+					});
+					$("#ano").change(function(){
+						var idTipoVacacions = $("#idTipoVacacions").children("option:selected").val();
+						if (idTipoVacacions != null){
+							actualizarDias();
+						}
+						comprobarAdvertenciaVacacions();
+						comprobarAdvertenciaVacacionsInv();
+					});
+					$("#idTipoAusencia").change(function(){
+						mostrarFraccionamentoTipoAusencia();
+					});
+					if(isNovo == "false"){
+						$("#selectorTipoSolicitude :input").attr('readonly', true);
+					}
+					$("#botonEliminarXustificante :button").click(function() {
+						idElemento = this.id;
+						var fila = idElemento.split("eliminaXustificante")[1].split(".")[0];
+						eliminarXustificante(fila);
+					});
+					
+					$('input[type=checkbox]').each(function () {
+					    idElemento = this.id;
+						var fila = idElemento.split("periodos")[1].split(".")[0];
+						mostrarSelectorHoras(this, fila);
+					});
+					$(".checkbox-inline input").change(function() {
+						idElemento = event.target.id;
+						var fila = idElemento.split("periodos")[1].split(".")[0]; 
+						mostrarSelectorHoras(this, fila);
+				    });
+					if(codigoColectivo == 'INV'){
+						$("#idTipoSolicitude option[value="+idTipoSolicitudeCompensacion+"]").remove();
+					}
+					
+					$("#btn-close-inv").click(function () {
+					    $("#advertenciaVacacionsInv").css("display", "none");
+					});
+					
+					$("#btn-close").click(function () {
+					    $("#advertenciaVacacions").css("display", "none");
+					});
+					
+					//Só para os administradores
+					$('#persoaPasTexto').typeahead({
+						source: function (query, process){
+							$.getJSON(
+								"/pas/relacionLaboralPersoaPasAutocompletable",
+								{ persoaTexto: query },
+								function (data) {
+									return process(data);
+								});
+						},
+						afterSelect: function (data) {
+							$('#idSolicitante').val(data.id);
+						},
+						delay: 300
+					});
+					
+				});
+				function mostrarSelectorHoras(fraccionamentoElement, fila){
+					var idTipoSolicitude = $("#idTipoSolicitude").children("option:selected").val();
+					if(idTipoSolicitude == idTipoSolicitudeCompensacion || (idTipoSolicitude == idTipoSolicitudeAusencias && fraccionamento==true)){
+						$('input[type=checkbox]').prop('checked', true);
+						$('input[type=checkbox]').attr('readonly',true);
+						document.getElementById("periodos" + fila +".horaInicio").disabled = false;
+						document.getElementById("periodos" + fila +".horaFin").disabled = false;
+					} else {
+						if(fraccionamentoElement.checked){
+							document.getElementById("periodos" + fila +".horaInicio").disabled = false;
+							document.getElementById("periodos" + fila +".horaFin").disabled = false;
+						} else {
+							document.getElementById("periodos" + fila +".horaInicio").disabled = true;
+							document.getElementById("periodos" + fila +".horaFin").disabled = true;
+						}
+						$('input[type=checkbox]').attr('readonly',false);					
+					}
+				};
+				
+				function fraccionamentoMarcado(obrigatorio){
+						$(".campoFraccionamento").show();
+						$('input[type=checkbox]').attr('readonly', obrigatorio);
+						if (obrigatorio){
+							$('input[type=checkbox]').prop('checked', obrigatorio);
+							$('input[id$="horaInicio"]').prop("disabled", !obrigatorio);
+							$('input[id$="horaFin"]').prop("disabled", !obrigatorio);
+						}
+				};
+				
+				function quitarFraccionamento(){
+					$(".campoFraccionamento").hide();
+					$('input[type=checkbox]').attr('readonly', false);
+					$('input[type=checkbox]').prop('checked', false);
+					$('input[id$="horaInicio"]').prop("disabled", true);
+					$('input[id$="horaFin"]').prop("disabled", true);
+				}
+				
+				function mostrarFraccionamentoTipoAusencia() {
+					var idTipoAusencia = $("#idTipoAusencia").children("option:selected").val();
+					if(idTipoAusencia != ""){
+						$.ajax({
+							type : "GET",
+							url : "/pas/podeFraccionarPeriodoTipoAusencia",
+							data : {
+								"idTipoAusencia": idTipoAusencia
+							}
+						}).done (function(data, textStatus, jqXHR) {
+							var jsonIsFraccionamento = JSON.parse(data);
+							console.log("done " + idTipoAusencia + " : " + jsonIsFraccionamento.isFraccionamento);
+							if(jsonIsFraccionamento.isFraccionamento){
+								fraccionamento = true;
+								fraccionamentoMarcado(true)
+							} else {
+								quitarFraccionamento()
+								fraccionamento = false;
+							}
+						}).fail (function(jqXHR, textStatus, errorThrown) {
+							console.log('Erro obtendo fraccionamento.');
+						});
+					}
+				}
+				
+				function mostrarFraccionamentoTipoVacacions() {
+					var idTipoVacacions = $("#idTipoVacacions").children("option:selected").val();
+					var idSolicitante = $("#idSolicitante").val();
+					var ano = $("#ano").children("option:selected").val();
+					if(idTipoVacacions != ""){
+						$.ajax({
+							type : "GET",
+							url : "/pas/podeFraccionarPeriodoTipoVacacions",
+							data : {
+								"idTipoVacacions": idTipoVacacions
+							}
+						}).done (function(data, textStatus, jqXHR) {
+							var jsonIsFraccionamento = JSON.parse(data);
+							console.log("done " + idTipoVacacions + " : " + jsonIsFraccionamento.isFraccionable);
+							if(jsonIsFraccionamento.isFraccionable){
+								fraccionamento = true;
+								fraccionamentoMarcado(false)
+							} else {
+								quitarFraccionamento();
+								fraccionamento = false;
+							}
+						}).fail (function(jqXHR, textStatus, errorThrown) {
+							console.log('Erro obtendo fraccionamento.');
+						});
+					}
+				}
+				
+				function actualizarDias() {
+					var idTipoVacacions = $("#idTipoVacacions").children("option:selected").val();
+					var idTipoSolicitude = $("#idTipoSolicitude").children("option:selected").val();
+					var ano = $("#ano").children("option:selected").val();
+					var idSolicitante = $("#idSolicitante").val();
+					if(idTipoVacacions != ""){
+						$.ajax({
+							type : "GET",
+							url : "/pas/obterNumeroDias",
+							data : {
+								"idTipoVacacions": idTipoVacacions,
+								"idSolicitante": idSolicitante,
+								"ano": ano
+							}
+						}).done (function(data, textStatus, jqXHR) {
+							var jsonDias = JSON.parse(data);
+							console.log("done " + idTipoVacacions + " : " + jsonDias.numeroDiasConcedidos + jsonDias.numeroDiasPendentesConcesion + jsonDias.numeroDiasDisponhibles);
+							$('#numeroDiasConcedidos').text(jsonDias.numeroDiasConcedidos + "d");
+							if (jsonDias.numeroHorasConcedidas > 0){
+								$('#numeroHorasConcedidas').text(jsonDias.numeroHorasConcedidas + "h");
+							}
+							$('#numeroDiasPendentesConcesion').text(jsonDias.numeroDiasPendentesConcesion + "d");
+							if (jsonDias.numeroHorasPendentesConcesion > 0){
+								$('#numeroHorasPendentesConcesion').text(jsonDias.numeroHorasPendentesConcesion + "h");
+							}
+							$('#numeroDiasDisponhibles').text(jsonDias.numeroDiasDisponhibles + "d");
+							if(jsonDias.numeroDiasDisponhibles < 0){
+								$('#numeroDiasDisponhibles').addClass('text-danger');
+							}	
+							if (jsonDias.numeroHorasDisponhibles > 0){
+								$('#numeroHorasDisponhibles').text(jsonDias.numeroHorasDisponhibles + "h");	
+							}
+						}).fail (function(jqXHR, textStatus, errorThrown) {
+							console.log('Erro obtendo numero de días laborables.');
+						});
+					}
+				}
+				
+				function autocompletarDataFin(idElemento){
+					var fila = parseInt(idElemento.split("periodos")[1].split(".")[0]);
+					var dataFin = $('.dateTimePicker').eq(fila*2+1).val();
+					var idTipoSolicitude = $("#idTipoSolicitude").children("option:selected").val()
+					if ((dataFin == "" || dataFin == null) && idTipoSolicitude == idTipoSolicitudeAusencias){
+						var dataInicio =  $('.dateTimePicker').eq(fila*2).val();
+						$('.dateTimePicker').eq(fila*2+1).val(dataInicio);
+					}
+				}
+				
+				function evaluarTipoSolicitude(idTipoSolicitude){					
+					if(idTipoSolicitude == idTipoSolicitudeAusencias){
+						$("#selectorTipoAusencia").css("display", "block");	
+						mostrarFraccionamentoTipoAusencia()
+						$("#divPeriodos").css("display", "block");
+						$("#divDataHora").css("display", "none");
+						obterAnosTipoSolicitude(idTipoSolicitude);
+					} else {
+						$("#selectorTipoAusencia").css("display", "none");						
+					}					
+					if(idTipoSolicitude == idTipoSolicitudeVacacions){
+						$("#divPeriodos").css("display", "block");
+						$("#selectorTipoVacacions").css("display", "block");
+						$("#divDias").css("display", "block");
+						obterAnosTipoSolicitude(idTipoSolicitude);
+						mostrarFraccionamentoTipoVacacions();
+						$("#divDataHora").css("display", "none");
+						actualizarDias();
+					} else {
+						$("#selectorTipoVacacions").css("display", "none");
+						$("#divDias").css("display", "none");
+					}
+					if(idTipoSolicitude == idTipoSolicitudeMarcaxes){
+						$("#selectorCausa").css("display", "block");
+						$("#divPeriodos").css("display", "none");
+						$("#divDataHora").css("display", "block");
+						$(".campoFraccionamento").hide();
+						obterAnosTipoSolicitude(idTipoSolicitude);
+						quitarFraccionamento();
+						eliminarPeriodos();
+					} else {
+						$("#divDataHora").css("display", "none");
+						$("#selectorCausa").css("display", "none");
+					}
+					if(idTipoSolicitude == idTipoSolicitudeCompensacion){						
+						$("#divPeriodos").css("display", "block");
+						$("#divXustificantes").css("display", "none");
+						$(".campoFraccionamento").show();
+						$("#selectorMesCompensar").css("display", "block");
+						$("#selectorAnoSolicitude").css("display", "none")
+						fraccionamentoMarcado(true);
+						obterAnosTipoSolicitude(idTipoSolicitude);
+					} else {
+						$("#divXustificantes").css("display", "block");
+						$("#selectorMesCompensar").css("display", "none");
+						$("#selectorAnoSolicitude").css("display", "block")
+					}
+					if(idTipoSolicitude == ""){
+						$("#selectorAnoSolicitude").css("display", "none")
+					}
+				}
+				
+				function mostrarTaboaXustificantes(){
+		        	var filas = $('#taboaXustificantes >tbody >tr').length;
+		        	if(filas == 0){
+		        		$('#mensaxeXustificante').css('display', 'block');
+		        	} else {
+		        		$('#mensaxeXustificante').css('display', 'none');
+		        	}
+		        }
+				
+				function eliminarXustificante(id){
+					event.preventDefault();
+		        	$('#xustificante'+id).remove();
+		        	mostrarTaboaXustificantes();
+		        };
+		        
+		        $('#engadeXustificante').click(function( event ) {
+		        	event.preventDefault();
+					engadirXustificante();
+				});
+		        
+		        function engadirXustificante(){
+		        	var filas = $('#taboaXustificantes >tbody >tr').length;
+		        	if(filas == 0){
+		        		$('#mensaxeXustificante').css('display', 'none');
+		        		$('#taboaXustificantes tbody').html('<tr id="xustificante'+filas+'"><td class="col-md-10"><div class="form-group"><div class="fileinput input-group fileinput-exists" data-provides="fileinput"><div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div><span class="input-group-addon btn btn-default btn-file"><span>Seleccionar ficheiro</span> <input class="documentoXustificante jsArquivo" type="file" data-filemaxsize2="1048576" id="xustificantes['+filas+'].file" name="xustificantes['+filas+'].file"></span></div></div></td><td class="col-md-2 text-right"><button class="btn btn-default" id="eliminaXustificante'+filas+'" onclick="eliminarXustificante('+filas+')" value="'+filas+'"><span class="glyphicon glyphicon-minus"></span></button></td></tr>');
+		        	} else{
+		        		$('#taboaXustificantes tr:last').after('<tr id="xustificante'+filas+'"><td class="col-md-10"><div class="form-group"><div class="fileinput input-group fileinput-exists" data-provides="fileinput"><div class="form-control" data-trigger="fileinput"><i class="glyphicon glyphicon-file fileinput-exists"></i> <span class="fileinput-filename"></span></div><span class="input-group-addon btn btn-default btn-file"><span>Seleccionar ficheiro</span> <input class="documentoXustificante jsArquivo" type="file" data-filemaxsize2="1048576" id="xustificantes['+filas+'].file" name="xustificantes['+filas+'].file"></span></div></div></td><td class="col-md-2 text-right"><button class="btn btn-default" id="eliminaXustificante'+filas+'" onclick="eliminarXustificante('+filas+')" value="'+filas+'"><span class="glyphicon glyphicon-minus"></span></button></td></tr>');		        		
+		        	}
+		        	$('#file').prop('accept', 'application/pdf');
+		        	$('.documentoXustificante').prop('accept', 'application/pdf');
+		        };
+		        
+		        function mostrarTaboaPeriodos(){
+		        	var filas = $('#taboaPeriodos >tbody >tr').length;
+		        	if(filas == 0){
+		        		$('#mensaxePeriodo').css('display', 'block');
+		        	} else {
+		        		$('#mensaxePeriodo').css('display', 'none');
+		        	}
+		        }
+		        
+		        $('#taboaPeriodos button').click(function( event ) {
+		        	event.preventDefault();
+		        	$('#periodo'+$(this).val()).remove();
+		        	mostrarTaboaPeriodos();
+				});
+
+		        function eliminarPeriodo(id){
+		        	event.preventDefault();
+		        	$('#periodo'+id).remove();
+		        	mostrarTaboaPeriodos();
+		        };
+
+		        function eliminarPeriodos(){
+		        	event.preventDefault();
+		        	$( ".periodo" ).each(function( index ){
+		        		$(this).remove();
+		        	});
+		        };
+
+		        $('#engadePeriodo').click(function( event ) {
+		        	event.preventDefault();
+		        	engadirPeriodo();
+		        });
+
+		        function engadirPeriodo(){
+		        	var filas = $('#taboaPeriodos >tbody >tr').length;
+		        	if(filas == 0){
+		        		$('#taboaPeriodos tbody').html('<tr class="periodo" id="periodo'+filas+'"><input type="hidden" id="periodos'+filas+'.id" name=periodos['+filas+'].id"><td><div class="form-group"><div class="input-group date"><input type="text" class="form-control dateTimePicker" placeholder="Dende" autocomplete="off" id="periodos'+filas+'.dataInicio" name="periodos['+filas+'].dataInicio" value="" _vkenabled="true"><span class="input-group-addon"> <span class="glyphicon glyphicon-calendar"></span></span></div></div></td><td><div class="form-group"><div class="input-group date"><input type="text" class="form-control dateTimePicker" placeholder="Ata" autocomplete="off" id="periodos'+filas+'.dataFin" name="periodos['+filas+'].dataFin" value="" _vkenabled="true" _originaltype="text"><span class="input-group-addon"> <span class="glyphicon glyphicon-calendar"></span></span></div><input type="hidden" class="form-control"  placeholder="0" value="0" autocomplete="off" id="periodos'+filas+'.numeroDias" name="periodos['+filas+'].numeroDias" _vkenabled="true"></div></td><td class="campoFraccionamento"><div class="checkbox"><label for="periodos'+filas+'.fraccionamentoPorHoras" class="checkbox-inline"><input id="periodos'+filas+'.fraccionamentoPorHoras" onclick="mostrarSelectorHoras(this,'+filas+')" type="checkbox" name="periodos['+filas+'].fraccionamentoPorHoras" value="true"><input type="hidden" name="_periodos['+filas+'].fraccionamentoPorHoras"></label></div></td><td class="campoFraccionamento"><div class="form-group"><div class="input-group date"><input type="text" class="form-control timePicker" placeholder="Hora de inicio" autocomplete="off" id="periodos'+filas+'.horaInicio" name="periodos['+filas+'].horaInicio" value="" _vkenabled="true"><span class="input-group-addon"> <span class="glyphicon glyphicon-time"></span></span></div></div></td><td class="campoFraccionamento"><div class="form-group"><div class="input-group date"><input type="text" class="form-control timePicker" placeholder="Hora de fin" autocomplete="off" id="periodos'+filas+'.horaFin" name="periodos['+filas+'].horaFin" value="" _vkenabled="true"><span class="input-group-addon"><span class="glyphicon glyphicon-time"></span></span></div></div></td><td class="text-right"><button class="btn btn-default" id="eliminaPeriodo'+filas+'" onclick="eliminarPeriodo('+filas+')" value="'+filas+'"><span class="glyphicon glyphicon-minus"></span></button></td></tr>');	        		
+		        	} else{
+		        		$('#taboaPeriodos tr:last').after('<tr class="periodo" id="periodo'+filas+'"><input type="hidden" id="periodos'+filas+'.id" name=periodos['+filas+'].id"><td><div class="form-group"><div class="input-group date"><input type="text" class="form-control dateTimePicker" placeholder="Dende" autocomplete="off" id="periodos'+filas+'.dataInicio" name="periodos['+filas+'].dataInicio" value="" _vkenabled="true"><span class="input-group-addon"> <span class="glyphicon glyphicon-calendar"></span></span></div></div></td><td><div class="form-group"><div class="input-group date"><input type="text" class="form-control dateTimePicker" placeholder="Ata" autocomplete="off" id="periodos'+filas+'.dataFin" name="periodos['+filas+'].dataFin" value="" _vkenabled="true" _originaltype="text"><span class="input-group-addon"> <span class="glyphicon glyphicon-calendar"></span></span></div><input type="hidden" class="form-control"  placeholder="0" value="0" autocomplete="off" id="periodos'+filas+'.numeroDias" name="periodos['+filas+'].numeroDias" _vkenabled="true"></div></td><td class="campoFraccionamento"><div class="checkbox"><label for="periodos'+filas+'.fraccionamentoPorHoras" class="checkbox-inline"><input id="periodos'+filas+'.fraccionamentoPorHoras" onclick="mostrarSelectorHoras(this,'+filas+')" type="checkbox" name="periodos['+filas+'].fraccionamentoPorHoras" value="true"><input type="hidden" name="_periodos['+filas+'].fraccionamentoPorHoras"></label></div></td><td class="campoFraccionamento"><div class="form-group"><div class="input-group date"><input type="text" class="form-control timePicker" placeholder="Hora de inicio" autocomplete="off" id="periodos'+filas+'.horaInicio" name="periodos['+filas+'].horaInicio" value="" _vkenabled="true"><span class="input-group-addon"> <span class="glyphicon glyphicon-time"></span></span></div></div></td><td class="campoFraccionamento"><div class="form-group"><div class="input-group date"><input type="text" class="form-control timePicker" placeholder="Hora de fin" autocomplete="off" id="periodos'+filas+'.horaFin" name="periodos['+filas+'].horaFin" value="" _vkenabled="true"><span class="input-group-addon"><span class="glyphicon glyphicon-time"></span></span></div></div></td><td class="text-right"><button class="btn btn-default" id="eliminaPeriodo'+filas+'" onclick="eliminarPeriodo('+filas+')" value="'+filas+'"><span class="glyphicon glyphicon-minus"></span></button></td></tr>');		        		
+		        	}
+		        	if(fraccionamento){
+	        			$(".campoFraccionamento").show();
+	        			$('input[type=checkbox]').each(function () {
+						    idElemento = this.id;
+							var fila = idElemento.split("periodos")[1].split(".")[0];
+							mostrarSelectorHoras(this, fila);
+						});
+	        		} else {
+	        			$(".campoFraccionamento").hide();
+	        		}
+		        	$('.dateTimePicker').datetimepicker({
+						locale: 'gl',
+						format: 'DD/MM/YYYY',
+						useCurrent: false
+					}).on('dp.change',function(event){
+						autocompletarDataFin(event.target.id)
+					  });	
+					
+					$('.timePicker').datetimepicker({
+						locale: 'gl',
+						format: 'HH:mm',
+						useCurrent: false
+					});
+		        	$('#mensaxePeriodo').css('display', 'none');
+		        };
+
+		        function obterAnosTipoSolicitude(idTipoSolicitude){
+		        	const map = new Map(Object.entries(JSON.parse(mapTipoSolicitudeEAnos.replace(/&quot;/g,'"'))))
+		        	$('#ano').find('option:not(:first)').remove();
+					
+					$.each(map.get(idTipoSolicitude), function(index, item) {
+						var o = new Option(item, item.toString());
+						$(o).html(item);
+						$("#ano").append(o);
+					});
+		        	if (anoSolicitude === "" || anoSolicitude === null){
+		        		$('#ano').find('option:nth-child(2)').attr('selected', true);
+		        	}
+		        	else {
+		        		var anoElement = $('#ano').find("option[value='" + anoSolicitude + "']");
+		        		if (anoElement.length > 0){
+		        			anoElement.attr('selected', true);
+		        		} else {
+			        		$('#ano').find('option:nth-child(2)').attr('selected', true);
+		        		}
+		        	}
+		        	comprobarAdvertenciaVacacions();
+		        	comprobarAdvertenciaVacacionsInv();
+					if (map.get(idTipoSolicitude).length <= 1){
+						$('#ano').prop("disabled", true);
+						$('#anoForm').prop("disabled", false)
+						$('#anoForm').val($('#ano').find("option:selected").val());
+					}
+					else {
+						$('#anoForm').prop("disabled", true)
+						$('#ano').prop("disabled", false);
+					}
+		        }
+		        
+		        function comprobarAdvertenciaVacacions() {
+					var ano = $('#ano').val();
+					var idTipoSolicitude = $('#idTipoSolicitude').val();
+					if (ano && idTipoSolicitude == idTipoSolicitudeVacacions) {
+						$.ajax({
+							type : "GET",
+							url : "/pas/tenVariasRelacionsLaboraisAno",
+							data : {
+								"idPersoa": idPersoa,
+								"ano": ano
+							}
+						}).done (function(data, textStatus, jqXHR) {
+							if (data) {
+								$("#advertenciaVacacions").css("display", "block");
+							} else {
+								$("#advertenciaVacacions").css("display", "none");
+							}
+						}).fail (function(jqXHR, textStatus, errorThrown) {
+							console.log('Erro obtendo tenVariasRelacionsLaboraisAno.');
+							$("#advertenciaVacacions").css("display", "none");
+						});
+					} else {
+						$("#advertenciaVacacions").css("display", "none");
+					}
+				}
+				
+				function comprobarAdvertenciaVacacionsInv() {
+					var ano = $('#ano').val();
+					if (isAdvertenciaVacacionsInv && codigoColectivo == 'INV' && ano == 2022) {
+						$("#advertenciaVacacionsInv").css("display", "block");
+					} else {
+						$("#advertenciaVacacionsInv").css("display", "none");
+					}
+				}
+				/*]]>*/				
+			</script>
+        
+
+        
+    </body>
+</html>

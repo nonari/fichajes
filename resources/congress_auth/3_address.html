@@ -1,0 +1,1464 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+
+
+
+
+
+
+
+
+
+    
+        
+    
+
+    
+
+    
+
+
+
+
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="gl">
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <meta http-equiv="imagetoolbar" content="no" />
+        <meta name="Author" content="ATIC" />
+        <meta name="Description" content="Web da sede electrónica - Web da sede electrónica" />
+        <meta name="language" content="" />
+        <meta name="robots" content="noindex" />
+        <meta name="title" content="Autorización de permisos para a asistencia a congresos, xornadas, etc do persoal contratado con cargo a actividades, proxectos de investigación e programas de recursos humanos&#32;&#45; Xestor de solicitudes" ></meta>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <title>Autorización de permisos para a asistencia a congresos, xornadas, etc do persoal contratado con cargo a actividades, proxectos de investigación e programas de recursos humanos&#32;&#45; Xestor de solicitudes</title>
+
+        <link rel="SHORTCUT ICON" href="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/images/favicon.ico">
+        <link href="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/stylesheets/jquery-ui.min.css" rel="stylesheet"/>
+        <link href="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/stylesheets/jquery-ui.structure.min.css" rel="stylesheet"/>
+        <link href="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/stylesheets/jquery-ui.theme.min.css" rel="stylesheet"/>
+        <link href="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/stylesheets/responsive-general.css" rel="stylesheet"/>
+        <link href="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/stylesheets/fa.css" rel="stylesheet"/>
+        <link rel="stylesheet" href="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/stylesheets/bootstrap.min.css" />
+        
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/jquery-3.3.1.min.js"  type="text/javascript"></script>
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/jquery-ui.min.js"  type="text/javascript"></script>
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/custom-form-elements.js"  type="text/javascript"></script>
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/generales_usc.js"  type="text/javascript"></script>
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/usc-formularios-utils_jQuery.js" type="text/javascript"></script>
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/bootstrap.min.js" type="text/javascript"></script>
+
+        <style type="text/css">input.styled { display: none; } select.styled { position: relative; width: 190px; opacity: 0; filter: alpha(opacity=0); z-index: 5; } .disabled { opacity: 0.5; filter: alpha(opacity=50);} .global-header { position: fixed; z-index: 999; top: 0; left: 0; width: 100%; height: 40px; background-color: #036; color: #fff; font-family: 'Ubuntu', sans-serif; } .global-header h1, .global-footer h1 { margin: 0; color: #ffffff; background-color: #036; background-repeat: no-repeat; background-position: left center; float: left; } .global-header h1 { width: 300px; height: 40px; background-size: contain; background-image: url(https://aplicacions.usc.es/intranet/solicitudes/themes/usc/images/global-header-logo-usc.png); } .languages { font-size: 0.9em; margin-right: 1em; } .languages a, .languages a:hover { color: #ccc !important; } div.usc-slogan { margin: 30px 10px 8px 0; } .usc-slogan { margin: 20px 10px 10px 0; font-family: 'Noto Serif', serif; font-size: 2em; color: #696158; text-transform: uppercase; display: inline-block; float: left; padding-left: 0.5em; } .navbar-default { background-color: #f8f8f8; border-color: #e7e7e7; } .navbar-default .navbar-nav li a { font-weight: 500; color: #036 !important; font-family: 'Ubuntu', sans-serif; font-size: 1.2em; } nav.navbar.navbar-default a.navbar-brand { display: inline-block; background-image: url(https://aplicacions.usc.es/intranet/solicitudes/themes/usc/images/logo.svg); background-repeat: no-repeat; background-size: contain; background-position: left center; width: 75px; opacity: 1.0; height: 50px;} .global-footer { margin-top: 1em; width: 100%; height: auto; background-color: #036; color: #fff; font-family: 'Ubuntu', sans-serif; } div.global-footer { margin-top: 0 !important; padding: 20px; } .global-footer h1 { width: 200px; height: 90px; background-size: 80%; background-image: url(https://aplicacions.usc.es/intranet/solicitudes/themes/usc/images/global-footer-logo-usc.png); margin: 0 75px 0 0; } .global-footer li > a { color: #FFF; } </style>
+
+        
+        <meta name="faragullas" content="true"/>        
+        
+        
+        <!-- SCRIPTS -->
+        <script type="text/javascript" src="https://aplicacions.usc.es/intranet/solicitudes/js/usc-ajax-utils.js"></script>
+        <!--<script type="text/javascript" src="https://aplicacions.usc.es/intranet/solicitudes/js/jquery.maskedinput.js"></script>-->
+        <script type="text/javascript" src="https://aplicacions.usc.es/intranet/solicitudes/js/jquery.mask.js"></script>
+    
+        
+    </head>
+    <body>
+        
+        <div class="global-header">
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <h1 class="text-hide d-none d-sm-block">Universidade de Santiago de Compostela</h1>
+                        <div class="d-flex justify-content-end my-2 flex-wrap">
+                            <ul class="links list-inline languages">
+                                
+                                
+                                    
+                                        
+                                            
+                                        
+                                    
+                                    
+                                
+                                
+                                
+                                    <li class="list-inline-item">
+                                        <a href="https://aplicacions.usc.es/intranet/solicitudes/changeLanguage.htm?setUserLocaleTo=GL" hreflang="es">Galego</a>
+                                    </li>
+                                
+                                    <li class="list-inline-item">
+                                        <a href="https://aplicacions.usc.es/intranet/solicitudes/changeLanguage.htm?setUserLocaleTo=ES" hreflang="es">Español</a>
+                                    </li>
+                                
+                                    <li class="list-inline-item">
+                                        <a href="https://aplicacions.usc.es/intranet/solicitudes/changeLanguage.htm?setUserLocaleTo=EN" hreflang="es">Inglés</a>
+                                    </li>
+                                
+                                
+                                    
+                                    <li class="list-inline-item" title="NID&#58;00000000T&#32;PROBA&#32;EXEMPLO&#44;PERSOA">
+                                        <a>NID&#58;00000000T&#32;PROBA...</a>
+                                    </li>
+
+                                    <li class="list-inline-item">
+                                        
+                                        
+                                            <a class="text-white" href="https://aplicacions.usc.es/intranet/solicitudes/j_spring_security_logout">Saír</a>
+                                        
+                                    </li>
+                                
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="container mb-3" style="margin-top: 40px">
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="usc-slogan d-none d-sm-block">
+                        <img src="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/images/logo_sede.gif" alt="Conxunto de identidade do servizo" width="443" height="75" />
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    
+                        <nav class="navbar-light navbar-default navbar navbar-expand-sm w-100">
+                            <a class="navbar-brand text-hide d-sm-none">USC</a>
+                            <div class="d-flex justify-content-end d-inline d-sm-none">
+                                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+                                    <span class="navbar-toggler-icon"></span>
+                                </button>
+                            </div>
+                            <div class="collapse navbar-collapse justify-content-between" id="navbarText">
+                                
+                                    <ul class="navbar-nav">
+                                        
+                                            <li class="nav-item dropdown">
+                                                <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" href="#">Servizos persoais</a>
+                                                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                                    
+                                                        
+
+
+
+
+
+
+
+
+
+
+<a class="dropdown-item" href="https://aplicacions.usc.es/intranet/solicitudes/persoais/solicitudes/acceso.htm" title="Acceso ás solicitudes presentadas polo usuario">Solicitudes</a>
+                                                    
+                                                </div>
+                                            </li>
+                                        
+                                    </ul>
+                                
+                            </div>
+                        </nav>
+                    
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="http://www.usc.gal"">Inicio</a></li><li class="breadcrumb-item"><a href="https://aplicacions.usc.es/intranet/solicitudes/index.htm">Xestor de formularios</a></li>
+                        <li class="breadcrumb-item">Servicios xerais</li><li class="breadcrumb-item"><a href="https://aplicacions.usc.es/intranet/solicitudes/RRHH_InvAsistenciaCongresos.htm?execution=e1s5">Autorización de permisos para a asistencia a congresos, xornadas, etc do persoal contratado con cargo a actividades, proxectos de investigación e programas de recursos humanos</a></li>
+                    </ol>
+                </nav>
+            
+        
+            
+
+
+
+
+
+    
+  
+ 
+
+            <div class="mb-3">
+                
+        <div class="row">
+            <div id="secon_nav" class="col-12">
+                <div id="titulo_principal">
+                    <h1>Autorización de permisos para a asistencia a congresos, xornadas, etc do persoal contratado con cargo a actividades, proxectos de investigación e programas de recursos humanos
+                        
+                        </h1>
+                    </div>
+                </div>
+
+                <!-- Validacions -->
+            
+                
+            
+            
+
+            <!-- Mensaxes alertas-->
+            
+            <div class="modal fade" id="dialogoMostrarAvisos" tabindex="-1" role="dialog" aria-labelledby="modalCenterTitle" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="title">Alertas</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <ul id="trErros">
+                                
+                            </ul>
+                            <p>Desexa continuar?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Volver</button>
+                            <button type="button" class="btn btn-primary" onclick="window.location = 'https://aplicacions.usc.es/intranet/solicitudes/RRHH_InvAsistenciaCongresos.htm?execution=e1s5&_eventId=validada';">Aceptar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 mt-3 usc_escondido">
+                <div class="alert alert-danger pb-0" role="alert">
+                    <p>
+                        <span class="ui-icon ui-icon-alert" style="display: inline-block;"></span>
+                        Detectáronse os seguintes erros na información do formulario:
+                    </p>
+                    <ul id="listaErros" ></ul>
+                    <p></p>
+                </div>
+            </div>
+
+            <!-- Mensaxe especial de erro que nos ven no arquivo de propiedades -->
+            
+
+            
+
+            <!-- Formulario -->
+            <form id="formulario" class="row col-12" action="https://aplicacions.usc.es/intranet/solicitudes/RRHH_InvAsistenciaCongresos.htm?execution=e1s5" method="post" enctype="multipart/form-data">
+
+                <input type="hidden" name="execution" value="e1s5"/>
+                <input type="hidden" name="_flowExecutionKey" value="e1s5"/>
+                <input type="hidden" name="novoFormulario" value="true"/>
+                <input id="id" name="id" type="hidden" value="0"/>
+                <!-- DOMICILIO -->
+                <div id="domicilio" class="row col-12">
+                    <h3 class="col-12 mt-3">Enderezo Postal</h3>
+                    <!-- Uso dentro do expediente -->
+                    
+                    
+                        <div class="col-12 mt-2">
+                            <p>Enderezo onde se celebrará o evento</p>
+                        </div>
+                    
+                    <div class="col-12 mt-2">
+                        <div class="form-row">
+                            <div class="col-12 col-md-5">
+                                <label for="idPais">País(*)</label>
+                                
+                                
+                                    <select id="idPais" name="idPais" onchange="listProv();" class="form-control">
+                                        <option value="0" data-codigo="0" ></option>
+                                        
+                                            <option value="140" data-codigo="401"  >Afganistán</option>
+                                        
+                                            <option value="28" data-codigo="101"  >Albania</option>
+                                        
+                                            <option value="19" data-codigo="126"  >Alemaña</option>
+                                        
+                                            <option value="33" data-codigo="124"  >Andorra</option>
+                                        
+                                            <option value="50" data-codigo="202"  >Angola</option>
+                                        
+                                            <option value="107" data-codigo="310"  >Antigua e Barbuda</option>
+                                        
+                                            <option value="141" data-codigo="402"  >Arabia Saudí</option>
+                                        
+                                            <option value="51" data-codigo="203"  >Argelia</option>
+                                        
+                                            <option value="43" data-codigo="148"  >Armenia</option>
+                                        
+                                            <option value="127" data-codigo="340"  >Arxentina</option>
+                                        
+                                            <option value="185" data-codigo="501"  >Australia</option>
+                                        
+                                            <option value="6" data-codigo="102"  >Austria</option>
+                                        
+                                            <option value="177" data-codigo="442"  >Azerbaiyán</option>
+                                        
+                                            <option value="108" data-codigo="311"  >Bahamas</option>
+                                        
+                                            <option value="142" data-codigo="403"  >Bahréin</option>
+                                        
+                                            <option value="143" data-codigo="404"  >Bangladesh</option>
+                                        
+                                            <option value="109" data-codigo="312"  >Barbados</option>
+                                        
+                                            <option value="39" data-codigo="138"  >Belarús</option>
+                                        
+                                            <option value="110" data-codigo="313"  >Belice</option>
+                                        
+                                            <option value="2" data-codigo="103"  >Bélxica</option>
+                                        
+                                            <option value="52" data-codigo="204"  >Benin</option>
+                                        
+                                            <option value="183" data-codigo="448"  >Bhután</option>
+                                        
+                                            <option value="128" data-codigo="341"  >Bolivia</option>
+                                        
+                                            <option value="41" data-codigo="145"  >Bosnia e Herzegovina</option>
+                                        
+                                            <option value="53" data-codigo="205"  >Botswana</option>
+                                        
+                                            <option value="129" data-codigo="342"  >Brasil</option>
+                                        
+                                            <option value="174" data-codigo="439"  >Brunei</option>
+                                        
+                                            <option value="3" data-codigo="104"  >Bulgaria</option>
+                                        
+                                            <option value="49" data-codigo="201"  >Burkina Faso</option>
+                                        
+                                            <option value="54" data-codigo="206"  >Burundi</option>
+                                        
+                                            <option value="55" data-codigo="207"  >Cabo Verde</option>
+                                        
+                                            <option value="155" data-codigo="417"  >Camboya</option>
+                                        
+                                            <option value="56" data-codigo="208"  >Camerún</option>
+                                        
+                                            <option value="104" data-codigo="301"  >Canadá</option>
+                                        
+                                            <option value="94" data-codigo="246"  >Chad</option>
+                                        
+                                            <option value="131" data-codigo="344"  >Chile</option>
+                                        
+                                            <option value="145" data-codigo="407"  >China</option>
+                                        
+                                            <option value="4" data-codigo="106"  >Chipre</option>
+                                        
+                                            <option value="130" data-codigo="343"  >Colombia</option>
+                                        
+                                            <option value="57" data-codigo="209"  >Comores</option>
+                                        
+                                            <option value="58" data-codigo="210"  >Congo</option>
+                                        
+                                            <option value="166" data-codigo="430"  >Corea</option>
+                                        
+                                            <option value="167" data-codigo="431"  >Corea do Norte</option>
+                                        
+                                            <option value="59" data-codigo="211"  >Costa de Marfil</option>
+                                        
+                                            <option value="111" data-codigo="314"  >Costa Rica</option>
+                                        
+                                            <option value="42" data-codigo="146"  >Croacia</option>
+                                        
+                                            <option value="112" data-codigo="315"  >Cuba</option>
+                                        
+                                            <option value="5" data-codigo="107"  >Dinamarca</option>
+                                        
+                                            <option value="60" data-codigo="212"  >Djibouti</option>
+                                        
+                                            <option value="113" data-codigo="316"  >Dominica</option>
+                                        
+                                            <option value="132" data-codigo="345"  >Ecuador</option>
+                                        
+                                            <option value="146" data-codigo="408"  >Emiratos Árabes Unidos</option>
+                                        
+                                            <option value="101" data-codigo="253"  >Eritrea</option>
+                                        
+                                            <option value="27" data-codigo="147"  >Eslovenia</option>
+                                        
+                                            <option value="1" data-codigo="108" selected="selected" >España</option>
+                                        
+                                            <option value="105" data-codigo="302"  >Estados Unidos de América</option>
+                                        
+                                            <option value="23" data-codigo="141"  >Estonia</option>
+                                        
+                                            <option value="62" data-codigo="214"  >Etiopía</option>
+                                        
+                                            <option value="61" data-codigo="213"  >Exipto</option>
+                                        
+                                            <option value="186" data-codigo="502"  >Fiji</option>
+                                        
+                                            <option value="147" data-codigo="409"  >Filipinas</option>
+                                        
+                                            <option value="7" data-codigo="109"  >Finlandia</option>
+                                        
+                                            <option value="8" data-codigo="110"  >Francia</option>
+                                        
+                                            <option value="63" data-codigo="215"  >Gabón</option>
+                                        
+                                            <option value="64" data-codigo="216"  >Gambia</option>
+                                        
+                                            <option value="40" data-codigo="139"  >Georgia</option>
+                                        
+                                            <option value="65" data-codigo="217"  >Ghana</option>
+                                        
+                                            <option value="115" data-codigo="318"  >Granada</option>
+                                        
+                                            <option value="9" data-codigo="111"  >Grecia</option>
+                                        
+                                            <option value="116" data-codigo="319"  >Guatemala</option>
+                                        
+                                            <option value="66" data-codigo="218"  >Guinea</option>
+                                        
+                                            <option value="68" data-codigo="220"  >Guinea Ecuatorial</option>
+                                        
+                                            <option value="67" data-codigo="219"  >Guinea-Bissau</option>
+                                        
+                                            <option value="133" data-codigo="346"  >Guyana</option>
+                                        
+                                            <option value="117" data-codigo="320"  >Haití</option>
+                                        
+                                            <option value="118" data-codigo="321"  >Honduras</option>
+                                        
+                                            <option value="10" data-codigo="112"  >Hungría</option>
+                                        
+                                            <option value="175" data-codigo="440"  >Illas Marshall</option>
+                                        
+                                            <option value="189" data-codigo="506"  >Illas Salomón</option>
+                                        
+                                            <option value="148" data-codigo="410"  >India</option>
+                                        
+                                            <option value="149" data-codigo="411"  >Indonesia</option>
+                                        
+                                            <option value="151" data-codigo="413"  >Irán</option>
+                                        
+                                            <option value="150" data-codigo="412"  >Iraq</option>
+                                        
+                                            <option value="11" data-codigo="113"  >Irlanda</option>
+                                        
+                                            <option value="29" data-codigo="114"  >Islandia</option>
+                                        
+                                            <option value="195" data-codigo="513"  >Islas Cook</option>
+                                        
+                                            <option value="152" data-codigo="414"  >Israel</option>
+                                        
+                                            <option value="12" data-codigo="115"  >Italia</option>
+                                        
+                                            <option value="178" data-codigo="443"  >Kazajstán</option>
+                                        
+                                            <option value="69" data-codigo="221"  >Kenia</option>
+                                        
+                                            <option value="179" data-codigo="444"  >Kirguistán</option>
+                                        
+                                            <option value="196" data-codigo="514"  >Kiribati</option>
+                                        
+                                            <option value="156" data-codigo="418"  >Kuwait</option>
+                                        
+                                            <option value="157" data-codigo="419"  >Laos</option>
+                                        
+                                            <option value="70" data-codigo="222"  >Lesotho</option>
+                                        
+                                            <option value="22" data-codigo="136"  >Letonia</option>
+                                        
+                                            <option value="158" data-codigo="420"  >Líbano</option>
+                                        
+                                            <option value="71" data-codigo="223"  >Liberia</option>
+                                        
+                                            <option value="72" data-codigo="224"  >Libia</option>
+                                        
+                                            <option value="30" data-codigo="116"  >Liechtenstein</option>
+                                        
+                                            <option value="24" data-codigo="142"  >Lituania</option>
+                                        
+                                            <option value="13" data-codigo="117"  >Luxemburgo</option>
+                                        
+                                            <option value="45" data-codigo="156"  >Macedonia</option>
+                                        
+                                            <option value="73" data-codigo="225"  >Madagascar</option>
+                                        
+                                            <option value="159" data-codigo="421"  >Malasia</option>
+                                        
+                                            <option value="74" data-codigo="226"  >Malawi</option>
+                                        
+                                            <option value="160" data-codigo="422"  >Maldivas</option>
+                                        
+                                            <option value="75" data-codigo="227"  >Mali</option>
+                                        
+                                            <option value="14" data-codigo="118"  >Malta</option>
+                                        
+                                            <option value="76" data-codigo="228"  >Marrocos</option>
+                                        
+                                            <option value="77" data-codigo="229"  >Mauricio</option>
+                                        
+                                            <option value="78" data-codigo="230"  >Mauritania</option>
+                                        
+                                            <option value="106" data-codigo="303"  >México</option>
+                                        
+                                            <option value="193" data-codigo="511"  >Micronesia</option>
+                                        
+                                            <option value="38" data-codigo="137"  >Moldavia</option>
+                                        
+                                            <option value="31" data-codigo="119"  >Mónaco</option>
+                                        
+                                            <option value="161" data-codigo="423"  >Mongolia</option>
+                                        
+                                            <option value="47" data-codigo="158"  >Montenegro</option>
+                                        
+                                            <option value="79" data-codigo="231"  >Mozambique</option>
+                                        
+                                            <option value="144" data-codigo="405"  >Myanmar</option>
+                                        
+                                            <option value="80" data-codigo="232"  >Namibia</option>
+                                        
+                                            <option value="197" data-codigo="515"  >Nauru</option>
+                                        
+                                            <option value="162" data-codigo="424"  >Nepal</option>
+                                        
+                                            <option value="120" data-codigo="323"  >Nicaragua</option>
+                                        
+                                            <option value="81" data-codigo="233"  >Níxer</option>
+                                        
+                                            <option value="82" data-codigo="234"  >Nixeria</option>
+                                        
+                                            <option value="32" data-codigo="120"  >Noruega</option>
+                                        
+                                            <option value="187" data-codigo="504"  >Nova Zelanda</option>
+                                        
+                                            <option value="114" data-codigo="317"  >O Salvador</option>
+                                        
+                                            <option value="163" data-codigo="425"  >Omán</option>
+                                        
+                                            <option value="103" data-codigo="299"  >Outros países de África</option>
+                                        
+                                            <option value="139" data-codigo="399"  >Outros países de América</option>
+                                        
+                                            <option value="184" data-codigo="499"  >Outros países de Asia</option>
+                                        
+                                            <option value="48" data-codigo="199"  >Outros países de Europa</option>
+                                        
+                                            <option value="200" data-codigo="599"  >Outros países de Oceanía</option>
+                                        
+                                            <option value="15" data-codigo="121"  >Países Baixos</option>
+                                        
+                                            <option value="164" data-codigo="426"  >Pakistán</option>
+                                        
+                                            <option value="198" data-codigo="516"  >Palaos</option>
+                                        
+                                            <option value="121" data-codigo="324"  >Panamá</option>
+                                        
+                                            <option value="188" data-codigo="505"  >Papúa Nova Guinea</option>
+                                        
+                                            <option value="134" data-codigo="347"  >Paraguai</option>
+                                        
+                                            <option value="135" data-codigo="348"  >Perú</option>
+                                        
+                                            <option value="16" data-codigo="122"  >Polonia</option>
+                                        
+                                            <option value="17" data-codigo="123"  >Portugal</option>
+                                        
+                                            <option value="165" data-codigo="427"  >Qatar</option>
+                                        
+                                            <option value="18" data-codigo="125"  >Reino Unido</option>
+                                        
+                                            <option value="83" data-codigo="235"  >República Centroafricana</option>
+                                        
+                                            <option value="25" data-codigo="143"  >República Checa</option>
+                                        
+                                            <option value="98" data-codigo="250"  >República Democrática do Congo</option>
+                                        
+                                            <option value="123" data-codigo="326"  >República Dominicana</option>
+                                        
+                                            <option value="26" data-codigo="144"  >República Eslovaca</option>
+                                        
+                                            <option value="85" data-codigo="237"  >Ruanda</option>
+                                        
+                                            <option value="20" data-codigo="128"  >Rumanía</option>
+                                        
+                                            <option value="44" data-codigo="154"  >Rusia</option>
+                                        
+                                            <option value="190" data-codigo="507"  >Samoa</option>
+                                        
+                                            <option value="126" data-codigo="329"  >San Cristovo e Nevis</option>
+                                        
+                                            <option value="34" data-codigo="129"  >San Marino</option>
+                                        
+                                            <option value="122" data-codigo="325"  >San Vicente e as Granadinas</option>
+                                        
+                                            <option value="125" data-codigo="328"  >Santa Lucía</option>
+                                        
+                                            <option value="35" data-codigo="130"  >Santa Sede</option>
+                                        
+                                            <option value="86" data-codigo="238"  >Santo Tomé e Príncipe</option>
+                                        
+                                            <option value="87" data-codigo="239"  >Senegal</option>
+                                        
+                                            <option value="46" data-codigo="157"  >Serbia</option>
+                                        
+                                            <option value="89" data-codigo="241"  >Serra Leona</option>
+                                        
+                                            <option value="88" data-codigo="240"  >Seychelles</option>
+                                        
+                                            <option value="168" data-codigo="432"  >Singapur</option>
+                                        
+                                            <option value="169" data-codigo="433"  >Siria</option>
+                                        
+                                            <option value="90" data-codigo="242"  >Somalia</option>
+                                        
+                                            <option value="170" data-codigo="434"  >Sri Lanka</option>
+                                        
+                                            <option value="84" data-codigo="236"  >Sudáfrica</option>
+                                        
+                                            <option value="91" data-codigo="243"  >Sudán</option>
+                                        
+                                            <option value="102" data-codigo="254"  >Sudán do Sur</option>
+                                        
+                                            <option value="21" data-codigo="131"  >Suecia</option>
+                                        
+                                            <option value="36" data-codigo="132"  >Suiza</option>
+                                        
+                                            <option value="136" data-codigo="349"  >Surinam</option>
+                                        
+                                            <option value="92" data-codigo="244"  >Swazilandia</option>
+                                        
+                                            <option value="180" data-codigo="445"  >Tadyikistán</option>
+                                        
+                                            <option value="171" data-codigo="435"  >Tailandia</option>
+                                        
+                                            <option value="93" data-codigo="245"  >Tanzania</option>
+                                        
+                                            <option value="199" data-codigo="517"  >Timor Oriental</option>
+                                        
+                                            <option value="95" data-codigo="247"  >Togo</option>
+                                        
+                                            <option value="191" data-codigo="508"  >Tonga</option>
+                                        
+                                            <option value="124" data-codigo="327"  >Trindade e Tobago</option>
+                                        
+                                            <option value="96" data-codigo="248"  >Túnez</option>
+                                        
+                                            <option value="181" data-codigo="446"  >Turkmenistán</option>
+                                        
+                                            <option value="172" data-codigo="436"  >Turquía</option>
+                                        
+                                            <option value="194" data-codigo="512"  >Tuvalu</option>
+                                        
+                                            <option value="37" data-codigo="135"  >Ucraina</option>
+                                        
+                                            <option value="97" data-codigo="249"  >Uganda</option>
+                                        
+                                            <option value="137" data-codigo="350"  >Uruguai</option>
+                                        
+                                            <option value="182" data-codigo="447"  >Uzbekistán</option>
+                                        
+                                            <option value="192" data-codigo="509"  >Vanuatu</option>
+                                        
+                                            <option value="138" data-codigo="351"  >Venezuela</option>
+                                        
+                                            <option value="173" data-codigo="437"  >Vietnam</option>
+                                        
+                                            <option value="119" data-codigo="322"  >Xamaica</option>
+                                        
+                                            <option value="153" data-codigo="415"  >Xapón</option>
+                                        
+                                            <option value="154" data-codigo="416"  >Xordania</option>
+                                        
+                                            <option value="176" data-codigo="441"  >Yemen</option>
+                                        
+                                            <option value="99" data-codigo="251"  >Zambia</option>
+                                        
+                                            <option value="100" data-codigo="252"  >Zimbabwe</option>
+                                        
+                                    </select>
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        <div class="form-row">
+                            <div id="divProvincias" class="col-12 col-md-5 usc_escondido">
+                                <div>
+                                    <label for="idProvincia">Provincia(*)</label>
+                                    
+                                    
+                                        <select id="idProvincia" name="idProvincia" class="form-control" onchange="listConc();">
+                                            <option value="0" selected="selected"></option>
+                                            
+                                                <option value="1">Araba/&Aacute;lava</option>
+                                            
+                                                <option value="2">Albacete</option>
+                                            
+                                                <option value="3">Alicante/Alacant</option>
+                                            
+                                                <option value="4">Almer&iacute;a</option>
+                                            
+                                                <option value="5">&Aacute;vila</option>
+                                            
+                                                <option value="6">Badajoz</option>
+                                            
+                                                <option value="7">Balears, Illes</option>
+                                            
+                                                <option value="8">Barcelona</option>
+                                            
+                                                <option value="9">Burgos</option>
+                                            
+                                                <option value="10">C&aacute;ceres</option>
+                                            
+                                                <option value="11">C&aacute;diz</option>
+                                            
+                                                <option value="12">Castell&oacute;n/Castell&oacute;</option>
+                                            
+                                                <option value="13">Ciudad Real</option>
+                                            
+                                                <option value="14">C&oacute;rdoba</option>
+                                            
+                                                <option value="15">Coru&ntilde;a, A</option>
+                                            
+                                                <option value="16">Cuenca</option>
+                                            
+                                                <option value="17">Girona</option>
+                                            
+                                                <option value="18">Granada</option>
+                                            
+                                                <option value="19">Guadalajara</option>
+                                            
+                                                <option value="20">Gipuzkoa</option>
+                                            
+                                                <option value="21">Huelva</option>
+                                            
+                                                <option value="22">Huesca</option>
+                                            
+                                                <option value="23">Ja&eacute;n</option>
+                                            
+                                                <option value="24">Le&oacute;n</option>
+                                            
+                                                <option value="25">Lleida</option>
+                                            
+                                                <option value="26">Rioja, La</option>
+                                            
+                                                <option value="27">Lugo</option>
+                                            
+                                                <option value="28">Madrid</option>
+                                            
+                                                <option value="29">M&aacute;laga</option>
+                                            
+                                                <option value="30">Murcia</option>
+                                            
+                                                <option value="31">Navarra</option>
+                                            
+                                                <option value="32">Ourense</option>
+                                            
+                                                <option value="33">Asturias</option>
+                                            
+                                                <option value="34">Palencia</option>
+                                            
+                                                <option value="35">Palmas, Las</option>
+                                            
+                                                <option value="36">Pontevedra</option>
+                                            
+                                                <option value="37">Salamanca</option>
+                                            
+                                                <option value="38">Santa Cruz de Tenerife</option>
+                                            
+                                                <option value="39">Cantabria</option>
+                                            
+                                                <option value="40">Segovia</option>
+                                            
+                                                <option value="41">Sevilla</option>
+                                            
+                                                <option value="42">Soria</option>
+                                            
+                                                <option value="43">Tarragona</option>
+                                            
+                                                <option value="44">Teruel</option>
+                                            
+                                                <option value="45">Toledo</option>
+                                            
+                                                <option value="46">Valencia/Val&eacute;ncia</option>
+                                            
+                                                <option value="47">Valladolid</option>
+                                            
+                                                <option value="48">Bizkaia</option>
+                                            
+                                                <option value="49">Zamora</option>
+                                            
+                                                <option value="50">Zaragoza</option>
+                                            
+                                                <option value="51">Ceuta</option>
+                                            
+                                                <option value="52">Melilla</option>
+                                            
+                                        </select>
+                                    
+                                </div><img id="imgProv" class="usc_escondido" src="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/images/jquery-ui-1.8.6/ui-anim_basic_16x16.gif"/>
+                            </div>
+                            <div class="col-md-2"></div>
+                            <div id="divConcellos" class="col-12 mt-2 mt-md-0 col-md-5 usc_escondido">
+                                <div>
+                                    <label for="idConcello">Concello(*)</label>
+                                    
+                                    
+                                        <select id="idConcello" name="idConcello" class="form-control">
+                                            <option value="0" selected="selected"></option>
+                                            
+                                        </select>
+                                    
+                                </div><img id="imgConc" class="usc_escondido" src="https://aplicacions.usc.es/intranet/solicitudes/themes/usc/images/jquery-ui-1.8.6/ui-anim_basic_16x16.gif"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        <div class="form-row">
+                            <div id="divDepart" class="col-12 col-md-5 usc_escondido">
+                                <label for="departamento">Departamento(*)</label>
+                                
+                                    <input id="departamento" name="departamento" class="form-control" type="text" value="" size="50" maxlength="255"/>
+                                
+                                
+                            </div>
+                            <div id="divCp" class="col-12 mt-2 mt-md-0 col-md-5">
+                                <label for="codigoPostal">Código postal(*)</label>
+                                
+                                    <input id="codigoPostal" name="codigoPostal" class="form-control" type="text" value="" size="50" maxlength="50"/>
+                                
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        <label for="enderezoLina1">Liña 1 de enderezo(*)</label>
+                        
+                            <input id="enderezoLina1" name="enderezoLina1" class="form-control" type="text" value="" size="50" maxlength="255"/>
+                        
+                        
+                    </div>
+                    <div class="clear"></div>
+                    <div class="col-12 mt-2">
+                        <label for="enderezoLina2">Liña 2 de enderezo</label>
+                        
+                            <input id="enderezoLina2" name="enderezoLina2" class="form-control" type="text" value="" size="50" maxlength="255"/>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                
+                    <div class="col-12 mt-2">
+                        <label for="observacions">Observacións</label>
+                        <textarea id="observacions" name="observacions" maxlength="512" class="form-control">
+</textarea>
+                    </div>
+                
+
+                
+                <!-- Lenda -->
+                <div class="col-12 mt-2">
+                    <span class="axuda"><small>Os campos marcados cun asterisco (*) son obrigatorios.</small></span>
+                </div>
+
+                
+
+                <!-- BOTONS -->
+                <div id="divBotoneraDatoPersoal" class="col-12 mt-4">
+                    
+
+
+
+
+
+
+
+
+
+<div class="botonera_fin">
+    <input id="accion" name="accion" type="hidden" value=""/>
+    
+
+                        <div class="container">
+                            <div class="row">
+                                <div class="order-4">
+                                    <button type="submit" name="_eventId_seguinte" class="btn btn-primary mt-1 ml-1">Seguinte&nbsp;<span class="fa fa-arrow-circle-right"/></button>
+                                </div>
+                                <div class="order-2">
+                                    
+                                        <button type="submit" name="_eventId_anterior" class="btn btn-secondary mt-1 ml-1">Anterior&nbsp;<span class="fa fa-arrow-circle-left"/></button>
+                                     
+                                </div>
+                                <div class="order-1">
+                                    <button type="submit" name="_eventId_cancelar" class="btn btn-secondary mt-1">Cancelar</button>
+                                </div>
+                                <div class="order-0">
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    
+</div>
+
+                </div>
+
+                <div class="modal fade" id="divDialogEspera" tabindex="-1" role="dialog" aria-labelledby="modalCenterTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="title">Autorización de permisos para a asistencia a congresos, xornadas, etc do persoal contratado con cargo a actividades, proxectos de investigación e programas de recursos humanos</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body cargando">
+                                <p>Agarde un intre...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>    
+        <!-- SCRIPTS -->
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/generalForms.js" type="text/javascript"></script>
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/usc-ajax-utils.js" type="text/javascript"></script>
+        <script src="https://aplicacions.usc.es/intranet/solicitudes/js/json.min.js" type="text/javascript" ></script>
+        <script type="text/javascript">
+            var codPais;
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+                    codPais = 108
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+            $(document).ready(function() {
+                
+            });
+
+            function mostrarElementosPaises(codigo) {
+                if (!codigo) {
+                    codigo = $("#idPais option:selected").data('codigo');
+                }
+
+                 if (codigo == '108') {
+                    //Mostramos
+                    $("#divProvincias").show();
+                    $("#divConcellos").show();
+                    $("#divDepart").hide();
+                    $("#divCp").attr('class', 'col-12 col-md-5');
+                } else {
+                    //Ocultamos
+                    $("#divProvincias").hide();
+                    $("#divConcellos").hide();
+                    $("#divDepart").show();
+                    $("#divCp").attr('class', 'col-12 mt-2 mt-md-0 col-md-5 offset-md-2');
+                }
+            }
+
+            mostrarElementosPaises(codPais);
+
+            function listProv() {
+                mostrarElementosPaises();
+                $("#imgProv").show();
+                listaProv('#divProvincias', $("#idPais option:selected").val());
+            }
+
+            function listConc() {
+                mostrarElementosPaises();
+                $("#imgConc").show();
+                var url = 'https://aplicacions.usc.es/intranet/solicitudes/RRHH_InvAsistenciaCongresos.htm?execution=e1s5&_eventId=obterConcellos&ajaxSource=true&fragments=content&opcion=' + $("#idProvincia option:selected").val();
+                listaConcellos('#divConcellos', url);
+            }
+
+            function listaConcellos(divContido, url) {
+                $.ajax({
+                    type: "POST",
+                    data: $("#formulario").serialize(),
+                    url: url,
+                    success: function(response) {
+                        var novoContido = $(divContido, response).html();
+                        $(divContido).html(novoContido);
+                    },
+                    error: function(response) {
+                    }
+                });
+                return false;
+           }
+
+           function listaProv(divContido, idPais) {
+               var url = 'https://aplicacions.usc.es/intranet/solicitudes/RRHH_InvAsistenciaCongresos.htm?execution=e1s5&_eventId=obterProvincias&ajaxSource=true&fragments=content&opcion=' + idPais;
+               $.ajax({
+                   type: "POST",
+                   data: $("#formulario").serialize(),
+                   url: url,
+                   success: function(response) {
+                       var novoContido = $(divContido, response).html();
+                       $(divContido).html(novoContido);
+                       listConc();
+                   },
+                   error: function(response) {
+                   }
+               });
+           }
+
+           pintarErrores();
+           function pintarErrores() {
+               
+           }
+           setInterval(reinicioSesion, intervalReloadSession);
+           function reinicioSesion(){
+               $.ajax({
+                   type: "GET",
+                   url: 'https://aplicacions.usc.es/intranet/solicitudes/ajax/reinicioSesion.htm',
+                   success: function() {
+                   },
+                   error: function() {
+                   }
+               });
+           }
+        </script>
+    
+            </div>
+            <div id="dialogModal" title="Información sobre o proxecto" style="display:none;">
+                <p>Este proxecto foi cofinanciado polo Ministerio de Industria, Turismo y Comercio, dentro do Plan Nacional de Investigación Científica, desenvolvemento e Inovación Tecnolóxica 2008-2011, Acción Estratéxica de Telecomunicacións e Sociedade da Información. Ano 2009, subprograma Avanza Servicios Públicos Dixitais, co nome "Proxecto eSICUS-eADM - UNIVERSIDADE DE SANTIAGO DE COMPOSTELA", expediente TSI-050200-2009-115</p>
+            </div>
+        </div>
+        
+            
+        <div class="global-footer">
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm-10">
+                        <h1 class="text-hide">Universidade de Santiago de Compostela</h1>
+                        
+                            <ul class="list-inline">
+                                <li class="list-inline-item mt-1"><a href="https://sede.usc.es/sede/publicainformacion/canles.htm"><span class="fa fa-envelope"></span> Contacto e canles de acceso aos servizos</a></li>
+                                <li class="list-inline-item mt-1"><a href="https://sede.usc.es/sede/publicainformacion/aspectosTecnicos.htm#axuda"><span class="fa fa-question-circle"></span> Soporte e axuda</a></li>
+                                <li class="list-inline-item mt-1"><a class="text-white" href="https://sede.usc.es/sede/publicainformacion/mapa.htm"><span class="fa fa-sitemap"></span> Mapa do web</a></li>
+                                <li class="list-inline-item mt-1"><a class="text-white" accesskey="a" href="https://sede.usc.es/sede/publicainformacion/aspectosTecnicos.htm"><span class="fa fa-universal-access"></span> Accesibilidade</a></li>
+                                <li class="list-inline-item mt-1"><a class="text-white" accesskey="r" href="https://sede.usc.es/sede/publicataboleiro/rssfeed.htm?lingua=gl"><span class="fa fa-rss-square"></span> RSS do taboleiro de anuncios</a></li>
+                            </ul>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+                
+        
+        
+    </body>
+</html>
