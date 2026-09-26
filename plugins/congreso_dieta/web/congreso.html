@@ -27,6 +27,9 @@
     .fc .fc-daygrid-day.dia-bloqueado { background: #f1f5f9; cursor: not-allowed; }
     .fc .fc-daygrid-day:not(.dia-bloqueado) { cursor: pointer; }
     #selection { font-weight: 600; }
+    .tick { display: flex; align-items: center; gap: .6rem; padding: .8rem 1rem; margin-bottom: .6rem; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; }
+    .tick:has(input:checked) { border-color: #b45309; background: #fffbeb; }
+    .tick input { width: 1.1rem; height: 1.1rem; margin: 0; }
     #status { color: #b45309; min-height: 1.5rem; }
     @media (max-width: 500px) {
       main { padding: 1rem .6rem; } .panel { padding: .9rem; }
@@ -44,6 +47,8 @@
   </section>
   <section class="panel">
     <h2>Nueva solicitud</h2>
+    <label class="tick"><input type="checkbox" id="no-auth"> Sin autorización de congreso (procedimiento especial)</label>
+    <p id="no-auth-help" class="muted" hidden>No se envía la solicitud de congreso a USC y puedes elegir cualquier día de este año.</p>
     <p>Pulsa el primer y el último día del congreso.</p>
     <div id="calendar" aria-label="Calendario del congreso"></div>
     <p id="selection" aria-live="polite">Sin fechas seleccionadas</p>
@@ -51,6 +56,6 @@
   </section>
   <p id="status" role="status" aria-live="polite"></p>
 </main>
-<script src="congreso.js?v=4"></script>
+<script src="congreso.js?v=5"></script>
 </body>
 </html>

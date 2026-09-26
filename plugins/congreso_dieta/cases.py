@@ -5,6 +5,7 @@ import json
 import shutil
 from dataclasses import asdict, dataclass
 from datetime import date
+from enum import StrEnum
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -17,22 +18,52 @@ CASES_FILE = DATA_DIR / "congreso_dieta.json"
 FILES_DIR = DATA_DIR / "congreso_dieta"
 
 
+class Stage(StrEnum):
+    """Where the per-diem document is; the values are what the cases file stores."""
+    NO_AUTH = "no_auth"                # special procedure: waits for the congress to end
+    AWAITING_AUTH = "awaiting_auth"
+    AUTH_RECEIVED = "auth_received"
+    GENERATED = "generated"
+    SIGNED = "signed"
+
+
+class Absence(StrEnum):
+    """Where the absence request is; the values are what the cases file stores."""
+    SCHEDULED = "scheduled"
+    ASKING = "asking"
+    REQUESTING = "requesting"
+    REQUESTED = "requested"
+    UNCERTAIN = "uncertain"
+    SKIPPED = "skipped"
+    SIMULATED = "simulated"
+    NOT_REQUESTED = "not_requested"
+
+    @property
+    def settled(self) -> bool:
+        """The question was answered or can no longer be asked."""
+        return self not in (Absence.SCHEDULED, Absence.ASKING, Absence.REQUESTING)
+
+
 @dataclass
 class Case:
     id: str
     start: str
     end: str
-    config: dict
     request_id: Optional[str] = None
     simulated: bool = False
-    absence: str = "scheduled"
-    stage: str = "awaiting_auth"
+    absence: Absence = Absence.SCHEDULED
+    stage: Stage = Stage.AWAITING_AUTH
     prompt_token: Optional[str] = None
     auth_date: Optional[str] = None
     last_problem: Optional[str] = None
     check_failures: int = 0
     notified_state: Optional[str] = None
     unsigned_saved: bool = False
+    no_auth: bool = False  # special procedure: no congress authorization
+
+    def __post_init__(self) -> None:
+        # The cases file stores the plain values; an unknown one raises ValueError.
+        self.stage, self.absence = Stage(self.stage), Absence(self.absence)
 
     @property
     def start_date(self) -> date:
@@ -43,8 +74,9 @@ class Case:
         return date.fromisoformat(self.end)
 
     @classmethod
-    def new(cls, start: date, end: date, config: dict, *, simulated: bool = False) -> "Case":
-        return cls(id=uuid4().hex, start=start.isoformat(), end=end.isoformat(), config=config, simulated=simulated)
+    def new(cls, start: date, end: date, *, simulated: bool = False, no_auth: bool = False) -> "Case":
+        return cls(id=uuid4().hex, start=start.isoformat(), end=end.isoformat(), simulated=simulated,
+                   no_auth=no_auth, stage=Stage.NO_AUTH if no_auth else Stage.AWAITING_AUTH)
 
 
 class CaseStore:
@@ -57,6 +89,8 @@ class CaseStore:
         if not self._path.exists():
             return
         data = json.loads(self._path.read_text(encoding="utf-8"))
+        for item in data["cases"]:
+            item.pop("config", None)  # older cases kept a copy of the plugin config; the current one is used
         self._cases = {item["id"]: Case(**item) for item in data["cases"]}
 
     def save(self) -> None:

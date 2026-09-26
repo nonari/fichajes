@@ -30,7 +30,8 @@ class CongresoBrowserTests(unittest.TestCase):
 
     def open_app(self, cases=()):
         html = re.sub(r"<script\b[^>]*src=[^>]+>\s*</script>", "", (ROOT / "plugins/congreso_dieta/web/congreso.html").read_text())
-        data = {"token": "launch", "today": "2026-10-01", "minStart": "2026-10-06", "cases": list(cases)}
+        data = {"token": "launch", "today": "2026-10-01", "minStart": "2026-10-06", "minStartNoAuth": "2026-01-01",
+                "cases": list(cases)}
         self.browser.get("about:blank")
         self.browser.get("data:text/html;charset=utf-8," + quote(html) + "#data=" + quote(json.dumps(data)) + self.TELEGRAM_PARAMS)
         self.browser.execute_script("""
@@ -76,3 +77,20 @@ class CongresoBrowserTests(unittest.TestCase):
         self.assertIn("Error al firmar", card.text)
         card.find_element(By.TAG_NAME, "button").click()
         self.assertEqual(self.sent(), [{"type": "congreso_dieta_cancel", "token": "launch", "case": "c1"}])
+
+    def test_no_auth_tick_allows_earlier_dates(self):
+        self.open_app()
+        self.click_day("2026-09-10")   # before minStart: ignored without the tick
+        self.assertEqual(self.browser.find_element(By.ID, "selection").text, "Sin fechas seleccionadas")
+        tick = self.browser.find_element(By.ID, "no-auth")
+        tick.click()
+        self.click_day("2026-09-10")
+        self.click_day("2026-09-11")
+        tick.click()                   # the range is no longer allowed: cleared
+        self.assertEqual(self.browser.find_element(By.ID, "selection").text, "Sin fechas seleccionadas")
+        tick.click()
+        self.click_day("2026-09-10")
+        self.click_day("2026-09-11")
+        self.browser.find_element(By.ID, "send").click()
+        self.assertEqual(self.sent(), [{"type": "congreso_dieta_new", "token": "launch", "start": "2026-09-10",
+                                        "end": "2026-09-11", "noAuth": True}])

@@ -5,6 +5,14 @@ progress and cancel them. N days before the start the bot asks whether to reques
 marks the authorization `Tramitada`, the bot fills the per-diem workbook through its own `CreaPDF` macro, joins the
 spreadsheet PDF with the authorization, signs the result with AutoFirma, sends it in Telegram and saves it.
 
+## Without the congress authorization
+
+For a special procedure when there is no time to formalise the authorization, tick **Sin autorización de congreso
+(procedimiento especial)** in the Mini App. The five days' notice then does not apply: any day of the current year can
+be chosen, including past ones. Nothing is sent to USC for the congress. The bot asks about the absence straight away
+and keeps reminding until you answer, even once the congress has started. After the congress ends and the absence
+question is answered, the per-diem workbook alone is signed, sent and saved.
+
 ## Requirements (host installation only)
 
 - LibreOffice with `python3-uno`; the virtualenv must be created with `--system-site-packages` (`install.sh` does it).

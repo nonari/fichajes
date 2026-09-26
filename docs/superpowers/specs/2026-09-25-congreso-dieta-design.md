@@ -43,7 +43,7 @@ join both PDFs, sign the result with AutoFirma and deliver it.
 ### Persistence: per-case state + core scheduled tasks
 
 Each `/congreso_dieta` run creates a *case* persisted as JSON in `.plugin_data/congreso_dieta.json` (next to
-`config.json`, written with `write_json_atomic`). A case stores a snapshot of the plugin config, the dates, its
+`config.json`, written with `write_json_atomic`). A case stores the dates, its
 state, its last problem and the paths of the artefacts produced so far; artefacts (authorization PDF, spreadsheet
 PDF, joined and signed PDFs) live in `.plugin_data/congreso_dieta/<case id>/`, removed when the case is cancelled.
 
@@ -127,7 +127,8 @@ the plugin validates in `setup()` (invalid config stops the bot at startup with 
 - The same `start_time`/`end_time` apply to every absence day.
 - Startup validation: `HH:MM` times, window start before end, template and attachment files exist, `output_dir` is
   writable, congress fields pass the existing `validate_request` with placeholder dates.
-- Each case snapshots the config at creation; editing `config.json` does not alter cases in progress.
+- Cases do not copy the config: every step uses the current plugin config, so a fix in `config.json` (after a
+  restart) also applies to cases in progress.
 
 ## Failures and notifications (*Decided*)
 

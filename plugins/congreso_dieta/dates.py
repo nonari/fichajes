@@ -13,6 +13,11 @@ def earliest_start(today: date) -> date:
     return today + timedelta(days=MIN_NOTICE_DAYS)
 
 
+def earliest_start_without_auth(today: date) -> date:
+    """Without the congress authorization any day of the current year can be chosen."""
+    return date(today.year, 1, 1)
+
+
 def parse_non_working(entries) -> set[date]:
     """Days marked non-working ("N") in the USC calendar payload ("N2026-10-13" or "N<start>:<end>")."""
     days: set[date] = set()

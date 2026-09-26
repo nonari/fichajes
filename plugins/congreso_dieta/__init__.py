@@ -37,7 +37,7 @@ def setup(application) -> None:
     config = parse_config(raw, today=get_madrid_now().date())
     store = CaseStore()
     store.load()
-    plugin = CongresoDieta(application, config, raw, store)
+    plugin = CongresoDieta(application, config, store)
     application.bot_data[PLUGIN_KEY] = plugin
     # Sending a question twice is harmless, so interrupted prompts are retried.
     application.scheduler.register_kind(PROMPT_KIND, plugin.run_absence_prompt, misfire=Misfire.RUN_LATE,

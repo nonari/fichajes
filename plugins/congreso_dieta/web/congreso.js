@@ -1,4 +1,5 @@
-/* Congress cases: cancel an open one or pick a continuous date range for a new one. */
+/* Congress cases: cancel an open one or pick a continuous date range for a new one (optionally without the
+   congress authorization, which lifts the five days' notice). */
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 const el = id => document.getElementById(id);
@@ -12,7 +13,8 @@ function send(payload) {
   tg?.sendData(JSON.stringify({...payload, token: data.token}));
 }
 const insideCase = day => data.cases.some(c => c.start <= day && day <= c.end);
-const blocked = day => day < data.minStart || insideCase(day);
+const noAuth = () => el('no-auth').checked;
+const blocked = day => day < (noAuth() ? data.minStartNoAuth : data.minStart) || insideCase(day);
 function problem() {
   if (!start) return 'Pulsa el primer día del congreso.';
   if (!end) return 'Pulsa el último día (o el mismo día si dura uno).';
@@ -65,6 +67,13 @@ if (data) {
     dateClick: info => pick(info.dateStr), datesSet: refresh,
   });
   calendar.render();
-  el('send').onclick = () => { if (!problem()) send({type: 'congreso_dieta_new', start, end}); };
+  el('no-auth').onchange = () => {
+    el('no-auth-help').hidden = !noAuth();
+    if (start && blocked(start)) { start = null; end = null; }
+    refresh();
+  };
+  el('send').onclick = () => {
+    if (!problem()) send({type: 'congreso_dieta_new', start, end, ...(noAuth() && {noAuth: true})});
+  };
   refresh();
 }

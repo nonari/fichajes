@@ -20,8 +20,8 @@ from fichaxebot.scrap_functions.congress_request import CongressRequestCancelled
 from fichaxebot.utils import get_madrid_now
 from fichaxebot.webapp_controller.vacation_confirmation import ACTIVE_KEY, STOPPING_KEY, PendingVacation
 from plugins.congreso_dieta import dates, pdf, spreadsheet, usc
-from plugins.congreso_dieta.cases import Case, CaseStore
-from plugins.congreso_dieta.config import PluginConfig, parse_config
+from plugins.congreso_dieta.cases import Absence, Case, CaseStore, Stage
+from plugins.congreso_dieta.config import PluginConfig
 
 logger = get_logger(__name__)
 
@@ -32,20 +32,21 @@ ABSENCES_URL = "https://fichaxe.usc.gal/pas/solicitudesPropias"
 FAILURES_BEFORE_NOTICE = 3
 
 STAGE_LABELS = {
-    "awaiting_auth": "Esperando la autorización firmada",
-    "auth_received": "Autorización recibida",
-    "generated": "Documento generado; pendiente de firma",
-    "signed": "Firmado; pendiente de entrega",
+    Stage.NO_AUTH: "Sin autorización (procedimiento especial)",
+    Stage.AWAITING_AUTH: "Esperando la autorización firmada",
+    Stage.AUTH_RECEIVED: "Autorización recibida",
+    Stage.GENERATED: "Documento generado; pendiente de firma",
+    Stage.SIGNED: "Firmado; pendiente de entrega",
 }
 ABSENCE_LABELS = {
-    "scheduled": "ausencia pendiente de preguntar",
-    "asking": "ausencia pendiente de tu respuesta",
-    "requesting": "solicitando la ausencia",
-    "requested": "ausencia solicitada",
-    "uncertain": "ausencia sin confirmar (revisa USC)",
-    "skipped": "ausencia no solicitada",
-    "simulated": "ausencia simulada",
-    "not_requested": "ausencia no solicitada",
+    Absence.SCHEDULED: "ausencia pendiente de preguntar",
+    Absence.ASKING: "ausencia pendiente de tu respuesta",
+    Absence.REQUESTING: "solicitando la ausencia",
+    Absence.REQUESTED: "ausencia solicitada",
+    Absence.UNCERTAIN: "ausencia sin confirmar (revisa USC)",
+    Absence.SKIPPED: "ausencia no solicitada",
+    Absence.SIMULATED: "ausencia simulada",
+    Absence.NOT_REQUESTED: "ausencia no solicitada",
 }
 
 
@@ -86,12 +87,11 @@ def build_absence_request(case: Case, kind: dict, days: list[date], absence) -> 
 
 
 class CongresoDieta:
-    def __init__(self, application, config: PluginConfig, raw_config: dict, store: CaseStore, *,
+    def __init__(self, application, config: PluginConfig, store: CaseStore, *,
                  clock=get_madrid_now, generate=spreadsheet.generate_pdf, join=pdf.join_pdfs,
                  sign=pdf.sign_pdf) -> None:
         self.app = application
         self.config = config
-        self.raw_config = raw_config
         self.store = store
         self.clock = clock
         self._generate_pdf = generate
@@ -111,9 +111,6 @@ class CongresoDieta:
     def session(self):
         return self.app.web_session
 
-    def case_config(self, case: Case) -> PluginConfig:
-        return parse_config(case.config, today=self.clock().date(), check_files=False)
-
     def alive(self, case: Case) -> bool:
         return self.store.get(case.id) is case
 
@@ -129,15 +126,26 @@ class CongresoDieta:
     def cancel_prompts(self, case: Case) -> None:
         self.scheduler.cancel(PROMPT_KIND, lambda task: task.payload.get("case") == case.id)
 
+    @staticmethod
+    def prompt_deadline(case: Case):
+        # Without authorization the congress may already be over; the absence is asked until answered.
+        return None if case.no_auth else dates.prompt_deadline(case.start_date)
+
+    def _schedule_prompt_at(self, case: Case, when) -> None:
+        deadline = self.prompt_deadline(case)
+        self.scheduler.schedule(PROMPT_KIND, min(when, deadline) if deadline else when, {"case": case.id})
+
     def schedule_prompt(self, case: Case, now) -> None:
-        config = self.case_config(case)
-        when = dates.first_prompt(case.start_date, config.days_before, config.prompt, now)
-        self.scheduler.schedule(PROMPT_KIND, min(when, dates.prompt_deadline(case.start_date)), {"case": case.id})
+        config = self.config
+        if case.no_auth:
+            when = dates.next_slot(now, config.prompt)
+        else:
+            when = dates.first_prompt(case.start_date, config.days_before, config.prompt, now)
+        self._schedule_prompt_at(case, when)
 
     def schedule_reminder(self, case: Case) -> None:
-        config = self.case_config(case)
-        when = min(dates.next_reminder(self.clock(), config.prompt), dates.prompt_deadline(case.start_date))
-        self.scheduler.schedule(PROMPT_KIND, when, {"case": case.id})
+        config = self.config
+        self._schedule_prompt_at(case, dates.next_reminder(self.clock(), config.prompt))
 
     # Mini App ----------------------------------------------------------------
 
@@ -150,6 +158,7 @@ class CongresoDieta:
             "token": self.launch_token,
             "today": today.isoformat(),
             "minStart": dates.earliest_start(today).isoformat(),
+            "minStartNoAuth": dates.earliest_start_without_auth(today).isoformat(),
             "cases": [{"id": case.id, "start": case.start, "end": case.end, "status": describe(case),
                        "problem": case.last_problem} for case in self.store.open_cases()],
         }
@@ -159,8 +168,8 @@ class CongresoDieta:
         await update.message.reply_text("Elige las fechas del congreso o gestiona los trámites en curso.",
                                         reply_markup=keyboard)
 
-    def check_range(self, start: date, end: date, today: date) -> Optional[str]:
-        earliest = dates.earliest_start(today)
+    def check_range(self, start: date, end: date, today: date, *, no_auth: bool = False) -> Optional[str]:
+        earliest = dates.earliest_start_without_auth(today) if no_auth else dates.earliest_start(today)
         if start < earliest:
             return f"El congreso debe empezar como pronto el {earliest:%d/%m/%Y}."
         if end < start:
@@ -181,9 +190,18 @@ class CongresoDieta:
         except (TypeError, ValueError):
             await message.reply_text("Las fechas no son válidas. Abre /congreso_dieta de nuevo.")
             return
-        problem = self.check_range(start, end, self.clock().date())
+        no_auth = data.get("noAuth") is True
+        problem = self.check_range(start, end, self.clock().date(), no_auth=no_auth)
         if problem:
             await message.reply_text(problem)
+            return
+        if no_auth:
+            case = Case.new(start, end, no_auth=True)
+            self.store.add(case)
+            self.schedule_prompt(case, self.clock())
+            await message.reply_text(f"✅ Trámite sin autorización de congreso creado para el {span(case)}. No se "
+                                     "envía nada a USC; te preguntaré por la ausencia y el documento de dieta se "
+                                     "generará al terminar el congreso.")
             return
         if self.app.bot_data.get(ACTIVE_KEY) or self.app.bot_data.get(STOPPING_KEY):
             await message.reply_text("Hay otra solicitud en curso. Espera a que termine.")
@@ -211,7 +229,7 @@ class CongresoDieta:
                 simulated = False
             except ReadOnlyStop:
                 simulated = True
-            case = Case.new(start, end, self.raw_config, simulated=simulated)
+            case = Case.new(start, end, simulated=simulated)
             self.store.add(case)
             self.schedule_prompt(case, self.clock())
             if simulated:
@@ -280,9 +298,9 @@ class CongresoDieta:
         self.cancel_prompts(case)
         self.store.remove(case.id)
         sent = []
-        if not case.simulated:
+        if not case.simulated and not case.no_auth:
             sent.append(f"la solicitud de congreso ({usc.REQUESTS_LIST_URL})")
-        if case.absence in ("requested", "uncertain"):
+        if case.absence in (Absence.REQUESTED, Absence.UNCERTAIN):
             sent.append(f"la ausencia ({ABSENCES_URL})")
         text = f"🗑️ Trámite del {span(case)} cancelado."
         if sent:
@@ -292,16 +310,16 @@ class CongresoDieta:
 
     async def _answer_absence(self, update, query, action: str, token: str) -> None:
         case = self.store.by_prompt_token(token)
-        if case is None or case.absence != "asking":
+        if case is None or case.absence != Absence.ASKING:
             await query.answer("Esta pregunta ya no está disponible.")
             return
         self.cancel_prompts(case)
         if action == "cdieta_absence_no":
-            case.absence = "skipped"
+            case.absence = Absence.SKIPPED
             self.store.save()
             await query.answer("No se solicitará la ausencia.")
             return
-        case.absence = "requesting"
+        case.absence = Absence.REQUESTING
         self.store.save()
         await query.answer("Solicitando la ausencia…")
         self.app.create_task(
@@ -309,13 +327,13 @@ class CongresoDieta:
 
     async def _ask_again(self, case: Case, text: str) -> None:
         if self.alive(case):
-            case.absence = "asking"
+            case.absence = Absence.ASKING
             self.store.save()
             self.schedule_reminder(case)
         await self.notify(text)
 
     async def _request_absence(self, case: Case, chat_id: int, user_id: int) -> None:
-        config = self.case_config(case)
+        config = self.config
         try:
             catalog = await asyncio.to_thread(self.session.fetch_absence_selection_data)
             kind = find_absence_type(catalog, config.absence.type_name)
@@ -330,7 +348,7 @@ class CongresoDieta:
             return
         days = dates.absence_days(case.start_date, case.end_date, dates.parse_non_working(entries))
         if not days:
-            case.absence = "not_requested"
+            case.absence = Absence.NOT_REQUESTED
             self.store.save()
             await self.notify(f"ℹ️ Del {span(case)} no hay días laborables: no hace falta solicitar ausencia.")
             return
@@ -343,7 +361,7 @@ class CongresoDieta:
             else:
                 await asyncio.to_thread(self.session.submit_absence_request, request)
         except ReadOnlyStop:
-            outcome, text = "simulated", "🧪 Modo de solo lectura: la ausencia llegó al paso final, pero no se envió a USC."
+            outcome, text = Absence.SIMULATED, "🧪 Modo de solo lectura: la ausencia llegó al paso final, pero no se envió a USC."
         except AbsenceRequestCancelled as exc:
             logger.info("Congress absence request cancelled: %s", exc)
             await self._ask_again(case, f"{exc} Te lo volveré a preguntar.")
@@ -353,12 +371,12 @@ class CongresoDieta:
             await self._ask_again(case, f"❌ {exc} Te lo volveré a preguntar.")
             return
         except AbsenceRequestUncertain as exc:
-            outcome, text = "uncertain", f"⚠️ {exc} {ABSENCES_URL}"
+            outcome, text = Absence.UNCERTAIN, f"⚠️ {exc} {ABSENCES_URL}"
         except Exception:
             logger.exception("Could not submit the congress absence request")
-            outcome, text = "uncertain", f"⚠️ No se pudo confirmar la ausencia. Comprueba USC antes de repetirla: {ABSENCES_URL}"
+            outcome, text = Absence.UNCERTAIN, f"⚠️ No se pudo confirmar la ausencia. Comprueba USC antes de repetirla: {ABSENCES_URL}"
         else:
-            outcome, text = "requested", f"✅ Ausencia solicitada del {span(case)}."
+            outcome, text = Absence.REQUESTED, f"✅ Ausencia solicitada del {span(case)}."
         if self.alive(case):
             case.absence = outcome
             self.store.save()
@@ -378,23 +396,23 @@ class CongresoDieta:
 
     async def run_absence_prompt(self, context, task) -> None:
         case = self.store.get(task.payload.get("case"))
-        if case is None or case.absence not in ("scheduled", "asking"):
+        if case is None or case.absence not in (Absence.SCHEDULED, Absence.ASKING):
             return
-        config = self.case_config(case)
+        config = self.config
         now = self.clock()
-        deadline = dates.prompt_deadline(case.start_date)
-        if now >= deadline:
-            case.absence = "not_requested"
+        deadline = self.prompt_deadline(case)
+        if deadline and now >= deadline:
+            case.absence = Absence.NOT_REQUESTED
             self.store.save()
             await self.notify(f"ℹ️ No se solicitó la ausencia del {span(case)}: el congreso ya ha empezado.")
             return
         slot = dates.next_slot(now, config.prompt)
         if slot > now:
-            self.scheduler.schedule(PROMPT_KIND, min(slot, deadline), {"case": case.id})
+            self._schedule_prompt_at(case, slot)
             return
-        first = case.absence == "scheduled"
+        first = case.absence == Absence.SCHEDULED
         case.prompt_token = case.prompt_token or uuid4().hex
-        case.absence = "asking"
+        case.absence = Absence.ASKING
         self.store.save()
         buttons = InlineKeyboardMarkup([[
             InlineKeyboardButton("Solicitar ausencia", callback_data=f"cdieta_absence_yes:{case.prompt_token}"),
@@ -422,16 +440,19 @@ class CongresoDieta:
         await self.notify(f"⚠️ {text}")
 
     async def _advance(self, case: Case, today: date) -> None:
-        if case.stage == "awaiting_auth":
+        # A past congress must not be delivered (and forgotten) while its absence question is still open.
+        if case.stage == Stage.NO_AUTH and today > case.end_date and case.absence.settled:
+            await self._generate(case, today)
+        if case.stage == Stage.AWAITING_AUTH:
             if case.simulated or not case.request_id:
                 return  # TODO(request id): see "Known gaps" in the spec
             await self._check_authorization(case, today)
-        if case.stage == "auth_received" and today >= dates.generation_day(
+        if case.stage == Stage.AUTH_RECEIVED and today >= dates.generation_day(
                 case.end_date, date.fromisoformat(case.auth_date)):
             await self._generate(case, today)
-        if case.stage == "generated":
+        if case.stage == Stage.GENERATED:
             await self._sign(case)
-        if case.stage == "signed":
+        if case.stage == Stage.SIGNED:
             await self._deliver(case)
 
     async def _check_authorization(self, case: Case, today: date) -> None:
@@ -464,12 +485,12 @@ class CongresoDieta:
             self.store.save()
             return
         (self.store.directory(case) / "autorizacion.pdf").write_bytes(document)
-        case.stage, case.auth_date, case.last_problem = "auth_received", today.isoformat(), None
+        case.stage, case.auth_date, case.last_problem = Stage.AUTH_RECEIVED, today.isoformat(), None
         self.store.save()
         await self.notify(f"📄 Autorización firmada recibida para el congreso del {span(case)}.")
 
     async def _generate(self, case: Case, today: date) -> None:
-        config = self.case_config(case)
+        config = self.config
         folder = self.store.directory(case)
         workdir = folder / "hoja"
         shutil.rmtree(workdir, ignore_errors=True)
@@ -477,15 +498,18 @@ class CongresoDieta:
         try:
             async with self.generation_lock:
                 sheet = await asyncio.to_thread(self._generate_pdf, config.spreadsheet_template, workdir, sheet_dates)
-            await asyncio.to_thread(self._join_pdfs, sheet, folder / "autorizacion.pdf", folder / "unido.pdf")
+            if case.no_auth:
+                await asyncio.to_thread(shutil.copyfile, sheet, folder / "unido.pdf")
+            else:
+                await asyncio.to_thread(self._join_pdfs, sheet, folder / "autorizacion.pdf", folder / "unido.pdf")
         except (spreadsheet.SpreadsheetError, pdf.PdfError, OSError) as exc:
             await self._problem(case, f"Error al generar el documento: {exc} Se reintentará mañana.")
             return
-        case.stage, case.last_problem = "generated", None
+        case.stage, case.last_problem = Stage.GENERATED, None
         self.store.save()
 
     async def _sign(self, case: Case) -> None:
-        config = self.case_config(case)
+        config = self.config
         folder = self.store.directory(case)
         try:
             await asyncio.to_thread(self._sign_pdf, folder / "unido.pdf", folder / "firmado.pdf", config.signing)
@@ -499,11 +523,11 @@ class CongresoDieta:
             await self._problem(case, f"Error al firmar: {exc} El documento sin firmar está en "
                                       f"{config.output_dir}. Se reintentará mañana.")
             return
-        case.stage, case.last_problem = "signed", None
+        case.stage, case.last_problem = Stage.SIGNED, None
         self.store.save()
 
     async def _deliver(self, case: Case) -> None:
-        config = self.case_config(case)
+        config = self.config
         signed = self.store.directory(case) / "firmado.pdf"
         target = config.output_dir / f"{document_name(case)}.pdf"
         try:

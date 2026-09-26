@@ -16,7 +16,7 @@ from fichaxebot.scrap_functions.congress_request import CongressRequestError
 from fichaxebot.utils import MADRID_TZ
 from fichaxebot.webapp_controller.vacation_confirmation import ACTIVE_KEY
 from plugins.congreso_dieta import flow, pdf, usc
-from plugins.congreso_dieta.cases import Case, CaseStore
+from plugins.congreso_dieta.cases import Absence, Case, CaseStore, Stage
 from plugins.congreso_dieta.config import parse_config
 from plugins.congreso_dieta.spreadsheet import SheetDates
 from tests.scheduler_fakes import Clock, fake_app, fire
@@ -85,7 +85,7 @@ class FlowTestCase(unittest.IsolatedAsyncioTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.generated = []
-        self.plugin = flow.CongresoDieta(self.app, self.config, self.raw, self.store, clock=self.clock,
+        self.plugin = flow.CongresoDieta(self.app, self.config, self.store, clock=self.clock,
                                          generate=self.fake_generate, join=self.fake_join, sign=self.fake_sign)
         self.scheduler.register_kind(flow.PROMPT_KIND, self.plugin.run_absence_prompt, misfire=Misfire.RUN_LATE,
                                      interrupted=Interrupted.RETRY)
@@ -120,7 +120,7 @@ class FlowTestCase(unittest.IsolatedAsyncioTestCase):
                                effective_chat=SimpleNamespace(id=123), effective_user=SimpleNamespace(id=456))
 
     def add_case(self, start=date(2026, 10, 20), end=date(2026, 10, 22), **fields):
-        case = Case.new(start, end, self.raw)
+        case = Case.new(start, end)
         for key, value in fields.items():
             setattr(case, key, value)
         self.store.add(case)
@@ -147,6 +147,12 @@ class OpenAndRangeTests(FlowTestCase):
         self.assertIn("anterior", self.plugin.check_range(date(2026, 10, 8), date(2026, 10, 7), today))
         self.assertIn("cambio de año", self.plugin.check_range(date(2026, 12, 30), date(2027, 1, 2), today))
         self.assertIn("solapan", self.plugin.check_range(date(2026, 10, 22), date(2026, 10, 23), today))
+
+
+class LabelTests(unittest.TestCase):
+    def test_every_state_has_a_label(self):
+        self.assertEqual(set(flow.STAGE_LABELS), set(Stage))
+        self.assertEqual(set(flow.ABSENCE_LABELS), set(Absence))
 
 
 class NewRequestTests(FlowTestCase):
@@ -227,7 +233,7 @@ class CancelTests(FlowTestCase):
         return query
 
     async def test_confirmed_cancel_stops_following_the_case(self):
-        case = self.add_case(absence="requested")
+        case = self.add_case(absence=Absence.REQUESTED)
         self.scheduler.schedule(flow.PROMPT_KIND, NOW + timedelta(days=1), {"case": case.id})
         folder = self.store.directory(case)
         message = await self.ask_cancel(case)
@@ -281,7 +287,7 @@ class AbsencePromptTests(FlowTestCase):
         stored = self.store.get(case.id)
         self.assertEqual(kwargs["reply_markup"].inline_keyboard[0][0].callback_data,
                          f"cdieta_absence_yes:{stored.prompt_token}")
-        self.assertEqual(stored.absence, "asking")
+        self.assertEqual(stored.absence, Absence.ASKING)
         self.assertEqual([task.when for task in self.reminders_for(case)], [NOW + timedelta(minutes=30)])
         await self.run_prompt(case)
         self.assertIn("Recordatorio", self.texts()[-1])
@@ -298,48 +304,49 @@ class AbsencePromptTests(FlowTestCase):
         self.clock.now = datetime(2026, 10, 20, 0, 0, tzinfo=MADRID_TZ)
         case = self.add_case()
         await self.run_prompt(case)
-        self.assertEqual(self.store.get(case.id).absence, "not_requested")
+        self.assertEqual(self.store.get(case.id).absence, Absence.NOT_REQUESTED)
         self.assertIn("No se solicitó la ausencia", self.texts()[-1])
 
     async def test_not_now_skips_the_absence_and_stops_reminders(self):
-        case = self.add_case(absence="asking", prompt_token=uuid4().hex)
+        case = self.add_case(absence=Absence.ASKING, prompt_token=uuid4().hex)
         self.scheduler.schedule(flow.PROMPT_KIND, NOW + timedelta(minutes=30), {"case": case.id})
         await self.answer(case, "no")
-        self.assertEqual(self.store.get(case.id).absence, "skipped")
+        self.assertEqual(self.store.get(case.id).absence, Absence.SKIPPED)
         self.assertEqual(self.reminders_for(case), [])
 
     async def test_yes_requests_the_working_days_with_hours(self):
-        case = self.add_case(date(2026, 10, 9), date(2026, 10, 14), absence="asking", prompt_token=uuid4().hex)
+        case = self.add_case(date(2026, 10, 9), date(2026, 10, 14), absence=Absence.ASKING, prompt_token=uuid4().hex)
         await self.answer(case, "yes")
         hours = {"startTime": "08:00", "endTime": "15:00"}
         self.assertEqual(self.session.absence_calls, [{
             "year": 2026, "absenceTypeId": "7", "observations": "", "attachments": [],
             "periods": [{"date": "2026-10-09", **hours}, {"date": "2026-10-14", **hours}]}])
-        self.assertEqual(self.store.get(case.id).absence, "requested")
+        self.assertEqual(self.store.get(case.id).absence, Absence.REQUESTED)
         self.assertIn("Ausencia solicitada", self.texts()[-1])
 
     async def test_read_only_rejection_and_unclear_outcomes(self):
-        for result, state, text in ((ReadOnlyStop(), "simulated", "solo lectura"),
-                                    (AbsenceRequestError("Día cerrado"), "asking", "Día cerrado"),
-                                    (AbsenceRequestUncertain("USC no confirmó"), "uncertain", "USC no confirmó")):
+        for result, state, text in ((ReadOnlyStop(), Absence.SIMULATED, "solo lectura"),
+                                    (AbsenceRequestError("Día cerrado"), Absence.ASKING, "Día cerrado"),
+                                    (AbsenceRequestUncertain("USC no confirmó"), Absence.UNCERTAIN,
+                                     "USC no confirmó")):
             with self.subTest(result=type(result).__name__):
-                case = self.add_case(absence="asking", prompt_token=uuid4().hex)
+                case = self.add_case(absence=Absence.ASKING, prompt_token=uuid4().hex)
                 self.session.absence_result = result
                 await self.answer(case, "yes")
                 self.assertEqual(self.store.get(case.id).absence, state)
                 self.assertIn(text, self.texts()[-1])
-                self.assertEqual(bool(self.reminders_for(case)), state == "asking")
+                self.assertEqual(bool(self.reminders_for(case)), state == Absence.ASKING)
 
     async def test_unknown_absence_type_keeps_asking(self):
         self.session.catalog = {"years": [2026], "types": [{"id": "1", "name": "Outro", "requiresHours": False}]}
-        case = self.add_case(absence="asking", prompt_token=uuid4().hex)
+        case = self.add_case(absence=Absence.ASKING, prompt_token=uuid4().hex)
         await self.answer(case, "yes")
-        self.assertEqual(self.store.get(case.id).absence, "asking")
+        self.assertEqual(self.store.get(case.id).absence, Absence.ASKING)
         self.assertIn("Asistencia a congresos", self.texts()[-1])
         self.assertEqual(self.session.absence_calls, [])
 
     async def test_stale_prompt_button(self):
-        case = self.add_case(absence="requested", prompt_token=uuid4().hex)
+        case = self.add_case(absence=Absence.REQUESTED, prompt_token=uuid4().hex)
         query = await self.answer(case, "yes")
         query.answer.assert_awaited_once_with("Esta pregunta ya no está disponible.")
 
@@ -364,7 +371,7 @@ class DailyTests(FlowTestCase):
              patch.object(usc, "download_authorization", return_value=b"%PDF-auth"):
             await self.daily()
         stored = self.store.get(case.id)
-        self.assertEqual((stored.stage, stored.auth_date), ("auth_received", "2026-10-01"))
+        self.assertEqual((stored.stage, stored.auth_date), (Stage.AUTH_RECEIVED, "2026-10-01"))
         self.assertEqual((self.store.directory(stored) / "autorizacion.pdf").read_bytes(), b"%PDF-auth")
         self.assertEqual(self.generated, [])
         self.assertIn("Autorización firmada recibida", self.texts()[-1])
@@ -381,6 +388,17 @@ class DailyTests(FlowTestCase):
         self.app.bot.send_document.assert_awaited_once()
         self.assertIsNone(self.store.get(case.id))
 
+    async def test_open_cases_use_the_current_plugin_config(self):
+        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02")
+        (self.store.directory(case) / "autorizacion.pdf").write_bytes(b"%PDF-auth")
+        moved = self.root / "nuevo"
+        moved.mkdir()
+        self.plugin.config = parse_config({**self.raw, "output_dir": str(moved)}, today=NOW.date())
+        self.clock.now = datetime(2026, 10, 8, 10, 0, tzinfo=MADRID_TZ)
+        await self.daily()
+        self.assertTrue((moved / "dieta_20261006_20261007.pdf").exists())
+        self.assertIsNone(self.store.get(case.id))
+
     async def test_check_failures_are_reported_on_the_third_day(self):
         case = self.add_case(request_id="100001")
         with patch.object(usc, "fetch_request_status", side_effect=RuntimeError("timeout")):
@@ -395,10 +413,10 @@ class DailyTests(FlowTestCase):
             await self.daily()
             await self.daily()
         self.assertEqual(sum("Denegada" in text for text in self.texts()), 1)
-        self.assertEqual(self.store.get(case.id).stage, "awaiting_auth")
+        self.assertEqual(self.store.get(case.id).stage, Stage.AWAITING_AUTH)
 
     async def test_signing_failure_keeps_an_unsigned_copy_and_retries(self):
-        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage="auth_received", auth_date="2026-10-02")
+        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02")
         (self.store.directory(case) / "autorizacion.pdf").write_bytes(b"%PDF-auth")
         self.clock.now = datetime(2026, 10, 8, 10, 0, tzinfo=MADRID_TZ)
 
@@ -409,10 +427,108 @@ class DailyTests(FlowTestCase):
         await self.daily()
         unsigned = self.config.output_dir / "dieta_20261006_20261007_SIN_FIRMAR.pdf"
         stored = self.store.get(case.id)
-        self.assertEqual(stored.stage, "generated")
+        self.assertEqual(stored.stage, Stage.GENERATED)
         self.assertIn("Certificado caducado", stored.last_problem)
         self.assertTrue(unsigned.exists())
         self.plugin._sign_pdf = self.fake_sign
         await self.daily()
         self.assertIsNone(self.store.get(case.id))
         self.assertFalse(unsigned.exists())
+
+
+class NoAuthTests(FlowTestCase):
+    """Special procedure: no congress authorization, any date of the current year."""
+
+    async def submit(self, start="2026-09-10", end="2026-09-11", no_auth=True):
+        self.plugin.launch_token = "t" * 32
+        message = self.message()
+        await self.plugin.handle_new(self.update(message), None,
+                                     {"token": "t" * 32, "start": start, "end": end, "noAuth": no_auth})
+        await asyncio.gather(*self.tasks)
+        return message
+
+    def add_no_auth_case(self, start=date(2026, 9, 10), end=date(2026, 9, 11), **fields):
+        return self.add_case(start, end, no_auth=True, stage=Stage.NO_AUTH, **fields)
+
+    async def daily(self):
+        await self.plugin.run_daily(SimpleNamespace(bot=self.app.bot, application=self.app))
+
+    async def test_open_app_sends_the_no_auth_minimum_and_status(self):
+        self.add_no_auth_case()
+        message = SimpleNamespace(reply_text=AsyncMock())
+        await self.plugin.open_app(SimpleNamespace(message=message), None)
+        url = message.reply_text.await_args.kwargs["reply_markup"].keyboard[0][0].web_app.url
+        payload = json.loads(unquote(url.split("#data=", 1)[1]))
+        self.assertEqual(payload["minStartNoAuth"], "2026-01-01")
+        self.assertIn("Sin autorización", payload["cases"][0]["status"])
+
+    def test_range_rules_without_authorization(self):
+        self.add_case(date(2026, 10, 20), date(2026, 10, 22))
+        today = NOW.date()
+        self.assertIsNone(self.plugin.check_range(date(2026, 1, 1), date(2026, 1, 2), today, no_auth=True))
+        self.assertIsNone(self.plugin.check_range(date(2026, 10, 2), date(2026, 10, 3), today, no_auth=True))
+        self.assertIn("como pronto", self.plugin.check_range(date(2025, 12, 31), date(2025, 12, 31), today,
+                                                             no_auth=True))
+        self.assertIn("solapan", self.plugin.check_range(date(2026, 10, 22), date(2026, 10, 23), today,
+                                                         no_auth=True))
+        self.assertIn("cambio de año", self.plugin.check_range(date(2026, 12, 30), date(2027, 1, 2), today,
+                                                               no_auth=True))
+
+    async def test_request_creates_the_case_without_contacting_usc(self):
+        message = await self.submit()
+        self.assertEqual(self.session.congress_calls, [])
+        [case] = self.store.open_cases()
+        self.assertEqual((case.no_auth, case.stage, case.simulated), (True, Stage.NO_AUTH, False))
+        self.assertEqual([task.when for task in self.scheduler.pending(flow.PROMPT_KIND)], [NOW])
+        self.assertIn("sin autorización", message.reply_text.await_args.args[0])
+        self.assertIsNone(self.plugin.launch_token)
+        self.assertNotIn(ACTIVE_KEY, self.app.bot_data)
+
+    async def test_only_a_boolean_flag_relaxes_the_range(self):
+        message = await self.submit(no_auth="true")
+        self.assertIn("como pronto", message.reply_text.await_args.args[0])
+        self.assertEqual(self.store.open_cases(), [])
+
+    async def test_absence_is_asked_even_after_the_congress(self):
+        case = self.add_no_auth_case()
+        task = self.scheduler.schedule(flow.PROMPT_KIND, NOW + timedelta(minutes=1), {"case": case.id})
+        job = next(job for job in self.app.job_queue.of("once") if job.data["id"] == task.id)
+        await fire(self.app, job)
+        self.assertIn("¿Solicito la ausencia", self.texts()[-1])
+        self.assertEqual(self.store.get(case.id).absence, Absence.ASKING)
+        self.assertEqual([task.when for task in self.scheduler.pending(flow.PROMPT_KIND)],
+                         [NOW + timedelta(minutes=30)])
+
+    async def test_document_waits_for_the_end_and_the_absence_answer(self):
+        future = self.add_no_auth_case(date(2026, 10, 5), date(2026, 10, 6), absence=Absence.SKIPPED)
+        case = self.add_no_auth_case(absence=Absence.ASKING)
+        await self.daily()
+        self.assertEqual(self.generated, [])
+        signed_from = []
+
+        def sign(src, out, signing):
+            signed_from.append(src.read_bytes())
+            return self.fake_sign(src, out, signing)
+
+        def join(*args):
+            raise AssertionError("no authorization to join")
+
+        self.plugin._sign_pdf, self.plugin._join_pdfs = sign, join
+        case.absence = Absence.SKIPPED
+        await self.daily()
+        self.assertEqual(self.generated, [SheetDates(date(2026, 9, 10), date(2026, 9, 11), NOW.date())])
+        self.assertEqual(signed_from, [b"%PDF-sheet"])
+        self.assertEqual((self.config.output_dir / "dieta_20260910_20260911.pdf").read_bytes(), b"%PDF-signed")
+        self.assertIsNone(self.store.get(case.id))
+        self.assertEqual(self.store.get(future.id).stage, Stage.NO_AUTH)
+
+    async def test_cancel_does_not_mention_a_congress_request(self):
+        case = self.add_no_auth_case(absence=Absence.SKIPPED)
+        self.plugin.launch_token = "t" * 32
+        message = SimpleNamespace(reply_text=AsyncMock())
+        await self.plugin.handle_cancel(self.update(message), None, {"token": "t" * 32, "case": case.id})
+        yes = message.reply_text.await_args.kwargs["reply_markup"].inline_keyboard[0][0].callback_data
+        query = SimpleNamespace(data=yes, answer=AsyncMock(), edit_message_text=AsyncMock())
+        await self.plugin.handle_callback(SimpleNamespace(callback_query=query), None)
+        self.assertIsNone(self.store.get(case.id))
+        self.assertNotIn(usc.REQUESTS_LIST_URL, query.edit_message_text.await_args.args[0])
