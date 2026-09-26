@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Congreso y dieta · USC</title>
+  <script src="https://unpkg.com/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* Fixed light scheme like the other Mini Apps: FullCalendar's own colours assume a light page. */
+    :root { color-scheme: light; font-family: "Segoe UI", Roboto, sans-serif; color: #1f2933; background: #f5f7fb; }
+    * { box-sizing: border-box; } body { margin: 0; }
+    main { max-width: 960px; margin: auto; padding: 1.5rem 1rem 2rem; }
+    h1 { font-size: 1.6rem; margin: 0 0 .4rem; } h2 { font-size: 1.2rem; margin-top: 0; }
+    p { line-height: 1.5; } .muted { color: #64748b; }
+    .panel { background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 8px 25px #0f172a0a; margin-bottom: 1rem; }
+    [hidden] { display: none !important; }
+    .case { border: 1px solid #cbd5e1; border-radius: 8px; padding: 1rem; margin-top: .6rem; }
+    .case p { margin: .3rem 0; }
+    .problem { color: #b45309; }
+    /* Scoped to the page's own buttons: a bare `button` rule also restyles FullCalendar's toolbar. */
+    #send, .case button { padding: .8rem 1rem; border: 0; border-radius: 8px; font: inherit; cursor: pointer; background: #1d4ed8; color: white; }
+    #send:disabled { cursor: not-allowed; opacity: .5; }
+    .case button.secondary { background: #e2e8f0; color: #334155; margin-top: .4rem; }
+    .actions { display: flex; justify-content: flex-end; margin-top: 1.25rem; }
+    .fc .fc-daygrid-day.dia-seleccionado { outline: 3px solid #b45309; outline-offset: -3px; background: #fffbeb; }
+    .fc .fc-daygrid-day.dia-bloqueado { background: #f1f5f9; cursor: not-allowed; }
+    .fc .fc-daygrid-day:not(.dia-bloqueado) { cursor: pointer; }
+    #selection { font-weight: 600; }
+    #status { color: #b45309; min-height: 1.5rem; }
+    @media (max-width: 500px) {
+      main { padding: 1rem .6rem; } .panel { padding: .9rem; }
+      .fc .fc-toolbar-title { font-size: 1rem; } .fc .fc-button { font-size: .8rem; padding: .4rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Congreso y dieta</h1>
+  <p class="muted">Autorización de congreso y dieta · USC</p>
+  <section id="cases-section" class="panel" hidden>
+    <h2>Trámites en curso</h2>
+    <div id="cases"></div>
+  </section>
+  <section class="panel">
+    <h2>Nueva solicitud</h2>
+    <p>Pulsa el primer y el último día del congreso.</p>
+    <div id="calendar" aria-label="Calendario del congreso"></div>
+    <p id="selection" aria-live="polite">Sin fechas seleccionadas</p>
+    <div class="actions"><button id="send" disabled>Solicitar</button></div>
+  </section>
+  <p id="status" role="status" aria-live="polite"></p>
+</main>
+<script src="congreso.js?v=4"></script>
+</body>
+</html>

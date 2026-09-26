@@ -61,6 +61,7 @@ if (data) {
   renderCases();
   calendar = new FullCalendar.Calendar(el('calendar'), {
     initialView: 'dayGridMonth', locale: 'es', firstDay: 1, height: 'auto', initialDate: data.minStart,
+    fixedWeekCount: false, headerToolbar: {start: 'title', end: 'prev,next,today'}, buttonText: {today: 'Hoy'},
     dateClick: info => pick(info.dateStr), datesSet: refresh,
   });
   calendar.render();

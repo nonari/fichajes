@@ -4,6 +4,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCS_DIR="$SCRIPT_DIR/../docs"
+PLUGINS_DIR="$(cd "$SCRIPT_DIR/../plugins" && pwd)"
 PORT=8000
 # Python expects True/False with capital letters
 USE_HTTPS="False"
@@ -43,7 +44,7 @@ else
   PROTOCOL="http"
 fi
 
-echo "📁 Serving directory: $DOCS_DIR"
+echo "📁 Serving directory: $DOCS_DIR (plugins/<name>/web at /plugins/<name>/)"
 echo "🌐 $PROTOCOL://localhost:$PORT"
 
 # --- ngrok tunnel ---
@@ -74,14 +75,29 @@ cd "$DOCS_DIR"
 # --- Launch Server ---
 python3 - <<EOF
 import http.server
+import os
 import socketserver
 import ssl
 
 PORT = $PORT
+PLUGINS_DIR = "$PLUGINS_DIR"
 # Now this will correctly inject True or False
 USE_HTTPS = $USE_HTTPS
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+    # Same layout as the Pages workflow: plugins/<name>/web is served at /plugins/<name>/.
+    def translate_path(self, path):
+        parts = path.split("/", 3)
+        if len(parts) > 2 and parts[1] == "plugins" and parts[2].isidentifier():
+            web = os.path.join(PLUGINS_DIR, parts[2], "web")
+            if os.path.isdir(web):
+                directory, self.directory = self.directory, web
+                try:
+                    return super().translate_path("/" + (parts[3] if len(parts) > 3 else ""))
+                finally:
+                    self.directory = directory
+        return super().translate_path(path)
+
     # Mini Apps change often during development; make webviews always revalidate.
     def end_headers(self):
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")

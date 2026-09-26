@@ -29,7 +29,7 @@ class CongresoBrowserTests(unittest.TestCase):
     TELEGRAM_PARAMS = "&tgWebAppData=query_id%3DAAA%26user%3D%257B%257D&tgWebAppVersion=7.10&tgWebAppPlatform=android"
 
     def open_app(self, cases=()):
-        html = re.sub(r"<script\b[^>]*src=[^>]+>\s*</script>", "", (ROOT / "docs/congreso.html").read_text())
+        html = re.sub(r"<script\b[^>]*src=[^>]+>\s*</script>", "", (ROOT / "plugins/congreso_dieta/web/congreso.html").read_text())
         data = {"token": "launch", "today": "2026-10-01", "minStart": "2026-10-06", "cases": list(cases)}
         self.browser.get("about:blank")
         self.browser.get("data:text/html;charset=utf-8," + quote(html) + "#data=" + quote(json.dumps(data)) + self.TELEGRAM_PARAMS)
@@ -41,7 +41,7 @@ class CongresoBrowserTests(unittest.TestCase):
                 render(){}
             }};
         """)
-        self.browser.execute_script((ROOT / "docs/congreso.js").read_text())
+        self.browser.execute_script((ROOT / "plugins/congreso_dieta/web/congreso.js").read_text())
 
     def click_day(self, day):
         self.browser.execute_script(f"window.testCalendar.options.dateClick({{dateStr:'{day}'}});")

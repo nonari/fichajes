@@ -22,7 +22,7 @@ Add `"congreso_dieta"` to `plugins` and a `plugin_config` section:
 "plugins": ["congreso_dieta"],
 "plugin_config": {
   "congreso_dieta": {
-    "webapp_url": "https://nonari.github.io/fichajes/congreso.html",
+    "webapp_url": "https://nonari.github.io/fichajes/plugins/congreso_dieta/congreso.html",
     "output_dir": "/home/user/Documentos/dietas",
     "auth_check_time": "10:00",
     "prompt": {"at": "09:00", "reminder_minutes": 30, "window": ["08:00", "20:00"]},
@@ -40,6 +40,9 @@ Add `"congreso_dieta"` to `plugins` and a `plugin_config` section:
   }
 }
 ```
+
+The Mini App lives in `plugins/congreso_dieta/web/` and is published with the other pages (see the README's plugin
+section); `webapp_url` may point at any HTTPS copy of it.
 
 The global `congress_confirmation_enabled` (default `true`) and `congress_confirmation_timeout_seconds` decide
 whether USC's preview PDF is confirmed in Telegram before the congress request is submitted.

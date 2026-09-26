@@ -168,6 +168,12 @@ colliding with built-in commands or another enabled plugin, or a failing
 starts normally and a Telegram message at startup names the plugin and the error.
 Plugin commands inherit the existing restriction to `telegram_chat_id`.
 
+A plugin's Mini App pages go in `plugins/<name>/web/`. The Pages workflow
+(`.github/workflows/pages.yml`) publishes `docs/` at the site root and each such
+folder at `/plugins/<name>/`, so a plugin's pages are added or removed with its
+folder; `devtools/launch_server.sh` serves the same layout for local testing.
+Point the plugin's configured web app URL at the published page.
+
 Plugins run as trusted local Python code in the bot process; the folder is an
 organizational boundary, not a sandbox. Install any extra plugin dependencies
 in the bot's environment yourself. Restart after code or configuration changes.

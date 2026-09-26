@@ -76,7 +76,7 @@ Today plugins can only export `COMMANDS`. This plugin additionally needs:
 
 ## Mini App (*Decided*)
 
-`/congreso_dieta` opens a single page (`docs/congreso.html` + `docs/congreso.js`, served like the other Mini Apps):
+`/congreso_dieta` opens a single page (`plugins/congreso_dieta/web/congreso.html` + `congreso.js`, published at `/plugins/congreso_dieta/`):
 
 1. **"Trámites en curso"** (only when cases exist): one card per case with its dates, the current step in plain
    Spanish (e.g. "Pendiente de confirmar la ausencia el 09/10", "Esperando la autorización firmada") and a
