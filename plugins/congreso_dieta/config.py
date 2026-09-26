@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from datetime import date, time as dtime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from fichaxebot.scrap_functions.congress_request import validate_request
 from fichaxebot.utils import parse_hour_minute
@@ -23,10 +23,27 @@ class PromptConfig:
 
 
 @dataclass(frozen=True)
+class VisibleSignature:
+    """Visible stamp in PDF points, origin at the page's bottom-left corner (AutoFirma's convention).
+
+    page is a 1-based page number, or "append" to add a blank last page for the stamp so no
+    existing page is drawn on.
+    """
+    page: Union[int, str]
+    x: float
+    y: float
+    width: float
+    height: float
+    text: str
+    font_size: int = 9
+
+
+@dataclass(frozen=True)
 class SigningConfig:
     store: str
     alias: str
     password: Optional[str]
+    visible: Optional[VisibleSignature] = None
 
 
 @dataclass(frozen=True)
@@ -79,6 +96,38 @@ def _text(value, label: str) -> str:
     return value.strip()
 
 
+def _number(value, label: str, *, positive: bool) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0 or (positive and value == 0):
+        _fail(f"'{label}' debe ser un número {'mayor que cero' if positive else 'no negativo'} (puntos PDF)")
+    return value
+
+
+def parse_visible_signature(raw) -> Optional[VisibleSignature]:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        _fail("'signing.visible' debe ser un objeto o null")
+    page = raw.get("page", 1)
+    if page != "append" and (type(page) is not int or page < 1):
+        _fail("'signing.visible.page' debe ser un número de página (1 = primera) o \"append\" (página nueva al final)")
+    text = raw.get("text")
+    # AutoFirma's -config value is split on a literal backslash-n: no newlines or backslashes in the text.
+    if not isinstance(text, str) or not text.strip() or "\n" in text or "\\" in text:
+        _fail("'signing.visible.text' debe ser una línea de texto sin barras invertidas")
+    font_size = raw.get("font_size", 9)
+    if type(font_size) is not int or font_size <= 0:
+        _fail("'signing.visible.font_size' debe ser un entero mayor que cero")
+    return VisibleSignature(
+        page=page,
+        x=_number(raw.get("x"), "signing.visible.x", positive=False),
+        y=_number(raw.get("y"), "signing.visible.y", positive=False),
+        width=_number(raw.get("width"), "signing.visible.width", positive=True),
+        height=_number(raw.get("height"), "signing.visible.height", positive=True),
+        text=text.strip(),
+        font_size=font_size,
+    )
+
+
 def parse_config(raw, *, today: date, check_files: bool = True) -> PluginConfig:
     """Validate a raw plugin section. check_files=False re-reads a case snapshot."""
     if not isinstance(raw, dict):
@@ -111,6 +160,7 @@ def parse_config(raw, *, today: date, check_files: bool = True) -> PluginConfig:
     password = signing_raw.get("password")
     if password is not None and not isinstance(password, str):
         _fail("'signing.password' debe ser texto o null")
+    visible = parse_visible_signature(signing_raw.get("visible"))
 
     absence_raw = _section(raw, "absence")
     type_name = _text(absence_raw.get("type"), "absence.type")
@@ -143,7 +193,7 @@ def parse_config(raw, *, today: date, check_files: bool = True) -> PluginConfig:
         output_dir=output_dir,
         auth_check_time=_hhmm(raw.get("auth_check_time"), "auth_check_time"),
         prompt=prompt,
-        signing=SigningConfig(store, alias, password),
+        signing=SigningConfig(store, alias, password, visible),
         days_before=_positive_int(raw.get("days_before"), "days_before"),
         spreadsheet_template=template,
         absence=AbsenceConfig(type_name, f"{absence_start:%H:%M}", f"{absence_end:%H:%M}"),

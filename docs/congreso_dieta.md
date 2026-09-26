@@ -56,5 +56,6 @@ firmada" until that step is added. Everything else can be exercised in read-only
 ## Optional local tests
 
 - `CONGRESO_TEMPLATE=/path/workbook.xlsm` runs the real LibreOffice macro test.
-- `CONGRESO_SIGN_ALIAS="<alias>"` (optionally `CONGRESO_SIGN_STORE`, `CONGRESO_SIGN_PASSWORD`) signs a dummy PDF.
+- Signing is checked outside the test suite: `.venv/bin/python devtools/sign_dummy_pdf.py` signs a dummy PDF
+  with the plugin's code and the `signing` settings from `config.json`, then verifies it with `pdfsig`.
 - `CHROMEDRIVER=/path/chromedriver` runs the Mini App browser test.

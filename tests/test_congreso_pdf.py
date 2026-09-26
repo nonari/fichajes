@@ -1,32 +1,16 @@
-import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from plugins.congreso_dieta import pdf
-from plugins.congreso_dieta.config import SigningConfig
+from plugins.congreso_dieta.config import SigningConfig, VisibleSignature
 
 SIGNING = SigningConfig("mozilla", "Alias", None)
 
 
 def completed(code=0, out="", err=""):
     return subprocess.CompletedProcess([], code, out, err)
-
-
-def minimal_pdf() -> bytes:
-    objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-               b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>"]
-    out, offsets = bytearray(b"%PDF-1.4\n"), []
-    for number, body in enumerate(objects, 1):
-        offsets.append(len(out))
-        out += b"%d 0 obj\n%s\nendobj\n" % (number, body)
-    xref = len(out)
-    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
-    for offset in offsets:
-        out += b"%010d 00000 n \n" % offset
-    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
-    return bytes(out)
 
 
 class PdfTestCase(unittest.TestCase):
@@ -62,6 +46,26 @@ class SignTests(PdfTestCase):
                           "-store", "mozilla", "-alias", "Alias"])
         self.assertEqual(pdf.sign_command(Path("in.pdf"), Path("out.pdf"),
                                           SigningConfig("pkcs12:/c.p12", "A", "pw"))[-2:], ["-password", "pw"])
+
+    def test_visible_signature_is_passed_as_autofirma_extra_params(self):
+        visible = VisibleSignature(page=1, x=90, y=141, width=29, height=27.5,
+                                   text="Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$", font_size=9)
+        command = pdf.sign_command(Path("in.pdf"), Path("out.pdf"), SigningConfig("mozilla", "Alias", None, visible))
+        extra = command[command.index("-config") + 1]
+        # AutoFirma's command line splits settings on a literal backslash-n, not a newline.
+        self.assertEqual(extra.split("\\n"), [
+            "signaturePage=1",
+            "signaturePositionOnPageLowerLeftX=90", "signaturePositionOnPageLowerLeftY=141",
+            # AutoFirma silently drops the stamp unless coordinates are whole points: 141 + 27.5 rounds up.
+            "signaturePositionOnPageUpperRightX=119", "signaturePositionOnPageUpperRightY=169",
+            "layer2Text=Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$", "layer2FontSize=9",
+        ])
+        self.assertNotIn("\n", extra)
+        third = pdf.visible_signature_params(VisibleSignature(1, 300, 1, 193.33, 33, "Firmado", 12))
+        self.assertIn("signaturePositionOnPageUpperRightX=493\\n", third)
+        appended = pdf.visible_signature_params(VisibleSignature("append", 250, 40, 310, 70, "Firmado", 14))
+        self.assertTrue(appended.startswith("signaturePage=append\\n"))
+        self.assertNotIn("-config", pdf.sign_command(Path("in.pdf"), Path("out.pdf"), SIGNING))
 
     def fake_autofirma(self, aliases=("as-logins-key", "Alias"), sign=None):
         """Answer listaliases with the given aliases and sign with `sign` (default: write a PDF)."""
@@ -126,14 +130,3 @@ class AliasResolutionTests(SignTests):
         with self.assertRaisesRegex(pdf.PdfError, "almacén"):
             pdf.sign_pdf(self.root / "unido.pdf", self.root / "firmado.pdf", SIGNING,
                          runner=lambda command, timeout: completed(1, err="Error al abrir el almacen"))
-
-
-@unittest.skipUnless(os.environ.get("CONGRESO_SIGN_ALIAS"), "Set CONGRESO_SIGN_ALIAS to sign a dummy PDF with AutoFirma")
-class RealSigningTests(PdfTestCase):
-    def test_autofirma_signs_a_dummy_pdf(self):
-        source = self.root / "dummy.pdf"
-        source.write_bytes(minimal_pdf())
-        signing = SigningConfig(os.environ.get("CONGRESO_SIGN_STORE", "mozilla"), os.environ["CONGRESO_SIGN_ALIAS"],
-                                os.environ.get("CONGRESO_SIGN_PASSWORD"))
-        signed = pdf.sign_pdf(source, self.root / "signed.pdf", signing)
-        self.assertIn(b"/ByteRange", signed.read_bytes())

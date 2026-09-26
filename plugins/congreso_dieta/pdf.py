@@ -74,11 +74,32 @@ def resolve_alias(signing: SigningConfig, *, runner=run) -> str:
                    f"Disponibles: {available}")
 
 
+def _points(value: float) -> str:
+    # AutoFirma silently ignores the whole stamp if any coordinate has decimals: send whole points.
+    return str(int(value + 0.5))
+
+
+def visible_signature_params(visible) -> str:
+    """AutoFirma PAdES extra params for a visible stamp; its command line splits them on a literal backslash-n."""
+    params = [
+        f"signaturePage={visible.page}",
+        f"signaturePositionOnPageLowerLeftX={_points(visible.x)}",
+        f"signaturePositionOnPageLowerLeftY={_points(visible.y)}",
+        f"signaturePositionOnPageUpperRightX={_points(visible.x + visible.width)}",
+        f"signaturePositionOnPageUpperRightY={_points(visible.y + visible.height)}",
+        f"layer2Text={visible.text}",
+        f"layer2FontSize={visible.font_size}",
+    ]
+    return "\\n".join(params)
+
+
 def sign_command(src: Path, out: Path, signing: SigningConfig, alias: str = None) -> list:
     command = ["autofirma", "sign", "-i", src, "-o", out, "-format", "pades",
                "-store", signing.store, "-alias", alias or signing.alias]
     if signing.password:
         command += ["-password", signing.password]
+    if signing.visible:
+        command += ["-config", visible_signature_params(signing.visible)]
     return command
 
 

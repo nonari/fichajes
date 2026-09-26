@@ -5,7 +5,7 @@ import unittest
 from datetime import date, time
 from pathlib import Path
 
-from plugins.congreso_dieta.config import parse_config
+from plugins.congreso_dieta.config import VisibleSignature, parse_config
 
 TODAY = date(2026, 10, 1)
 CONGRESS = {
@@ -82,3 +82,41 @@ class ConfigTests(unittest.TestCase):
         raw = copy.deepcopy(self.raw)
         raw["output_dir"] = "/nonexistent/dietas"
         self.assertEqual(parse_config(raw, today=TODAY, check_files=False).output_dir, Path("/nonexistent/dietas"))
+
+
+class VisibleSignatureConfigTests(unittest.TestCase):
+    VISIBLE = {"page": 1, "x": 90, "y": 141, "width": 29, "height": 27,
+               "text": "Firmado por $$SUBJECTCN$$ el día $$SIGNDATE=dd/MM/yyyy$$", "font_size": 9}
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.raw = raw_config(directory.name)
+
+    def parse(self, visible):
+        raw = copy.deepcopy(self.raw)
+        raw["signing"]["visible"] = visible
+        return parse_config(raw, today=TODAY)
+
+    def test_invisible_by_default(self):
+        self.assertIsNone(parse_config(self.raw, today=TODAY).signing.visible)
+
+    def test_visible_signature_is_parsed(self):
+        self.assertEqual(self.parse(dict(self.VISIBLE)).signing.visible,
+                         VisibleSignature(page=1, x=90, y=141, width=29, height=27,
+                                          text=self.VISIBLE["text"], font_size=9))
+        without_font = {key: value for key, value in self.VISIBLE.items() if key != "font_size"}
+        self.assertEqual(self.parse(without_font).signing.visible.font_size, 9)
+
+    def test_append_places_the_stamp_on_a_new_last_page(self):
+        self.assertEqual(self.parse({**self.VISIBLE, "page": "append"}).signing.visible.page, "append")
+
+    def test_invalid_visible_values_name_the_setting(self):
+        for key, value in (("page", 0), ("page", "1"), ("x", -1), ("y", "141"), ("width", 0), ("height", True),
+                           ("text", ""), ("text", "dos\nlíneas"), ("text", "con \\ barra"), ("font_size", 0)):
+            with self.subTest(key=key, value=value), \
+                    self.assertRaisesRegex(ValueError, re.escape(f"signing.visible.{key}")):
+                self.parse({**self.VISIBLE, key: value})
+        with self.assertRaisesRegex(ValueError, "signing.visible"):
+            self.parse([])
+
