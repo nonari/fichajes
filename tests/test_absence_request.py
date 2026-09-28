@@ -46,6 +46,10 @@ class SelectionTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(absence.AbsenceRequestError):
                 absence.validate_selection(self.selection(**change), CATALOG)
 
+    def test_supported_type_must_also_be_available_in_live_catalog(self):
+        with self.assertRaisesRegex(absence.AbsenceRequestError, 'ya no está disponible'):
+            absence.validate_selection(self.selection(absenceTypeId='7'), CATALOG)
+
     def test_pdf_paths_validated_and_caller_files_retained(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "proof.pdf"
@@ -62,6 +66,23 @@ class SelectionTests(unittest.TestCase):
 
 
 class ApiTests(unittest.TestCase):
+    def test_api_rejects_unsupported_type_even_if_live_catalog_contains_it(self):
+        session = UscWebSession.__new__(UscWebSession)
+        session.config = SimpleNamespace(read_only=False)
+        session._lock = RLock()
+        catalog = {'years': [2026], 'types': [{'id': '99', 'name': 'Unknown', 'requiresHours': False}]}
+        data = {'year': 2026, 'absenceTypeId': '99', 'periods': [{'date': '2026-01-01'}]}
+        with patch('fichaxebot.usc_api.fetch_absence_catalog', return_value=catalog), \
+             patch('fichaxebot.usc_api.fill_absence_request') as fill, \
+             patch('fichaxebot.usc_api._submit_absence_request') as submit:
+            with self.assertRaises(absence.AbsenceRequestError) as error:
+                session.submit_absence_request(data)
+        self.assertIn('absenceTypeId', str(error.exception))
+        self.assertIn('99', str(error.exception))
+        self.assertIn('Desprazamentos autorizados', str(error.exception))
+        fill.assert_not_called()
+        submit.assert_not_called()
+
     def test_api_needs_no_telegram_and_forwards_explicit_callback(self):
         session = UscWebSession.__new__(UscWebSession)
         session.config = SimpleNamespace(read_only=False)

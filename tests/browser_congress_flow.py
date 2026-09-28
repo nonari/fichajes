@@ -73,7 +73,7 @@ class CongressBrowserTests(unittest.TestCase):
         self.now.start().return_value.date.return_value = date(2026, 9, 25)
         self.addCleanup(self.now.stop)
         self.session = SimpleNamespace(driver=self.browser, wait=WebDriverWait(self.browser, 2),
-                                       _ensure_access_to=self.browser.get)
+                                       _ensure_access_to=self.browser.get, config=SimpleNamespace(read_only=False))
         Handler.pdf_requests = 0
 
     def test_all_steps_pdf_cookie_and_one_confirmed_submission(self):
@@ -112,6 +112,19 @@ class CongressBrowserTests(unittest.TestCase):
         self.assertEqual(saved['2']['email'], 'original@example.test')
         self.assertEqual(saved['3']['departamento'], 'Paris')
         self.assertIn('-', saved['4'].values())
+
+    def test_employment_selection_uses_official_label_when_web_code_changes(self):
+        def open_fixture(url):
+            self.browser.get(url)
+            self.browser.execute_script("""
+                document.getElementById('step4').content
+                    .querySelector('[data-label="Contratados predoutorais"]').setAttribute('value', 'changed-web-code');
+            """)
+        self.session._ensure_access_to = open_fixture
+        congress.submit_congress_request(self.session, DATA)
+        details = self.browser.execute_script('return window.saved[4]')
+        self.assertIn('changed-web-code', details.values())
+        self.assertIn('Contratados predoutorais', details.values())
 
     def test_cancel_keeps_live_review_without_submitting(self):
         with self.assertRaises(congress.CongressRequestCancelled):

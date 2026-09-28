@@ -11,14 +11,11 @@ from selenium.webdriver.support.ui import Select
 
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scrap_functions.commit import commit_click
+from fichaxebot.usc_types import EmploymentCategory
 from fichaxebot.utils import get_madrid_now
 
 logger = get_logger(__name__)
 REQUEST_URL = 'https://aplicacions.usc.es/intranet/solicitudes/RRHH_InvAsistenciaCongresos.htm'
-EMPLOYMENT_CATEGORIES = frozenset({
-    'Proxectos', 'JIN', 'MARIECURIE', 'PREDOUTORAIS', 'POSDOUTORAIS',
-    'BeatrizGalindo', 'DISTINGUIEOD', 'JUANDELACIERVA', 'RAMONYCAJAL', 'TECNICOAPOIO',
-})
 
 
 class CongressRequestError(ValueError):
@@ -61,10 +58,13 @@ def validate_request(data: dict, today: date) -> dict:
             ('line2', False, 255), ('observations', False, 512),
         )
     }
-    for key in ('reason', 'organization', 'employment_category', 'supervisor_query'):
+    for key in ('reason', 'organization', 'supervisor_query'):
         result[key] = _text(data, key, multiline=key == 'reason')
-    if result['employment_category'] not in EMPLOYMENT_CATEGORIES:
-        raise CongressRequestError('Selecciona una categoría de contrato válida.')
+    try:
+        result['employment_category'] = EmploymentCategory.from_config(
+            data.get('employment_category'), 'employment_category').name
+    except ValueError as exc:
+        raise CongressRequestError(str(exc)) from exc
     if len(result['supervisor_query']) < 3:
         raise CongressRequestError('Indica al menos tres caracteres para buscar al supervisor.')
     teaching = data.get('teaching_assigned')
@@ -192,7 +192,8 @@ def _set_date(session, index, iso_date):
 def _fill_details(session, data):
     _fill(session, _detail_selector(0), data['reason'])
     _fill(session, _detail_selector(1), data['organization'])
-    _field(session, _detail_selector(3, 'codigo') + f'[value="{data["employment_category"]}"]').click()
+    category = EmploymentCategory[data['employment_category']]
+    _field(session, _detail_selector(3, 'codigo') + f'[data-label="{category.display_name}"]').click()
     _field(session, _detail_selector(5, 'codigo') + f'[value="{int(data["teaching_assigned"])}"]').click()
     if data['teaching_assigned']:
         _fill(session, _detail_selector(6), data['teaching_cover'])

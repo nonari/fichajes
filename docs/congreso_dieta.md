@@ -37,12 +37,12 @@ Add `"congreso_dieta"` to `plugins` and a `plugin_config` section:
     "signing": {"store": "mozilla", "alias": "NOMBRE APELLIDOS - 00000000T", "password": null},
     "days_before": 3,
     "spreadsheet_template": "/home/user/plantillas/GL_VISITAS_PLANTA_FINSA.xlsm",
-    "absence": {"type": "Asistencia a congresos", "start_time": "08:00", "end_time": "15:00"},
+    "absence": {"type": "DESPRAZAMENTOS_AUTORIZADOS", "start_time": "08:00", "end_time": "15:00"},
     "congress": {
       "data_processing_authorized": true,
       "address": {"country": "España", "province": "Coruña, A", "municipality": "Santiago de Compostela",
                   "postal_code": "15782", "line1": "…"},
-      "reason": "…", "organization": "…", "employment_category": "PREDOUTORAIS",
+      "reason": "…", "organization": "…", "employment_category": "CONTRATADOS_PREDOUTORAIS",
       "teaching_assigned": false, "supervisor_query": "…"
     }
   }
@@ -58,6 +58,20 @@ whether USC's preview PDF is confirmed in Telegram before the congress request i
 `congress` accepts the fields of [the congress API](congress_api.md) except the dates. The absence type is matched
 by name against USC. Invalid settings disable the plugin (the rest of the bot keeps working); a Telegram message at
 startup names the setting to fix.
+
+Set `absence.type` to the normalized `AbsenceType` member name, such as `DESPRAZAMENTOS_AUTORIZADOS`.
+Both settings require exact uppercase names with underscores; display names and web codes are not config values.
+See the [supported absence types](absence_api.md#supported-types); `Asistencia a congresos` is not a valid type.
+Set `congress.employment_category` to the normalized `EmploymentCategory` member name from the [employment categories](congress_api.md#employment-categories).
+
+Both catalogs and their validators belong to the app in
+[`fichaxebot/usc_types.py`](../fichaxebot/usc_types.py), and the USC API validates them independently of plugins.
+Plugin setup reuses these validators before registering jobs. Invalid values disable the enabled plugin and
+produce a startup error naming `absence.type` or `congress.employment_category` under
+`plugin_config.congreso_dieta`, including the rejected value and valid choices.
+Browser selectors use the official USC display names stored in the enums. The web codes are retained separately.
+Absence availability is also checked against the live USC catalog when requested.
+The example above is a configuration example; select the values that apply to you.
 
 ## Known gap
 

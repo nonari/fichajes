@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from fichaxebot.scrap_functions.congress_request import validate_request
+from fichaxebot.usc_types import AbsenceType, EmploymentCategory
 from fichaxebot.utils import parse_hour_minute
 
 NAME = "congreso_dieta"
@@ -48,7 +49,7 @@ class SigningConfig:
 
 @dataclass(frozen=True)
 class AbsenceConfig:
-    type_name: str
+    type: AbsenceType
     start_time: str
     end_time: str
 
@@ -163,15 +164,23 @@ def parse_config(raw, *, today: date, check_files: bool = True) -> PluginConfig:
     visible = parse_visible_signature(signing_raw.get("visible"))
 
     absence_raw = _section(raw, "absence")
-    type_name = _text(absence_raw.get("type"), "absence.type")
+    try:
+        absence_type = AbsenceType.from_config(absence_raw.get("type"), 'absence.type')
+    except ValueError as exc:
+        _fail(str(exc))
     absence_start = _hhmm(absence_raw.get("start_time"), "absence.start_time")
     absence_end = _hhmm(absence_raw.get("end_time"), "absence.end_time")
     if absence_start >= absence_end:
         _fail("'absence.start_time' debe ser anterior a 'absence.end_time'")
 
-    congress = _section(raw, "congress")
+    congress = copy.deepcopy(_section(raw, "congress"))
     if "start_date" in congress or "end_date" in congress:
         _fail("'congress' no debe incluir fechas: se eligen en el calendario")
+    try:
+        congress['employment_category'] = EmploymentCategory.from_config(
+            congress.get('employment_category'), 'congress.employment_category').name
+    except ValueError as exc:
+        _fail(str(exc))
 
     output_dir = Path(_text(raw.get("output_dir"), "output_dir"))
     template = Path(_text(raw.get("spreadsheet_template"), "spreadsheet_template"))
@@ -196,6 +205,6 @@ def parse_config(raw, *, today: date, check_files: bool = True) -> PluginConfig:
         signing=SigningConfig(store, alias, password, visible),
         days_before=_positive_int(raw.get("days_before"), "days_before"),
         spreadsheet_template=template,
-        absence=AbsenceConfig(type_name, f"{absence_start:%H:%M}", f"{absence_end:%H:%M}"),
-        congress=copy.deepcopy(congress),
+        absence=AbsenceConfig(absence_type, f"{absence_start:%H:%M}", f"{absence_end:%H:%M}"),
+        congress=congress,
     )

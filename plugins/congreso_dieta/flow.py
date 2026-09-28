@@ -336,9 +336,9 @@ class CongresoDieta:
         config = self.config
         try:
             catalog = await asyncio.to_thread(self.session.fetch_absence_selection_data)
-            kind = find_absence_type(catalog, config.absence.type_name)
+            kind = find_absence_type(catalog, config.absence.type.display_name)
             if kind is None:
-                raise AbsenceRequestError(f"USC no ofrece el tipo de ausencia «{config.absence.type_name}».")
+                raise AbsenceRequestError(f"USC no ofrece el tipo de ausencia «{config.absence.type.display_name}».")
             entries = await asyncio.to_thread(self.session.fetch_calendar_summary)
         except Exception as exc:  # noqa: BLE001 - nothing was sent yet; asking again is safe
             logger.exception("Could not prepare the congress absence request")

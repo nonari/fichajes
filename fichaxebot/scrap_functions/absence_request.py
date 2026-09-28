@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import Select
 
 from fichaxebot.scrap_functions.commit import commit_click
 from fichaxebot.scrap_functions.vacation_request import REQUEST_URL, _capture_full_page
+from fichaxebot.usc_types import AbsenceType
 from fichaxebot.utils import get_madrid_now
 
 MAX_FILE_BYTES = 1048576
@@ -100,7 +101,11 @@ def validate_selection(data: dict, catalog: dict) -> dict:
     year = data.get("year")
     if type(year) is not int or year not in catalog["years"]:
         raise AbsenceRequestError("Selecciona un año disponible en USC.")
-    kind = next((kind for kind in catalog["types"] if kind["id"] == data.get("absenceTypeId")), None)
+    try:
+        absence_type = AbsenceType.from_code(data.get("absenceTypeId"), 'absenceTypeId')
+    except ValueError as exc:
+        raise AbsenceRequestError(str(exc)) from exc
+    kind = next((kind for kind in catalog["types"] if kind["id"] == absence_type.code), None)
     if kind is None:
         raise AbsenceRequestError("El tipo de ausencia ya no está disponible en USC.")
     raw = data.get("periods")
@@ -134,7 +139,7 @@ def validate_selection(data: dict, catalog: dict) -> dict:
     attachments = data.get("attachments", [])
     if not isinstance(attachments, list) or len(attachments) > MAX_ATTACHMENTS:
         raise AbsenceRequestError("Se permiten como máximo diez documentos PDF.")
-    return {"year": year, "absenceTypeId": kind["id"], "absenceTypeName": kind["name"],
+    return {"year": year, "absenceTypeId": kind["id"], "absenceTypeName": absence_type.display_name,
             "requiresHours": kind["requiresHours"], "periods": sorted(periods, key=lambda item: item["date"]),
             "observations": observations.strip(), "attachments": [validate_pdf(path) for path in attachments]}
 
@@ -157,7 +162,7 @@ def fill_absence_request(session, selection):
         Select(year).select_by_value(str(selection["year"]))
     elif year.get_attribute("value") != str(selection["year"]):
         raise AbsenceRequestError("USC ya no permite seleccionar ese año.")
-    Select(session.driver.find_element(By.ID, "idTipoAusencia")).select_by_value(selection["absenceTypeId"])
+    Select(session.driver.find_element(By.ID, "idTipoAusencia")).select_by_visible_text(selection["absenceTypeName"])
     session.wait.until(lambda driver: driver.execute_script("return !window.jQuery || jQuery.active === 0;"))
     actual_hours = session.driver.execute_script("return window.fraccionamento;")
     if actual_hours is not selection["requiresHours"]:

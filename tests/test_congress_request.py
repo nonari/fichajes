@@ -21,7 +21,7 @@ DATA = {
     'address': {'country': 'España', 'province': 'Coruña, A', 'municipality': 'Santiago de Compostela',
                 'postal_code': '15782', 'line1': 'Example street 1'},
     'reason': 'Attendance at a research congress', 'organization': 'Example University',
-    'employment_category': 'PREDOUTORAIS', 'teaching_assigned': False,
+    'employment_category': 'CONTRATADOS_PREDOUTORAIS', 'teaching_assigned': False,
     'start_date': '2026-10-10', 'end_date': '2026-10-12', 'supervisor_query': 'Example Supervisor',
 }
 
@@ -56,6 +56,15 @@ class ValidationTests(unittest.TestCase):
                 self.validate({**DATA, **change})
         self.assertEqual(self.validate({**DATA, 'reason': 'First paragraph\nSecond paragraph'})['reason'],
                          'First paragraph\nSecond paragraph')
+
+    def test_invalid_employment_category_lists_codes_and_labels(self):
+        with self.assertRaises(congress.CongressRequestError) as error:
+            self.validate({**DATA, 'employment_category': 'unknown'})
+        message = str(error.exception)
+        self.assertIn('employment_category', message)
+        self.assertIn('unknown', message)
+        self.assertIn('CONTRATADOS_DE_CONTRATOS_E_PROXECTOS', message)
+        self.assertIn('Contratados de Contratos e Proxectos', message)
 
     def test_attachments_require_real_nonempty_files_and_titles(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -254,4 +263,3 @@ class SupervisorTests(unittest.TestCase):
         session = self.page([self.suggestion('MERA PÉREZ, DAVID'), self.suggestion('MERA LÓPEZ, ANA')])
         with patch.object(congress, '_fill'), self.assertRaisesRegex(congress.CongressRequestError, 'ambigua'):
             congress._fill_supervisor(session, 'Mera')
-

@@ -8,7 +8,7 @@ from unittest.mock import patch
 from telegram.ext import ApplicationBuilder, CommandHandler
 
 import plugins.congreso_dieta as plugin_module
-from fichaxebot.plugins import register_plugins
+from fichaxebot.plugins import plugin_warning, register_plugins
 from fichaxebot.scheduler import TaskScheduler
 from fichaxebot.utils import MADRID_TZ
 from fichaxebot.webapp_controller import router
@@ -59,3 +59,40 @@ class PluginWiringTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("plugin_config.congreso_dieta", failures[0].message)
         self.assertNotIn(plugin_module.PLUGIN_KEY, self.app.bot_data)
         self.assertEqual(dict(self.app.handlers), {})
+
+    async def test_invalid_absence_type_is_reported_at_startup_before_scheduling(self):
+        raw = raw_config(str(self.root))
+        raw['absence']['type'] = 'Asistencia a congresos'
+        self.configure(raw)
+        with patch.dict(router.WEBAPP_CONTROLLERS):
+            failures = register_plugins(self.app, ['congreso_dieta'])
+            self.assertNotIn('congreso_dieta_new', router.WEBAPP_CONTROLLERS)
+        self.assertEqual(len(failures), 1)
+        warning = plugin_warning(failures)
+        self.assertIn('absence.type', warning)
+        self.assertIn('Asistencia a congresos', warning)
+        self.assertIn('Desprazamentos autorizados', warning)
+        self.assertNotIn(plugin_module.PLUGIN_KEY, self.app.bot_data)
+        self.assertEqual(dict(self.app.handlers), {})
+        started = fake_app()
+        self.app.scheduler.start(started)
+        self.assertEqual(started.job_queue.of('daily'), [])
+
+    async def test_invalid_employment_category_is_reported_at_startup_before_scheduling(self):
+        raw = raw_config(str(self.root))
+        raw['congress']['employment_category'] = 'unknown'
+        self.configure(raw)
+        with patch.dict(router.WEBAPP_CONTROLLERS):
+            failures = register_plugins(self.app, ['congreso_dieta'])
+            self.assertNotIn('congreso_dieta_new', router.WEBAPP_CONTROLLERS)
+        self.assertEqual(len(failures), 1)
+        warning = plugin_warning(failures)
+        self.assertIn('congress.employment_category', warning)
+        self.assertIn('unknown', warning)
+        self.assertIn('CONTRATADOS_DE_CONTRATOS_E_PROXECTOS', warning)
+        self.assertIn('Contratados de Contratos e Proxectos', warning)
+        self.assertNotIn(plugin_module.PLUGIN_KEY, self.app.bot_data)
+        self.assertEqual(dict(self.app.handlers), {})
+        started = fake_app()
+        self.app.scheduler.start(started)
+        self.assertEqual(started.job_queue.of('daily'), [])

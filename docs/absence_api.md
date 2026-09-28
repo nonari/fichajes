@@ -34,7 +34,8 @@ day. Dates can be past or future, must belong to the selected USC year, and
 cannot repeat. Up to 100 dates are accepted by the Python API. The Mini App also
 checks Telegram's 4096-byte message limit and may require fewer dates.
 
-Types and hourly requirements are read from USC and refreshed before submission.
+Available types and hourly requirements are read from USC and refreshed before submission.
+The API also validates `absenceTypeId` against the app's supported types below, even for callers without plugins.
 Vacation balances and vacation-specific date restrictions do not apply. USC
 still validates the request and may reject dates or require supporting evidence.
 
@@ -44,6 +45,30 @@ validation. The caller owns these files: the API does not delete them.
 The API returns normalized request details, attachment filenames, the request ID,
 and USC state only after verifying the resulting summary in the submitted
 `Solicitada` state. Other states are reported as uncertain.
+
+## Supported types
+
+The app owns the `AbsenceType` enum and its validators in
+[`fichaxebot/usc_types.py`](../fichaxebot/usc_types.py), based on the supplied `resources/ausencias_types.html`.
+Pass the ID as a string to the API. Invalid IDs raise `AbsenceRequestError` with the rejected value and valid choices.
+The selected type must also be available in the live USC form. Newly discovered USC types require updating this catalog.
+Plugin configuration uses the normalized enum name; the existing Mini App/API payload keeps `absenceTypeId`.
+Each enum member holds `{"name": "official USC display name", "code": "USC code"}`.
+Browser dropdown selectors use the official display name.
+
+| Normalized name | USC display name | ID/code |
+| --- | --- | --- |
+| `ASISTENCIA_A_CURSO_DE_FORMACION` | Asistencia a curso de formación | `3` |
+| `FALECEMENTO_ACCIDENTE_OU_ENFERMIDADE_DE_FAMILIAR` | Falecemento, accidente ou enfermidade de familiar | `4` |
+| `EXAMES_FINAIS_E_PROBAS` | Exames finais e probas | `5` |
+| `TRASLADO_DE_DOMICILIO` | Traslado de domicilio | `6` |
+| `DESPRAZAMENTOS_AUTORIZADOS` | Desprazamentos autorizados | `7` |
+| `DESPRAZAMENTO_COMISION_SERVIZOS_AUTORIZADA` | Desprazamento comision servizos autorizada | `8` |
+| `DEBERES_PERSOAIS_INESCUSABLES` | Deberes persoais inescusables | `9` |
+| `FUNCIONS_SINDICAIS` | Funcións sindicais | `10` |
+| `OUTRAS_AUSENCIAS` | Outras ausencias | `11` |
+| `AUSENCIA_RECUPERABLE` | Ausencia recuperable | `12` |
+| `COMPENSACION_POR_TRABALLAR_EN_FESTIVOS` | Compensación por traballar en festivos | `13` |
 
 ## Screenshot confirmation
 

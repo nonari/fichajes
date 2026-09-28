@@ -31,7 +31,7 @@ class FakeSession:
         self.congress_calls, self.absence_calls = [], []
         self.congress_result = {"status": "unverified", "submission_attempted": True}
         self.absence_result = {"id": "9", "state": "Solicitada"}
-        self.catalog = {"years": [2026], "types": [{"id": "7", "name": "Asistencia  a congresos", "requiresHours": True}]}
+        self.catalog = {"years": [2026], "types": [{"id": "7", "name": "Desprazamentos  autorizados", "requiresHours": True}]}
         self.calendar = ["N2026-10-13"]
 
     def submit_congress_request(self, data, confirm=None):
@@ -342,7 +342,7 @@ class AbsencePromptTests(FlowTestCase):
         case = self.add_case(absence=Absence.ASKING, prompt_token=uuid4().hex)
         await self.answer(case, "yes")
         self.assertEqual(self.store.get(case.id).absence, Absence.ASKING)
-        self.assertIn("Asistencia a congresos", self.texts()[-1])
+        self.assertIn("Desprazamentos autorizados", self.texts()[-1])
         self.assertEqual(self.session.absence_calls, [])
 
     async def test_stale_prompt_button(self):

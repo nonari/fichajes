@@ -13,7 +13,7 @@ CONGRESS = {
     "address": {"country": "España", "province": "Coruña, A", "municipality": "Santiago de Compostela",
                 "postal_code": "15782", "line1": "Rúa Exemplo 1"},
     "reason": "Asistencia a congreso", "organization": "Universidade de Exemplo",
-    "employment_category": "PREDOUTORAIS", "teaching_assigned": False, "supervisor_query": "Persoa Supervisora",
+    "employment_category": "CONTRATADOS_PREDOUTORAIS", "teaching_assigned": False, "supervisor_query": "Persoa Supervisora",
 }
 
 
@@ -30,7 +30,7 @@ def raw_config(directory):
         "signing": {"store": "mozilla", "alias": "Alias de proba", "password": None},
         "days_before": 3,
         "spreadsheet_template": str(template),
-        "absence": {"type": "Asistencia a congresos", "start_time": "8:00", "end_time": "15:00"},
+        "absence": {"type": "DESPRAZAMENTOS_AUTORIZADOS", "start_time": "8:00", "end_time": "15:00"},
         "congress": copy.deepcopy(CONGRESS),
     }
 
@@ -83,6 +83,48 @@ class ConfigTests(unittest.TestCase):
         raw["output_dir"] = "/nonexistent/dietas"
         self.assertEqual(parse_config(raw, today=TODAY, check_files=False).output_dir, Path("/nonexistent/dietas"))
 
+    def test_unknown_absence_type_reports_setting_value_and_valid_choices(self):
+        self.raw['absence']['type'] = 'Asistencia a congresos'
+        for check_files in (True, False):
+            with self.subTest(check_files=check_files), self.assertRaises(ValueError) as error:
+                parse_config(self.raw, today=TODAY, check_files=check_files)
+            message = str(error.exception)
+            self.assertIn('plugin_config.congreso_dieta', message)
+            self.assertIn('absence.type', message)
+            self.assertIn('Asistencia a congresos', message)
+            self.assertIn('Desprazamentos autorizados', message)
+            self.assertIn('Desprazamento comision servizos autorizada', message)
+
+    def test_normalized_absence_type_resolves_to_enum_with_official_name(self):
+        config = parse_config(self.raw, today=TODAY)
+        self.assertEqual(config.absence.type.name, 'DESPRAZAMENTOS_AUTORIZADOS')
+        self.assertEqual(config.absence.type.value, {'name': 'Desprazamentos autorizados', 'code': '7'})
+
+    def test_config_rejects_display_names_and_web_codes(self):
+        for section, key, value in (
+                ('absence', 'type', 'Desprazamentos autorizados'),
+                ('absence', 'type', '7'),
+                ('congress', 'employment_category', 'Contratados de Contratos e Proxectos'),
+                ('congress', 'employment_category', 'Proxectos')):
+            raw = copy.deepcopy(self.raw)
+            raw[section][key] = value
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                parse_config(raw, today=TODAY)
+
+    def test_unknown_employment_category_reports_setting_value_and_choices(self):
+        for value in ('unknown', '', None, []):
+            self.raw['congress']['employment_category'] = value
+            for check_files in (True, False):
+                with self.subTest(value=value, check_files=check_files), self.assertRaises(ValueError) as error:
+                    parse_config(self.raw, today=TODAY, check_files=check_files)
+                message = str(error.exception)
+                self.assertIn('plugin_config.congreso_dieta', message)
+                self.assertIn('congress.employment_category', message)
+                self.assertIn(repr(value), message)
+                self.assertIn('CONTRATADOS_DE_CONTRATOS_E_PROXECTOS', message)
+                self.assertIn('Contratados de Contratos e Proxectos', message)
+
+
 
 class VisibleSignatureConfigTests(unittest.TestCase):
     VISIBLE = {"page": 1, "x": 90, "y": 141, "width": 29, "height": 27,
@@ -119,4 +161,3 @@ class VisibleSignatureConfigTests(unittest.TestCase):
                 self.parse({**self.VISIBLE, key: value})
         with self.assertRaisesRegex(ValueError, "signing.visible"):
             self.parse([])
-

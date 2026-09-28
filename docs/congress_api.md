@@ -34,7 +34,7 @@ data = {
     },
     "reason": "Attendance at a research congress",
     "organization": "Example University",  # USC's “Razón social” field.
-    "employment_category": "PREDOUTORAIS",
+    "employment_category": "CONTRATADOS_PREDOUTORAIS",
     "teaching_assigned": False,
     # "teaching_cover": "Covered by ...",  # Required when teaching_assigned is True.
     "start_date": start.isoformat(),
@@ -51,7 +51,29 @@ data = {
 - Dates use `YYYY-MM-DD`. The saved USC form requires at least five days' notice; the API also checks the live datepicker limits. The end cannot precede the start.
 - Supervisor search requires at least three characters. An exact unique match is preferred; otherwise a single suggestion is required. Ambiguous searches fail instead of choosing a person arbitrarily.
 - Attachments are optional, at most ten, with titles of at most 50 characters and readable, nonempty local files. USC may apply additional validation.
-- USC employment codes are `Proxectos`, `JIN`, `MARIECURIE`, `PREDOUTORAIS`, `POSDOUTORAIS`, `BeatrizGalindo`, `DISTINGUIEOD`, `JUANDELACIERVA`, `RAMONYCAJAL`, and `TECNICOAPOIO`. The spelling of each code follows USC.
+
+## Employment categories
+
+Use a normalized enum name below for `employment_category`. The app owns `EmploymentCategory` and its validator in
+[`fichaxebot/usc_types.py`](../fichaxebot/usc_types.py), based on the supplied `resources/employment_category_types.html`.
+The API validates it before opening the wizard; plugins may reuse the validator at startup.
+Invalid values raise `CongressRequestError` naming the field, rejected value, and valid enum names with their labels.
+Normalized names are case-sensitive. Browser radio selectors use the official label (`data-label`), not the web code.
+Each enum value is a `{"name": "official USC display name", "code": "USC code"}` record.
+The original codes remain available, including USC's spelling `DISTINGUIEOD`.
+
+| Normalized name | USC label | Web code |
+| --- | --- | --- |
+| `CONTRATADOS_DE_CONTRATOS_E_PROXECTOS` | Contratados de Contratos e Proxectos | `Proxectos` |
+| `CONTRATADOS_JIN` | Contratados JIN | `JIN` |
+| `CONTRATADOS_MARIE_CURIE` | Contratados Marie Curie | `MARIECURIE` |
+| `CONTRATADOS_PREDOUTORAIS` | Contratados predoutorais | `PREDOUTORAIS` |
+| `CONTRATADOS_POSDOUTORAIS` | Contratados posdoutorais | `POSDOUTORAIS` |
+| `INVESTIGADOR_BEATRIZ_GALINDO` | Investigador Beatriz Galindo | `BeatrizGalindo` |
+| `INVESTIGADOR_DISTINGUIDO` | Investigador distinguido | `DISTINGUIEOD` |
+| `JUAN_DE_LA_CIERVA` | Juan de la Cierva | `JUANDELACIERVA` |
+| `RAMON_Y_CAJAL` | Ramón y Cajal | `RAMONYCAJAL` |
+| `TECNICOS_DE_APOIO` | Técnicos de apoio | `TECNICOAPOIO` |
 
 ## Optional PDF confirmation
 
