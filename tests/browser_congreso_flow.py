@@ -31,7 +31,11 @@ class CongresoBrowserTests(unittest.TestCase):
     def open_app(self, cases=()):
         html = re.sub(r"<script\b[^>]*src=[^>]+>\s*</script>", "", (ROOT / "plugins/congreso_dieta/web/congreso.html").read_text())
         data = {"token": "launch", "today": "2026-10-01", "minStart": "2026-10-06", "minStartNoAuth": "2026-01-01",
-                "cases": list(cases)}
+                "cases": [{"steps": [
+                    {"key": "authorization", "label": "Autorización", "state": "completed", "detail": "Recibida", "action": None},
+                    {"key": "absence", "label": "Ausencia", "state": "scheduled", "detail": "Programada", "action": "absence"},
+                    {"key": "sign", "label": "Firma", "state": "error", "detail": "Error al firmar", "action": "sign"},
+                ], **case} for case in cases]}
         self.browser.get("about:blank")
         self.browser.get("data:text/html;charset=utf-8," + quote(html) + "#data=" + quote(json.dumps(data)) + self.TELEGRAM_PARAMS)
         self.browser.execute_script("""
@@ -75,7 +79,7 @@ class CongresoBrowserTests(unittest.TestCase):
                         "problem": "Error al firmar"}])
         card = self.browser.find_element(By.CSS_SELECTOR, ".case")
         self.assertIn("Error al firmar", card.text)
-        card.find_element(By.TAG_NAME, "button").click()
+        card.find_element(By.CSS_SELECTOR, "button.secondary").click()
         self.assertEqual(self.sent(), [{"type": "congreso_dieta_cancel", "token": "launch", "case": "c1"}])
 
     def test_no_auth_tick_allows_earlier_dates(self):
@@ -94,3 +98,36 @@ class CongresoBrowserTests(unittest.TestCase):
         self.browser.find_element(By.ID, "send").click()
         self.assertEqual(self.sent(), [{"type": "congreso_dieta_new", "token": "launch", "start": "2026-09-10",
                                         "end": "2026-09-11", "noAuth": True}])
+
+    def test_status_lines_and_clickable_actions_send_only_confirmation_requests(self):
+        for action in ('absence', 'sign'):
+            with self.subTest(action=action):
+                self.open_app([{'id': 'c1', 'start': '2026-09-28', 'end': '2026-09-30', 'problem': 'No module named uno'}])
+                card = self.browser.find_element(By.CSS_SELECTOR, '.case')
+                self.assertTrue(card.text.startswith('Del '))
+                rows = card.find_elements(By.CSS_SELECTOR, '.step')
+                self.assertEqual(len(rows), 3)
+                for row, expected in zip(rows, ('✅ Autorización', '⏱️ Ausencia', '❌ Firma')):
+                    self.assertTrue(row.text.startswith(expected), row.text)
+                self.assertEqual(rows[0].tag_name, 'p')
+                card.find_element(By.CSS_SELECTOR, f'button[data-step="{action}"]').click()
+                self.assertEqual(self.sent(), [{'type': 'congreso_dieta_action', 'token': 'launch',
+                                                'case': 'c1', 'action': action}])
+                self.assertFalse(any(button.is_enabled() for button in card.find_elements(By.TAG_NAME, 'button')))
+
+    def test_special_procedure_omits_authorization_and_completed_signature_is_not_clickable(self):
+        self.open_app([{'id': 'c1', 'start': '2026-09-28', 'end': '2026-09-30', 'problem': '<script>bad</script>',
+                        'steps': [
+                            {'key': 'absence', 'label': 'Ausencia', 'state': 'error', 'detail': 'No solicitada', 'action': 'absence'},
+                            {'key': 'sign', 'label': 'Firma', 'state': 'completed', 'detail': 'Firmada', 'action': None}]}])
+        card = self.browser.find_element(By.CSS_SELECTOR, '.case')
+        self.assertNotIn('Autorización', card.text)
+        self.assertEqual(card.find_element(By.CSS_SELECTOR, '[data-step="sign"]').tag_name, 'p')
+        self.assertEqual(card.find_element(By.CSS_SELECTOR, '.problem').text, '<script>bad</script>')
+
+    def test_old_keyboard_payload_shows_reopen_notice_and_keeps_calendar_usable(self):
+        self.open_app([{'id': 'c1', 'start': '2026-09-28', 'end': '2026-09-30', 'steps': None}])
+        self.assertIn('Abre /congreso_dieta de nuevo', self.browser.find_element(By.CSS_SELECTOR, '.case').text)
+        self.click_day('2026-10-20')
+        self.click_day('2026-10-21')
+        self.assertTrue(self.browser.find_element(By.ID, 'send').is_enabled())

@@ -37,6 +37,7 @@ class Absence(StrEnum):
     SKIPPED = "skipped"
     SIMULATED = "simulated"
     NOT_REQUESTED = "not_requested"
+    NOT_REQUIRED = "not_required"
 
     @property
     def settled(self) -> bool:
@@ -60,6 +61,8 @@ class Case:
     notified_state: Optional[str] = None
     unsigned_saved: bool = False
     no_auth: bool = False  # special procedure: no congress authorization
+    absence_problem: Optional[str] = None
+    document_delivered: bool = False
 
     def __post_init__(self) -> None:
         # The cases file stores the plain values; an unknown one raises ValueError.

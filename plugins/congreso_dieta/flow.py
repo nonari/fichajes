@@ -19,7 +19,7 @@ from fichaxebot.scrap_functions.commit import ReadOnlyStop
 from fichaxebot.scrap_functions.congress_request import CongressRequestCancelled, CongressRequestError
 from fichaxebot.utils import get_madrid_now
 from fichaxebot.webapp_controller.vacation_confirmation import ACTIVE_KEY, STOPPING_KEY, PendingVacation
-from plugins.congreso_dieta import dates, pdf, spreadsheet, usc
+from plugins.congreso_dieta import dates, pdf, presentation, spreadsheet, usc
 from plugins.congreso_dieta.cases import Absence, Case, CaseStore, Stage
 from plugins.congreso_dieta.config import PluginConfig
 
@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 
 PROMPT_KIND = "congreso_dieta.absence_prompt"
 DAILY_JOB = "congreso_dieta.daily"
-CALLBACK_PATTERN = r"^cdieta_(?:absence_yes|absence_no|cancel_yes|cancel_no):[0-9a-f]{32}$"
+CALLBACK_PATTERN = r"^cdieta_(?:absence_yes|absence_no|cancel_yes|cancel_no|action_yes|action_no):[0-9a-f]{32}$"
 ABSENCES_URL = "https://fichaxe.usc.gal/pas/solicitudesPropias"
 FAILURES_BEFORE_NOTICE = 3
 
@@ -47,6 +47,7 @@ ABSENCE_LABELS = {
     Absence.SKIPPED: "ausencia no solicitada",
     Absence.SIMULATED: "ausencia simulada",
     Absence.NOT_REQUESTED: "ausencia no solicitada",
+    Absence.NOT_REQUIRED: "ausencia no necesaria",
 }
 
 
@@ -99,6 +100,8 @@ class CongresoDieta:
         self._sign_pdf = sign
         self.launch_token: Optional[str] = None
         self.cancel_requests: dict[str, str] = {}
+        self.action_requests: dict[str, tuple[str, str, str]] = {}
+        self.document_busy: set[str] = set()
         self.generation_lock = asyncio.Lock()
 
     # Helpers -----------------------------------------------------------------
@@ -149,6 +152,12 @@ class CongresoDieta:
 
     # Mini App ----------------------------------------------------------------
 
+    def case_view(self, case: Case) -> dict:
+        problems = [text for text in (case.absence_problem, case.last_problem) if text]
+        return {"id": case.id, "start": case.start, "end": case.end, "status": describe(case),
+                "problem": '\n'.join(problems) or None,
+                "steps": presentation.steps(case, self.clock().date(), busy=case.id in self.document_busy)}
+
     async def open_app(self, update, context) -> None:
         if not update.message:
             return
@@ -159,8 +168,7 @@ class CongresoDieta:
             "today": today.isoformat(),
             "minStart": dates.earliest_start(today).isoformat(),
             "minStartNoAuth": dates.earliest_start_without_auth(today).isoformat(),
-            "cases": [{"id": case.id, "start": case.start, "end": case.end, "status": describe(case),
-                       "problem": case.last_problem} for case in self.store.open_cases()],
+            "cases": [self.case_view(case) for case in self.store.open_cases()],
         }
         url = _build_vacations_url(self.config.webapp_url, payload)
         keyboard = ReplyKeyboardMarkup([[KeyboardButton("Congreso y dieta", web_app=WebAppInfo(url=url))]],
@@ -277,9 +285,75 @@ class CongresoDieta:
 
     # Callbacks -----------------------------------------------------------------
 
+    def _action_allowed(self, case: Case, action: str) -> bool:
+        if case.id in self.document_busy or self.app.bot_data.get(STOPPING_KEY):
+            return False
+        if action == 'absence':
+            return presentation.can_request_absence(case) and not self.app.bot_data.get(ACTIVE_KEY)
+        return (action == 'sign' and presentation.can_sign(case, self.clock().date())
+                and case.absence != Absence.REQUESTING)
+
+    async def handle_action(self, update, context, data: dict) -> None:
+        message = update.effective_message
+        if not self.take_token(data):
+            await message.reply_text("Esta selección ya no es válida. Abre /congreso_dieta de nuevo.")
+            return
+        case = self.store.get(data.get('case')) if isinstance(data.get('case'), str) else None
+        action = data.get('action')
+        if case is None or not self._action_allowed(case, action):
+            await message.reply_text("Esta acción no está disponible ahora. Abre /congreso_dieta para ver el estado actual.")
+            return
+        token = uuid4().hex
+        state = case.absence if action == 'absence' else case.stage
+        self.action_requests[token] = (case.id, action, state)
+        if action == 'absence':
+            text = f"¿Solicitar ahora la ausencia del {span(case)}?"
+            if case.absence == Absence.UNCERTAIN:
+                text += (" El envío anterior quedó sin confirmar. Comprueba antes USC: si ya aparece presentada, "
+                         f"no continúes porque crearías una solicitud duplicada. {ABSENCES_URL}")
+        else:
+            text = f"¿Generar y firmar ahora la dieta del {span(case)}, sin esperar a la ejecución diaria?"
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton('Sí, continuar', callback_data=f'cdieta_action_yes:{token}')],
+            [InlineKeyboardButton('No', callback_data=f'cdieta_action_no:{token}')],
+        ])
+        await message.reply_text(text, reply_markup=buttons)
+
+    async def _answer_action(self, update, query, action: str, token: str) -> None:
+        request = self.action_requests.pop(token, None)
+        case = self.store.get(request[0]) if request else None
+        if case is None:
+            await query.answer("Esta confirmación ya no está disponible.")
+            return
+        if action == 'cdieta_action_no':
+            await query.answer('Acción cancelada.')
+            await query.edit_message_text('No se ha realizado ninguna acción.')
+            return
+        _, operation, expected_state = request
+        state = case.absence if operation == 'absence' else case.stage
+        if state != expected_state or not self._action_allowed(case, operation):
+            await query.answer('El estado cambió. Abre /congreso_dieta de nuevo.')
+            return
+        self.action_requests = {key: value for key, value in self.action_requests.items() if value[0] != case.id}
+        if operation == 'absence':
+            self.cancel_prompts(case)
+            case.absence, case.absence_problem = Absence.REQUESTING, None
+            self.store.save()
+            task = self._request_absence(case, update.effective_chat.id, update.effective_user.id)
+        else:
+            self.document_busy.add(case.id)
+            task = self._run_document(case, self.clock().date(), force=True)
+        # Start before awaiting Telegram so delivery failures cannot leave an unstarted operation.
+        self.app.create_task(task, update=update)
+        await query.answer('Solicitud iniciada.' if operation == 'absence' else 'Preparando la dieta…')
+        await query.edit_message_text('Solicitando la ausencia…' if operation == 'absence' else 'Generando y firmando la dieta…')
+
     async def handle_callback(self, update, context) -> None:
         query = update.callback_query
         action, token = query.data.split(":", 1)
+        if action in ('cdieta_action_yes', 'cdieta_action_no'):
+            await self._answer_action(update, query, action, token)
+            return
         if action in ("cdieta_cancel_yes", "cdieta_cancel_no"):
             await self._answer_cancel(query, action, token)
             return
@@ -294,6 +368,9 @@ class CongresoDieta:
         if action == "cdieta_cancel_no":
             await query.answer("Se mantiene el trámite.")
             await query.edit_message_text(f"El trámite del {span(case)} sigue en curso.")
+            return
+        if case.id in self.document_busy or case.absence == Absence.REQUESTING:
+            await query.answer('Hay una operación en curso. Espera a que termine antes de cancelar.')
             return
         self.cancel_prompts(case)
         self.store.remove(case.id)
@@ -315,11 +392,11 @@ class CongresoDieta:
             return
         self.cancel_prompts(case)
         if action == "cdieta_absence_no":
-            case.absence = Absence.SKIPPED
+            case.absence, case.absence_problem = Absence.SKIPPED, None
             self.store.save()
             await query.answer("No se solicitará la ausencia.")
             return
-        case.absence = Absence.REQUESTING
+        case.absence, case.absence_problem = Absence.REQUESTING, None
         self.store.save()
         await query.answer("Solicitando la ausencia…")
         self.app.create_task(
@@ -328,6 +405,7 @@ class CongresoDieta:
     async def _ask_again(self, case: Case, text: str) -> None:
         if self.alive(case):
             case.absence = Absence.ASKING
+            case.absence_problem = text
             self.store.save()
             self.schedule_reminder(case)
         await self.notify(text)
@@ -348,7 +426,7 @@ class CongresoDieta:
             return
         days = dates.absence_days(case.start_date, case.end_date, dates.parse_non_working(entries))
         if not days:
-            case.absence = Absence.NOT_REQUESTED
+            case.absence, case.absence_problem = Absence.NOT_REQUIRED, None
             self.store.save()
             await self.notify(f"ℹ️ Del {span(case)} no hay días laborables: no hace falta solicitar ausencia.")
             return
@@ -380,6 +458,7 @@ class CongresoDieta:
             outcome, text = Absence.REQUESTED, f"✅ Ausencia solicitada del {span(case)}."
         if self.alive(case):
             case.absence = outcome
+            case.absence_problem = None if outcome == Absence.REQUESTED else text
             self.store.save()
         await self.notify(text)
 
@@ -428,11 +507,19 @@ class CongresoDieta:
     async def run_daily(self, context) -> None:
         today = self.clock().date()
         for case in list(self.store.open_cases()):
-            try:
-                await self._advance(case, today)
-            except Exception:  # noqa: BLE001 - one broken case must not block the others
-                logger.exception("Unexpected error advancing congress case %s", case.id)
-                await self._problem(case, "Error inesperado; se reintentará mañana.")
+            if case.id not in self.document_busy:
+                self.document_busy.add(case.id)
+                await self._run_document(case, today)
+
+    async def _run_document(self, case: Case, today: date, *, force: bool = False) -> None:
+        try:
+            if self.alive(case) and (not force or presentation.can_sign(case, today)):
+                await self._advance(case, today, force=force)
+        except Exception:  # noqa: BLE001 - retain the case for the next daily or manual attempt
+            logger.exception("Unexpected error advancing congress case %s", case.id)
+            await self._problem(case, "Error inesperado; se reintentará mañana.")
+        finally:
+            self.document_busy.discard(case.id)
 
     async def _problem(self, case: Case, text: str) -> None:
         if self.alive(case):
@@ -440,9 +527,9 @@ class CongresoDieta:
             self.store.save()
         await self.notify(f"⚠️ {text}")
 
-    async def _advance(self, case: Case, today: date) -> None:
+    async def _advance(self, case: Case, today: date, *, force: bool = False) -> None:
         # A past congress must not be delivered (and forgotten) while its absence question is still open.
-        if case.stage == Stage.NO_AUTH and today > case.end_date and case.absence.settled:
+        if case.stage == Stage.NO_AUTH and today > case.end_date and (case.absence.settled or force):
             await self._generate(case, today)
         if case.stage == Stage.AWAITING_AUTH:
             if case.simulated or not case.request_id:
@@ -483,6 +570,7 @@ class CongresoDieta:
                                   "Cancela el trámite con /congreso_dieta si ya no sigue adelante.")
             return
         if document is None:
+            case.last_problem, case.notified_state = None, None
             self.store.save()
             return
         (self.store.directory(case) / "autorizacion.pdf").write_bytes(document)
@@ -530,6 +618,10 @@ class CongresoDieta:
         self.store.save()
 
     async def _deliver(self, case: Case) -> None:
+        if case.document_delivered:
+            if case.absence.settled:
+                self.store.remove(case.id)
+            return
         config = self.config
         signed = self.store.directory(case) / "firmado.pdf"
         target = config.output_dir / f"{document_name(case)}.pdf"
@@ -544,4 +636,7 @@ class CongresoDieta:
             await self._problem(case, f"No se pudo entregar el documento firmado: {exc} Se reintentará mañana.")
             return
         (config.output_dir / f"{document_name(case)}_SIN_FIRMAR.pdf").unlink(missing_ok=True)
-        self.store.remove(case.id)
+        case.document_delivered, case.last_problem = True, None
+        self.store.save()
+        if case.absence.settled:
+            self.store.remove(case.id)

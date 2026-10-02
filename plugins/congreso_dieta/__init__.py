@@ -4,7 +4,7 @@ from telegram.ext import CallbackQueryHandler
 from fichaxebot.config import get_config
 from fichaxebot.scheduler import Interrupted, Misfire
 from fichaxebot.utils import get_madrid_now
-from plugins.congreso_dieta.cases import CaseStore
+from plugins.congreso_dieta.cases import Absence, CaseStore
 from plugins.congreso_dieta.config import NAME, parse_config
 from plugins.congreso_dieta.flow import CALLBACK_PATTERN, DAILY_JOB, PROMPT_KIND, CongresoDieta
 
@@ -27,9 +27,14 @@ async def _cancel_request(update, context, data):
     await _plugin(context).handle_cancel(update, context, data)
 
 
+async def _case_action(update, context, data):
+    await _plugin(context).handle_action(update, context, data)
+
+
 COMMANDS = {"congreso_dieta": congreso_dieta}
 COMMAND_DESCRIPTIONS = {"congreso_dieta": "Congreso: autorización, ausencia y documento de dieta firmado"}
-WEBAPP_CONTROLLERS = {"congreso_dieta_new": _new_request, "congreso_dieta_cancel": _cancel_request}
+WEBAPP_CONTROLLERS = {"congreso_dieta_new": _new_request, "congreso_dieta_cancel": _cancel_request,
+                      "congreso_dieta_action": _case_action}
 
 
 def setup(application) -> None:
@@ -37,6 +42,13 @@ def setup(application) -> None:
     config = parse_config(raw, today=get_madrid_now().date())
     store = CaseStore()
     store.load()
+    interrupted = [case for case in store.open_cases() if case.absence == Absence.REQUESTING]
+    for case in interrupted:
+        case.absence = Absence.UNCERTAIN
+        case.absence_problem = ("El envío de la ausencia se interrumpió al reiniciar el bot. "
+                                "Comprueba en USC si se registró antes de volver a solicitarla.")
+    if interrupted:
+        store.save()
     plugin = CongresoDieta(application, config, store)
     application.bot_data[PLUGIN_KEY] = plugin
     # Sending a question twice is harmless, so interrupted prompts are retried.

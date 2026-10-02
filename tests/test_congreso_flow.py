@@ -377,7 +377,7 @@ class DailyTests(FlowTestCase):
         self.assertIn("Autorización firmada recibida", self.texts()[-1])
 
     async def test_full_document_run_on_generation_day(self):
-        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), request_id="100001")
+        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), request_id="100001", absence=Absence.REQUESTED)
         self.clock.now = datetime(2026, 10, 8, 10, 0, tzinfo=MADRID_TZ)
         with patch.object(usc, "fetch_request_status", return_value=self.status()), \
              patch.object(usc, "download_authorization", return_value=b"%PDF-auth"):
@@ -389,7 +389,7 @@ class DailyTests(FlowTestCase):
         self.assertIsNone(self.store.get(case.id))
 
     async def test_open_cases_use_the_current_plugin_config(self):
-        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02")
+        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02", absence=Absence.REQUESTED)
         (self.store.directory(case) / "autorizacion.pdf").write_bytes(b"%PDF-auth")
         moved = self.root / "nuevo"
         moved.mkdir()
@@ -439,7 +439,7 @@ class DailyTests(FlowTestCase):
         self.assertIsNone(self.store.get(case.id))
 
     async def test_signing_failure_keeps_an_unsigned_copy_and_retries(self):
-        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02")
+        case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02", absence=Absence.REQUESTED)
         (self.store.directory(case) / "autorizacion.pdf").write_bytes(b"%PDF-auth")
         self.clock.now = datetime(2026, 10, 8, 10, 0, tzinfo=MADRID_TZ)
 

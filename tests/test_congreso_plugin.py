@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -13,7 +13,7 @@ from fichaxebot.scheduler import TaskScheduler
 from fichaxebot.utils import MADRID_TZ
 from fichaxebot.webapp_controller import router
 from plugins.congreso_dieta import flow
-from plugins.congreso_dieta.cases import CaseStore
+from plugins.congreso_dieta.cases import Absence, Case, CaseStore
 from tests.scheduler_fakes import Clock, fake_app
 from tests.test_congreso_config import raw_config
 
@@ -41,7 +41,7 @@ class PluginWiringTests(unittest.IsolatedAsyncioTestCase):
         self.configure(raw_config(str(self.root)))
         with patch.dict(router.WEBAPP_CONTROLLERS):
             register_plugins(self.app, ["congreso_dieta"])
-            self.assertTrue({"congreso_dieta_new", "congreso_dieta_cancel"} <= set(router.WEBAPP_CONTROLLERS))
+            self.assertTrue({"congreso_dieta_new", "congreso_dieta_cancel", "congreso_dieta_action"} <= set(router.WEBAPP_CONTROLLERS))
         commands = {command for handlers in self.app.handlers.values() for handler in handlers
                     if isinstance(handler, CommandHandler) for command in handler.commands}
         self.assertIn("congreso_dieta", commands)
@@ -59,6 +59,26 @@ class PluginWiringTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("plugin_config.congreso_dieta", failures[0].message)
         self.assertNotIn(plugin_module.PLUGIN_KEY, self.app.bot_data)
         self.assertEqual(dict(self.app.handlers), {})
+
+    async def test_setup_recovers_interrupted_absence_without_resubmitting(self):
+        self.configure(raw_config(str(self.root)))
+        store = CaseStore(self.root / "cases.json", self.root / "files")
+        interrupted = Case.new(date(2026, 9, 28), date(2026, 9, 30), no_auth=True)
+        interrupted.absence = Absence.REQUESTING
+        completed = Case.new(date(2026, 10, 20), date(2026, 10, 21))
+        completed.absence = Absence.REQUESTED
+        store.add(interrupted)
+        store.add(completed)
+
+        plugin_module.setup(self.app)
+
+        store.load()
+        recovered = store.get(interrupted.id)
+        self.assertEqual(recovered.absence, Absence.UNCERTAIN)
+        self.assertIn("USC", recovered.absence_problem)
+        plugin = self.app.bot_data[plugin_module.PLUGIN_KEY]
+        self.assertTrue(plugin._action_allowed(recovered, "absence"))
+        self.assertEqual(store.get(completed.id).absence, Absence.REQUESTED)
 
     async def test_invalid_absence_type_is_reported_at_startup_before_scheduling(self):
         raw = raw_config(str(self.root))

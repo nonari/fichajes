@@ -13,6 +13,30 @@ be chosen, including past ones. Nothing is sent to USC for the congress. The bot
 and keeps reminding until you answer, even once the congress has started. After the congress ends and the absence
 question is answered, the per-diem workbook alone is signed, sent and saved.
 
+## Procedure status and manual actions
+
+Each open procedure shows its date range first, followed by these rows:
+
+- **Autorización**, when required: ✅ once received, ⏱️ while pending, or ❌ if its check fails or USC rejects it.
+- **Ausencia**: ✅ submitted (or unnecessary because there are no working days), ⏱️ scheduled/in progress,
+  or ❌ declined, failed, simulated, or unconfirmed.
+- **Firma**: ✅ signed, ⏱️ pending/in progress, or ❌ if document generation or signing failed.
+
+Click an available **Ausencia** row to request it now, including a previously declined request. Telegram asks
+for confirmation before starting. If the previous submission was unconfirmed, it warns you to check USC first
+to avoid creating a duplicate. The configured final USC screenshot confirmation still applies.
+
+Click an available **Firma** row to generate and sign immediately after the congress's final day, without waiting
+for the daily job. Telegram asks for confirmation. A procedure requiring authorization still needs that document;
+an already signed document is never signed again. A signing failure retries the existing generated document.
+
+Error details appear beneath the status rows and remain associated with the failed step. Successful retries clear
+that step's error. Manual and daily document operations cannot run on the same procedure simultaneously.
+
+After delivery, the procedure is removed once absence handling is settled. If you manually sign while the absence
+question is still open, the procedure remains visible with ✅ Firma and the absence action available. The PDF is
+not delivered again on subsequent daily checks.
+
 ## Requirements (host installation only)
 
 - Enable the plugin in `config.json` before running `install.sh`. Its local

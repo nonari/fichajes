@@ -10,6 +10,7 @@ function send(payload) {
   if (sent) return;
   sent = true;
   el('send').disabled = true;
+  document.querySelectorAll('.case button').forEach(button => { button.disabled = true; });
   tg?.sendData(JSON.stringify({...payload, token: data.token}));
 }
 const insideCase = day => data.cases.some(c => c.start <= day && day <= c.end);
@@ -43,8 +44,26 @@ function renderCases() {
   el('cases').replaceChildren(...data.cases.map(item => {
     const card = document.createElement('div'); card.className = 'case';
     const title = document.createElement('strong'); title.textContent = `Del ${label(item.start)} al ${label(item.end)}`;
-    const status = document.createElement('p'); status.textContent = item.status;
-    card.append(title, status);
+    card.append(title);
+    if (!item.steps) {
+      const notice = document.createElement('p');
+      notice.textContent = 'Abre /congreso_dieta de nuevo para ver el estado actualizado.';
+      card.append(notice);
+    }
+    for (const step of item.steps || []) {
+      const row = document.createElement(step.action ? 'button' : 'p');
+      row.className = `step step-${step.state}`;
+      row.dataset.step = step.key;
+      const icon = {completed: '✅', scheduled: '⏱️', running: '⏱️', error: '❌'}[step.state];
+      row.textContent = `${icon} ${step.label} · ${step.detail}`;
+      if (step.action) {
+        row.title = step.action === 'sign' ? 'Firmar ahora (pedirá confirmación)' : 'Solicitar ahora (pedirá confirmación)';
+        row.onclick = () => send({type: 'congreso_dieta_action', case: item.id, action: step.action});
+        const hint = document.createElement('span'); hint.className = 'step-hint';
+        hint.textContent = 'Pulsa para continuar'; row.append(hint);
+      }
+      card.append(row);
+    }
     if (item.problem) { const p = document.createElement('p'); p.className = 'problem'; p.textContent = item.problem; card.append(p); }
     const cancel = document.createElement('button'); cancel.className = 'secondary'; cancel.textContent = 'Cancelar';
     cancel.onclick = () => send({type: 'congreso_dieta_cancel', case: item.id});
