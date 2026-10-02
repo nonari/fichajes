@@ -29,8 +29,7 @@ fi
 
 if [ ! -e "${VENV_PATH}" ] && [ ! -L "${VENV_PATH}" ]; then
     echo "🐍 Creating virtual environment: ${VENV_PATH}"
-    # System site-packages expose LibreOffice's python3-uno to plugins.
-    python3 -m venv --system-site-packages "${VENV_PATH}"
+    python3 -m venv "${VENV_PATH}"
 else
     echo "✔️ Reusing existing virtual environment"
 fi
@@ -43,6 +42,9 @@ fi
 
 echo "📦 Installing dependencies from requirements.txt"
 "${PYTHON_PATH}" -m pip install -r "${REQ_FILE}"
+
+echo "📦 Checking enabled plugin dependencies"
+"${PYTHON_PATH}" "${BOT_PATH}/devtools/install_plugins.py" "${BOT_PATH}"
 
 # ──────────────────────────────────────────────
 # 2. Generate systemd service file

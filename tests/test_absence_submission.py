@@ -48,6 +48,28 @@ class SubmissionTests(unittest.TestCase):
         capture.assert_not_called()
         self.link.click.assert_called_once()
 
+    def test_redirect_to_request_list_verifies_the_submitted_id(self):
+        self.link.click.side_effect=lambda: setattr(self.session.driver, 'current_url',
+            'https://fichaxe.usc.gal/pas/solicitudesPropias')
+        self.session.driver.execute_script.return_value = [
+            {'state': 'Solicitada', 'requestType': 'Ausencias autorizadas'}]
+        with patch.object(absence, '_read_review', return_value=REVIEW) as read_review:
+            result = absence.submit_absence_request(self.session, SELECTION)
+        self.assertEqual((result['id'], result['state']), ('123', 'Solicitada'))
+        read_review.assert_called_once()
+        self.link.click.assert_called_once()
+
+    def test_request_list_needs_one_matching_submitted_absence(self):
+        self.link.click.side_effect=lambda: setattr(self.session.driver, 'current_url',
+            'https://fichaxe.usc.gal/pas/solicitudesPropias')
+        good = {'state': 'Solicitada', 'requestType': 'Ausencias autorizadas'}
+        for rows in ([], [good, good], [{**good, 'state': 'Borrador'}],
+                     [{**good, 'state': 'Descoñecido'}], [{**good, 'requestType': 'Vacacións, permisos e licenzas'}]):
+            self.session.driver.execute_script.return_value = rows
+            with self.subTest(rows=rows), patch.object(absence, '_read_review', return_value=REVIEW), \
+                    self.assertRaises(absence.AbsenceRequestUncertain):
+                absence.submit_absence_request(self.session, SELECTION)
+
     def test_capture_and_callback_failure_prevent_submission(self):
         with patch.object(absence,'_read_review',return_value=REVIEW):
             with patch.object(absence,'_capture_full_page',side_effect=WebDriverException()), self.assertRaises(absence.AbsenceRequestError):

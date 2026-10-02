@@ -76,7 +76,9 @@ After configuring `config.json`, run from the repository directory:
 bash install.sh "$(pwd)"
 ```
 
-The installer creates the Python environment, installs dependencies, and uses sudo to install and start `fichaxe.service` automatically at boot. The service runs as root.
+The installer creates or reuses the Python environment, installs core dependencies, runs dependency hooks for
+enabled plugins, and uses sudo to install and start `fichaxe.service` automatically at boot. A failed plugin hook
+stops installation before service changes. The service runs as root.
 
 ```bash
 sudo systemctl status fichaxe.service
@@ -175,7 +177,25 @@ folder; `devtools/launch_server.sh` serves the same layout for local testing.
 Point the plugin's configured web app URL at the published page.
 
 Plugins run as trusted local Python code in the bot process; the folder is an
-organizational boundary, not a sandbox. Install any extra plugin dependencies
-in the bot's environment yourself. Restart after code or configuration changes.
+organizational boundary, not a sandbox.
+
+A plugin can provide an optional `plugins/<name>/install.py` to install and verify
+its dependencies. The host installer runs these scripts for enabled plugins in
+configuration order, using the bot's Python and the plugin folder as the working
+directory. It does not import the plugin, so the hook can prepare dependencies
+needed by `__init__.py`. Scripts should be safe to rerun, use `sys.executable` for
+Python dependencies, request `sudo` only for required system operations, and exit
+nonzero with a clear error if setup is incomplete. Plugins without a hook need no
+special installation. Package names and setup details stay inside each plugin.
+
+After enabling a plugin, run its setup through the shared runner:
+
+```bash
+.venv/bin/python devtools/install_plugins.py
+```
+
+This runs dependency setup without changing the service or starting the bot.
+Restart after code or configuration changes.
 With Docker, rebuild the image for code changes using
-`docker compose up -d --build`. There is no runtime installation or hot reload.
+`docker compose up -d --build`. The supplied Docker image does not run host plugin
+hooks. There is no runtime installation or hot reload.

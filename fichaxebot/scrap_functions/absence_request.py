@@ -257,6 +257,32 @@ def verify_review(review, selection):
         raise AbsenceRequestError("El resumen de USC no coincide con el tipo, fechas, horas, observaciones o documentos.")
 
 
+def _read_list_receipt(session, request_id):
+    """Read the submitted request in USC's redirect page, without reopening its wizard."""
+    session.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'table.table tbody')))
+    rows = session.driver.execute_script("""
+        const path = '/pas/solicitude/' + arguments[0] + '/resumo';
+        return [...document.querySelectorAll('table.table')].flatMap(table => {
+            const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+            const state = headers.indexOf('Estado'), type = headers.indexOf('Tipo de solicitude');
+            if (state < 0 || type < 0) return [];
+            return [...table.querySelectorAll('tbody tr')].filter(row =>
+                [...row.querySelectorAll('a[href]')].some(link => {
+                    const url = new URL(link.href, location.href);
+                    return url.origin === location.origin && url.pathname === path;
+                })
+            ).map(row => ({
+                state: row.cells[state]?.textContent.trim() || '',
+                requestType: row.cells[type]?.textContent.trim() || ''
+            }));
+        });
+    """, request_id)
+    if len(rows) != 1 or rows[0]['requestType'] != REQUEST_NAME:
+        raise AbsenceRequestUncertain("No se pudo identificar la ausencia enviada en la lista de USC. "
+                                      "Comprueba tus solicitudes antes de repetirlo.")
+    return rows[0]['state']
+
+
 def submit_absence_request(session, selection, confirm=None):
     form = session.driver.find_element(By.ID, "formularioSolicitude")
     session.driver.find_element(By.ID, "seguinte").click()
@@ -300,15 +326,23 @@ def submit_absence_request(session, selection, confirm=None):
         except TimeoutException:
             pass
         session.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
-        updated = _read_review(session)
-        verify_review(updated, selection)
-        receipt_id = re.match(r"/pas/solicitude/([1-9]\d*)(?:/|$)", urlsplit(session.driver.current_url).path)
-        if (updated["state"].casefold() != "solicitada" or updated["canSubmit"]
-                or (receipt_id and receipt_id.group(1) != match.group(1))):
+        destination = urlsplit(session.driver.current_url)
+        if destination.netloc != urlsplit(REQUEST_URL).netloc:
+            raise AbsenceRequestUncertain("USC no confirmó el envío. Comprueba tus solicitudes antes de repetirlo.")
+        if destination.path == '/pas/solicitudesPropias':
+            state = _read_list_receipt(session, match.group(1))
+        else:
+            updated = _read_review(session)
+            verify_review(updated, selection)
+            receipt_id = re.match(r"/pas/solicitude/([1-9]\d*)(?:/|$)", destination.path)
+            if updated['canSubmit'] or not receipt_id or receipt_id.group(1) != match.group(1):
+                raise AbsenceRequestUncertain("USC no confirmó el envío. Comprueba tus solicitudes antes de repetirlo.")
+            state = updated['state']
+        if state.casefold() != "solicitada":
             raise AbsenceRequestUncertain("USC no confirmó el envío. Comprueba tus solicitudes antes de repetirlo.")
         # Do not leak local filesystem paths into user-facing receipts.
         return {**{key: value for key, value in selection.items() if key != "attachments"},
                 "attachments": [Path(path).name for path in selection["attachments"]],
-                "id": match.group(1), "state": updated["state"]}
+                "id": match.group(1), "state": state}
     except (WebDriverException, AbsenceRequestError) as exc:
         raise AbsenceRequestUncertain("No se pudo confirmar el envío. Comprueba USC antes de repetirlo.") from exc

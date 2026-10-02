@@ -371,6 +371,7 @@ class CongresoDieta:
             await self._ask_again(case, f"❌ {exc} Te lo volveré a preguntar.")
             return
         except AbsenceRequestUncertain as exc:
+            logger.warning("Could not verify congress absence submission", exc_info=True)
             outcome, text = Absence.UNCERTAIN, f"⚠️ {exc} {ABSENCES_URL}"
         except Exception:
             logger.exception("Could not submit the congress absence request")
@@ -503,6 +504,7 @@ class CongresoDieta:
             else:
                 await asyncio.to_thread(self._join_pdfs, sheet, folder / "autorizacion.pdf", folder / "unido.pdf")
         except (spreadsheet.SpreadsheetError, pdf.PdfError, OSError) as exc:
+            logger.exception("Could not generate document for congress case %s", case.id)
             await self._problem(case, f"Error al generar el documento: {exc} Se reintentará mañana.")
             return
         case.stage, case.last_problem = Stage.GENERATED, None
@@ -514,6 +516,7 @@ class CongresoDieta:
         try:
             await asyncio.to_thread(self._sign_pdf, folder / "unido.pdf", folder / "firmado.pdf", config.signing)
         except pdf.PdfError as exc:
+            logger.exception("Could not sign document for congress case %s", case.id)
             if not case.unsigned_saved:
                 try:
                     shutil.copyfile(folder / "unido.pdf", config.output_dir / f"{document_name(case)}_SIN_FIRMAR.pdf")

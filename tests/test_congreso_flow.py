@@ -415,6 +415,29 @@ class DailyTests(FlowTestCase):
         self.assertEqual(sum("Denegada" in text for text in self.texts()), 1)
         self.assertEqual(self.store.get(case.id).stage, Stage.AWAITING_AUTH)
 
+    async def test_generation_failure_logs_cause_and_keeps_case_for_retry(self):
+        case = self.add_case(date(2026, 9, 29), date(2026, 9, 30),
+                             no_auth=True, stage=Stage.NO_AUTH, absence=Absence.REQUESTED)
+
+        def failing(*args):
+            try:
+                raise ModuleNotFoundError("No module named 'uno'")
+            except ModuleNotFoundError as exc:
+                raise flow.spreadsheet.SpreadsheetError(f"LibreOffice no pudo generar la hoja: {exc}") from exc
+
+        self.plugin._generate_pdf = failing
+        with self.assertLogs(flow.logger, level='ERROR') as logs:
+            await self.daily()
+        output = '\n'.join(logs.output)
+        self.assertIn(case.id, output)
+        self.assertIn("ModuleNotFoundError: No module named 'uno'", output)
+        self.assertEqual(self.store.get(case.id).stage, Stage.NO_AUTH)
+        self.assertIn("No module named 'uno'", self.texts()[-1])
+        self.app.bot.send_document.assert_not_awaited()
+        self.plugin._generate_pdf = self.fake_generate
+        await self.daily()
+        self.assertIsNone(self.store.get(case.id))
+
     async def test_signing_failure_keeps_an_unsigned_copy_and_retries(self):
         case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02")
         (self.store.directory(case) / "autorizacion.pdf").write_bytes(b"%PDF-auth")
@@ -424,7 +447,10 @@ class DailyTests(FlowTestCase):
             raise pdf.PdfError("Certificado caducado")
 
         self.plugin._sign_pdf = failing
-        await self.daily()
+        with self.assertLogs(flow.logger, level='ERROR') as logs:
+            await self.daily()
+        self.assertIn(case.id, '\n'.join(logs.output))
+        self.assertIn('Certificado caducado', '\n'.join(logs.output))
         unsigned = self.config.output_dir / "dieta_20261006_20261007_SIN_FIRMAR.pdf"
         stored = self.store.get(case.id)
         self.assertEqual(stored.stage, Stage.GENERATED)

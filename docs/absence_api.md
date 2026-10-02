@@ -43,8 +43,11 @@ Attachments are readable, nonempty local PDF files, up to ten files of 1 MiB eac
 The API checks their extension, size, and PDF header; USC performs its own file
 validation. The caller owns these files: the API does not delete them.
 The API returns normalized request details, attachment filenames, the request ID,
-and USC state only after verifying the resulting summary in the submitted
-`Solicitada` state. Other states are reported as uncertain.
+and USC state only after verifying the submitted `Solicitada` state. It supports
+both the detailed summary and USC's redirect to `Solicitudes propias`. On that
+list, it requires exactly one absence row linked to the request ID captured before
+submission. Missing, duplicate, or non-submitted entries remain uncertain; the
+submission is never repeated automatically.
 
 ## Supported types
 
@@ -144,15 +147,16 @@ preparation and screenshot confirmation, they wait for the shared browser lock.
 
 ## Offline verification and live-page limitation
 
-The supplied absence resource contains the initial form, not an absence review
-or receipt. Review parsing follows the existing USC summary conventions and
-rejects unrecognized layouts. The browser fixture's reviews/receipts are
-synthetic; passing offline checks does not establish compatibility with an
-unseen live review page. No live request is submitted by the test suite.
+The supplied absence resource contains the initial form. Review parsing follows
+the USC summary conventions and rejects unrecognized layouts. The submitted-list
+fixture is sanitized from the observed USC redirect page; the browser replay
+checks successful confirmation, a different request ID, and a draft state.
+No live request is submitted by the test suite.
 
 ```bash
 python -m unittest discover -s tests -p 'test_absence*.py'
 CHROMEDRIVER=/path/to/chromedriver python -m unittest discover -s tests -p browser_absence_flow.py -v
+CHROMEDRIVER=/path/to/chromedriver python -m unittest discover -s tests -p browser_absence_receipt.py -v
 ```
 
 Browser tests block external HTTP(S) URLs and use sanitized local fixtures.

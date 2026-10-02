@@ -15,12 +15,28 @@ question is answered, the per-diem workbook alone is signed, sent and saved.
 
 ## Requirements (host installation only)
 
-- LibreOffice with `python3-uno`; the virtualenv must be created with `--system-site-packages` (`install.sh` does it).
-- `pdfunite` (poppler-utils) and the AutoFirma command line (`autofirma`).
+- Enable the plugin in `config.json` before running `install.sh`. Its local
+  [`install.py`](../plugins/congreso_dieta/install.py) installs missing Debian/Ubuntu
+  packages (`libreoffice-calc`, `python3-uno`, `poppler-utils`) using apt and sudo when needed.
+- The hook verifies UNO in the bot's Python. If an existing virtualenv hides the installed
+  system package, it enables `include-system-site-packages` and verifies the import in a new
+  process. Use a virtualenv based on `/usr/bin/python3`; incompatible Python versions fail
+  setup with a diagnostic instead of failing during document generation.
+- Install AutoFirma separately so its `autofirma` command is available. The hook checks
+  `soffice`, `pdfunite`, and `autofirma` and stops if any is missing.
 - A certificate in the Firefox store AutoFirma reads (`autofirma listaliases -store mozilla`) or a `.p12` file.
   Write `signing.alias` with the certificate name as Firefox or `certutil` show it (e.g. with `Ñ`). AutoFirma
   lists accented names mis-encoded (`Ñ` → `Ã` + an invisible character); the plugin matches and uses that form
   itself, and a wrong name fails with the list of available certificates.
+
+You can rerun enabled plugin dependency hooks without modifying or starting the service:
+
+```bash
+.venv/bin/python devtools/install_plugins.py
+```
+
+Dependency setup does not generate documents, sign PDFs, or access certificates. Restart
+the bot after setup so its running Python process sees any environment changes.
 
 ## Configuration
 
