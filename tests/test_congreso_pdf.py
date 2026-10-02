@@ -105,6 +105,32 @@ class AliasResolutionTests(SignTests):
     # AutoFirma decodes the UTF-8 certificate nickname as Latin-1: "Ñ" (C3 91) becomes "Ã" + U+0091.
     GARBLED = "BUDIÃ\u0091O REGUEIRA ALEJANDRO - 00000000T"
 
+    def test_java_logs_are_not_reported_as_available_certificates(self):
+        output = ('oct 02, 2026 1:31:52 P. M. es.gob.afirma.core.LogManager install\n'
+                  'INFO: La ruta no existe\n'
+                  'WARNING: A restricted method in java.lang.System has been called\n')
+        with self.assertRaises(pdf.PdfError) as error:
+            pdf.resolve_alias(SIGNING, runner=lambda command, timeout: completed(err=output))
+        self.assertIn('Disponibles: ninguno', str(error.exception))
+        self.assertNotIn('WARNING', str(error.exception))
+
+    def test_explicit_profile_is_used_for_both_listing_and_signing(self):
+        signing = SigningConfig('mozilla', 'Alias', None, mozilla_profiles_ini=self.root / 'profiles.ini')
+        calls = []
+
+        def runner(command, timeout):
+            calls.append(command)
+            if 'listaliases' in command:
+                return completed(err='Alias\n')
+            Path(command[command.index('-o') + 1]).write_bytes(b'%PDF-signed')
+            return completed()
+
+        pdf.sign_pdf(self.root / 'unido.pdf', self.root / 'firmado.pdf', signing, runner=runner)
+        for command in calls:
+            self.assertEqual(command[:4], ['env',
+                'es.gob.afirma.keystores.mozilla.UseEnvironmentVariables=true',
+                f'AFIRMA_NSS_PROFILES_INI={self.root / "profiles.ini"}', 'autofirma'])
+
     def test_misencoded_alias_is_matched_and_signed_with_autofirmas_raw_name(self):
         runner, calls = self.fake_autofirma(aliases=("as-logins-key", self.GARBLED))
         signing = SigningConfig("mozilla", self.CORRECT, None)

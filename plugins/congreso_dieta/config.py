@@ -45,6 +45,7 @@ class SigningConfig:
     alias: str
     password: Optional[str]
     visible: Optional[VisibleSignature] = None
+    mozilla_profiles_ini: Optional[Path] = None
 
 
 @dataclass(frozen=True)
@@ -162,6 +163,13 @@ def parse_config(raw, *, today: date, check_files: bool = True) -> PluginConfig:
     if password is not None and not isinstance(password, str):
         _fail("'signing.password' debe ser texto o null")
     visible = parse_visible_signature(signing_raw.get("visible"))
+    profiles = signing_raw.get("mozilla_profiles_ini")
+    if profiles is not None:
+        profiles = Path(_text(profiles, "signing.mozilla_profiles_ini"))
+        if store != "mozilla" or not profiles.is_absolute():
+            _fail("'signing.mozilla_profiles_ini' requiere una ruta absoluta y el almacén mozilla")
+        if check_files and (not profiles.is_file() or not os.access(profiles, os.R_OK)):
+            _fail(f"'signing.mozilla_profiles_ini' debe ser un fichero legible: {profiles}")
 
     absence_raw = _section(raw, "absence")
     try:
@@ -202,7 +210,7 @@ def parse_config(raw, *, today: date, check_files: bool = True) -> PluginConfig:
         output_dir=output_dir,
         auth_check_time=_hhmm(raw.get("auth_check_time"), "auth_check_time"),
         prompt=prompt,
-        signing=SigningConfig(store, alias, password, visible),
+        signing=SigningConfig(store, alias, password, visible, profiles),
         days_before=_positive_int(raw.get("days_before"), "days_before"),
         spreadsheet_template=template,
         absence=AbsenceConfig(absence_type, f"{absence_start:%H:%M}", f"{absence_end:%H:%M}"),

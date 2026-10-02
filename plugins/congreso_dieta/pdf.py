@@ -1,6 +1,7 @@
 """Join the spreadsheet and authorization PDFs and sign the result with AutoFirma's command line."""
 from __future__ import annotations
 
+import re
 import subprocess
 import unicodedata
 from pathlib import Path
@@ -45,6 +46,27 @@ def _store_arguments(signing: SigningConfig) -> list:
     return ["-store", signing.store] + (["-password", signing.password] if signing.password else [])
 
 
+def _autofirma(signing: SigningConfig) -> list[str]:
+    if signing.mozilla_profiles_ini is None:
+        return ["autofirma"]
+    # Only this subprocess gets the profile override; the bot's environment is unchanged.
+    return ["env", "es.gob.afirma.keystores.mozilla.UseEnvironmentVariables=true",
+            f"AFIRMA_NSS_PROFILES_INI={signing.mozilla_profiles_ini}", "autofirma"]
+
+
+def _aliases(output: str) -> list[str]:
+    lines = []
+    for line in output.splitlines():
+        if not line.strip() or line[0].isspace():
+            continue
+        if re.match(r"^(?:INFO|WARNING|SEVERE|FINE|FINER|FINEST|CONFIG|INFORMACIÓN|ADVERTENCIA|GRAVE):", line):
+            continue
+        if re.search(r"\b(?:es\.gob\.afirma|java\.util\.)[\w.$]+ \w+$", line):
+            continue
+        lines.append(line.rstrip("\r"))
+    return lines
+
+
 def _repaired(alias: str) -> str:
     """AutoFirma decodes UTF-8 certificate nicknames as Latin-1 ("Ñ" -> "Ã" + U+0091); undo that."""
     try:
@@ -57,14 +79,14 @@ def _repaired(alias: str) -> str:
 def resolve_alias(signing: SigningConfig, *, runner=run) -> str:
     """Return AutoFirma's own spelling of the configured certificate alias."""
     try:
-        result = runner(["autofirma", "listaliases"] + _store_arguments(signing), LIST_TIMEOUT)
+        result = runner(_autofirma(signing) + ["listaliases"] + _store_arguments(signing), LIST_TIMEOUT)
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise PdfError(f"AutoFirma no respondió al consultar el almacén: {exc}") from exc
     if result.returncode != 0:
         raise PdfError(f"AutoFirma no pudo abrir el almacén {signing.store}: {_message(result)}")
     # AutoFirma prints the aliases on stderr; read both streams in case that changes.
     output = f"{result.stdout or ''}\n{result.stderr or ''}"
-    aliases = [line.rstrip("\r") for line in output.splitlines() if line.strip() and not line[0].isspace()]
+    aliases = _aliases(output)
     wanted = unicodedata.normalize("NFC", signing.alias.strip())
     for alias in aliases:
         if alias == signing.alias or _repaired(alias) == wanted:
@@ -94,7 +116,7 @@ def visible_signature_params(visible) -> str:
 
 
 def sign_command(src: Path, out: Path, signing: SigningConfig, alias: str = None) -> list:
-    command = ["autofirma", "sign", "-i", src, "-o", out, "-format", "pades",
+    command = _autofirma(signing) + ["sign", "-i", src, "-o", out, "-format", "pades",
                "-store", signing.store, "-alias", alias or signing.alias]
     if signing.password:
         command += ["-password", signing.password]

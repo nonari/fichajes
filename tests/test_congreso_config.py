@@ -76,6 +76,16 @@ class ConfigTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, re.escape(expected)):
                     parse_config(raw, today=TODAY)
 
+    def test_explicit_firefox_profiles_file_is_validated(self):
+        profiles = Path(self.raw['output_dir']).parent / 'profiles.ini'
+        profiles.write_text('[Profile0]\nPath=default\nIsRelative=1\n')
+        self.raw['signing']['mozilla_profiles_ini'] = str(profiles)
+        self.assertEqual(parse_config(self.raw, today=TODAY).signing.mozilla_profiles_ini, profiles)
+        for value in ('relative/profiles.ini', str(profiles.parent), '/missing/profiles.ini', 42):
+            self.raw['signing']['mozilla_profiles_ini'] = value
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'signing.mozilla_profiles_ini'):
+                parse_config(self.raw, today=TODAY)
+
     def test_missing_section_and_skipping_file_checks(self):
         with self.assertRaisesRegex(ValueError, "congreso_dieta"):
             parse_config(None, today=TODAY)
