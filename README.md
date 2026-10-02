@@ -78,7 +78,20 @@ bash install.sh "$(pwd)"
 
 The installer creates or reuses the Python environment, installs core dependencies, runs dependency hooks for
 enabled plugins, and uses sudo to install and start `fichaxe.service` automatically at boot. A failed plugin hook
-stops installation before service changes. The service runs as root.
+stops installation before service changes. The service runs as the installing user (or `SUDO_USER` when invoked
+through sudo), using a systemd `user.conf` override. Set `FICHAXE_SERVICE_USER` to choose another non-root account.
+It starts at boot without requiring that user to log in.
+
+To migrate an existing root service without reinstalling dependencies, run from the repository:
+
+```bash
+sudo bash devtools/configure_service_user.sh "$(pwd)" "$USER"
+```
+
+This stops the service, transfers root-owned scheduler state, plugin working files and logs to the selected user,
+then applies the systemd override and starts it again. That user must already have access to `config.json`, the
+virtualenv and project directory, and write access to any configured plugin output directories. Existing unit
+settings are preserved. If startup fails, the unit and its data remain available for inspection.
 
 ```bash
 sudo systemctl status fichaxe.service

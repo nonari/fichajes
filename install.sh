@@ -2,6 +2,12 @@
 set -euo pipefail
 
 SERVICE_NAME="fichaxe.service"
+SERVICE_USER="${FICHAXE_SERVICE_USER:-${SUDO_USER:-$(id -un)}}"
+SERVICE_UID="$(id -u "$SERVICE_USER")"
+if [[ "$SERVICE_UID" == 0 ]]; then
+    echo "❌ Run the installer as your normal user, or set FICHAXE_SERVICE_USER to a non-root account." >&2
+    exit 1
+fi
 
 # ──────────────────────────────────────────────
 # 1. Detect or accept BOT_PATH
@@ -74,33 +80,8 @@ echo "📝 Created ${SERVICE_FILE}"
 # ──────────────────────────────────────────────
 # 3. Enable, start, and verify service
 # ──────────────────────────────────────────────
-sudo systemctl daemon-reload
-sudo systemctl enable "${SERVICE_NAME}"
-
-echo "🚀 Starting service..."
-if ! sudo systemctl start "${SERVICE_NAME}"; then
-    echo "❌ Failed to start service. Rolling back..."
-    sudo systemctl disable "${SERVICE_NAME}" || true
-    sudo rm -f "${SERVICE_FILE}"
-    sudo systemctl daemon-reload
-    exit 1
-fi
-
-sleep 3
-
-if ! sudo systemctl is-active --quiet "${SERVICE_NAME}"; then
-    echo "❌ Service failed to stay active. Showing last logs:"
-    echo "───────────────────────────────"
-    sudo journalctl -u "${SERVICE_NAME}" -n 20 --no-pager || true
-    echo "───────────────────────────────"
-    echo "🧹 Cleaning up..."
-    sudo systemctl disable "${SERVICE_NAME}" || true
-    sudo systemctl stop "${SERVICE_NAME}" || true
-    sudo rm -f "${SERVICE_FILE}"
-    sudo systemctl daemon-reload
-    exit 1
-fi
+echo "🚀 Configuring and starting service as ${SERVICE_USER}..."
+sudo bash "${BOT_PATH}/devtools/configure_service_user.sh" "${BOT_PATH}" "${SERVICE_USER}"
 
 echo "✅ Service ${SERVICE_NAME} installed and running."
 echo "   → Logs: ${LOG_FILE}"
-sudo systemctl status "${SERVICE_NAME}" --no-pager -l | head -n 15

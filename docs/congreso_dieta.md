@@ -52,7 +52,7 @@ not delivered again on subsequent daily checks.
   Write `signing.alias` with the certificate name as Firefox or `certutil` show it (e.g. with `Ñ`). AutoFirma
   lists accented names mis-encoded (`Ñ` → `Ã` + an invisible character); the plugin matches and uses that form
   itself, and a wrong name fails with the list of available certificates.
-  If the bot runs as another user (the installer runs it as root), set
+  If the bot runs as another user (including older installations running as root), set
   `signing.mozilla_profiles_ini` to the absolute path of your Firefox `profiles.ini`, for example
   `/home/user/snap/firefox/common/.mozilla/firefox/profiles.ini`. The plugin passes that file to AutoFirma
   for both alias lookup and signing. Without it, AutoFirma uses the service user's Firefox store.

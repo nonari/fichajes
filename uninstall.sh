@@ -18,6 +18,10 @@ else
     echo "⚠️ Service file not found at $SERVICE_PATH"
 fi
 
+# Remove only the account override managed by the installer; preserve any other overrides.
+sudo rm -f "$SERVICE_PATH.d/user.conf"
+sudo rmdir "$SERVICE_PATH.d" 2>/dev/null || true
+
 # Reload systemd daemon
 echo "🔄 Reloading systemd daemon..."
 sudo systemctl daemon-reload
