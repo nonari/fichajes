@@ -1,4 +1,4 @@
-/* Congress cases: cancel an open one or pick a continuous date range for a new one (optionally without the
+/* Congress cases: cancel an open one (or repeat the signature of one finished in the last day) or pick a continuous date range for a new one (optionally without the
    congress authorization, which lifts the five days' notice). */
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
@@ -57,15 +57,16 @@ function renderCases() {
       const icon = {completed: '✅', scheduled: '⏱️', running: '⏱️', error: '❌'}[step.state];
       row.textContent = `${icon} ${step.label} · ${step.detail}`;
       if (step.action) {
-        row.title = step.action === 'sign' ? 'Firmar ahora (pedirá confirmación)' : 'Solicitar ahora (pedirá confirmación)';
+        row.title = {sign: 'Firmar ahora', resign: 'Repetir la firma', absence: 'Solicitar ahora'}[step.action] + ' (pedirá confirmación)';
         row.onclick = () => send({type: 'congreso_dieta_action', case: item.id, action: step.action});
         const hint = document.createElement('span'); hint.className = 'step-hint';
-        hint.textContent = 'Pulsa para continuar'; row.append(hint);
+        hint.textContent = step.action === 'resign' ? 'Pulsa para repetir la firma' : 'Pulsa para continuar'; row.append(hint);
       }
       card.append(row);
     }
     if (item.problem) { const p = document.createElement('p'); p.className = 'problem'; p.textContent = item.problem; card.append(p); }
-    const cancel = document.createElement('button'); cancel.className = 'secondary'; cancel.textContent = 'Cancelar';
+    const cancel = document.createElement('button'); cancel.className = 'secondary';
+    cancel.textContent = item.completed ? 'Quitar de la lista' : 'Cancelar';
     cancel.onclick = () => send({type: 'congreso_dieta_cancel', case: item.id});
     card.append(cancel);
     return card;

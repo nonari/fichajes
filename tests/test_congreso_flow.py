@@ -386,7 +386,7 @@ class DailyTests(FlowTestCase):
         target = self.config.output_dir / "dieta_20261006_20261007.pdf"
         self.assertEqual(target.read_bytes(), b"%PDF-signed")
         self.app.bot.send_document.assert_awaited_once()
-        self.assertIsNone(self.store.get(case.id))
+        self.assertIsNotNone(self.store.get(case.id).completed_at)
 
     async def test_open_cases_use_the_current_plugin_config(self):
         case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02", absence=Absence.REQUESTED)
@@ -397,7 +397,7 @@ class DailyTests(FlowTestCase):
         self.clock.now = datetime(2026, 10, 8, 10, 0, tzinfo=MADRID_TZ)
         await self.daily()
         self.assertTrue((moved / "dieta_20261006_20261007.pdf").exists())
-        self.assertIsNone(self.store.get(case.id))
+        self.assertIsNotNone(self.store.get(case.id).completed_at)
 
     async def test_check_failures_are_reported_on_the_third_day(self):
         case = self.add_case(request_id="100001")
@@ -436,7 +436,7 @@ class DailyTests(FlowTestCase):
         self.app.bot.send_document.assert_not_awaited()
         self.plugin._generate_pdf = self.fake_generate
         await self.daily()
-        self.assertIsNone(self.store.get(case.id))
+        self.assertIsNotNone(self.store.get(case.id).completed_at)
 
     async def test_signing_failure_keeps_an_unsigned_copy_and_retries(self):
         case = self.add_case(date(2026, 10, 6), date(2026, 10, 7), stage=Stage.AUTH_RECEIVED, auth_date="2026-10-02", absence=Absence.REQUESTED)
@@ -458,7 +458,7 @@ class DailyTests(FlowTestCase):
         self.assertTrue(unsigned.exists())
         self.plugin._sign_pdf = self.fake_sign
         await self.daily()
-        self.assertIsNone(self.store.get(case.id))
+        self.assertIsNotNone(self.store.get(case.id).completed_at)
         self.assertFalse(unsigned.exists())
 
 
@@ -545,7 +545,7 @@ class NoAuthTests(FlowTestCase):
         self.assertEqual(self.generated, [SheetDates(date(2026, 9, 10), date(2026, 9, 11), NOW.date())])
         self.assertEqual(signed_from, [b"%PDF-sheet"])
         self.assertEqual((self.config.output_dir / "dieta_20260910_20260911.pdf").read_bytes(), b"%PDF-signed")
-        self.assertIsNone(self.store.get(case.id))
+        self.assertIsNotNone(self.store.get(case.id).completed_at)
         self.assertEqual(self.store.get(future.id).stage, Stage.NO_AUTH)
 
     async def test_cancel_does_not_mention_a_congress_request(self):

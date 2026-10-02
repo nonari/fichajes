@@ -12,6 +12,11 @@ def can_sign(case: Case, today: date) -> bool:
     return today > case.end_date and case.stage in (Stage.NO_AUTH, Stage.AUTH_RECEIVED, Stage.GENERATED)
 
 
+def can_resign(case: Case) -> bool:
+    """A finished procedure can sign its generated document again while it is still listed."""
+    return case.completed_at is not None and case.stage == Stage.SIGNED
+
+
 def steps(case: Case, today: date, *, busy: bool = False) -> list[dict]:
     rows = []
     if not case.no_auth:
@@ -39,7 +44,9 @@ def steps(case: Case, today: date, *, busy: bool = False) -> list[dict]:
               'En curso' if busy else 'Error al generar o firmar' if signing_error else
               'Disponible después del último día' if today <= case.end_date else
               'Pendiente de autorización' if case.stage == Stage.AWAITING_AUTH else 'Pendiente')
+    idle = not busy and case.absence != Absence.REQUESTING
+    action = 'sign' if can_sign(case, today) else 'resign' if can_resign(case) else None
     rows.append({'key': 'sign', 'label': 'Firma', 'detail': detail,
                  'state': 'completed' if signed else 'running' if busy else 'error' if signing_error else 'scheduled',
-                 'action': 'sign' if can_sign(case, today) and not busy and case.absence != Absence.REQUESTING else None})
+                 'action': action if idle else None})
     return rows

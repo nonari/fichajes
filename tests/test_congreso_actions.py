@@ -1,14 +1,14 @@
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from plugins.congreso_dieta import flow
+from plugins.congreso_dieta import flow, pdf
 from plugins.congreso_dieta.cases import Absence, CaseStore, Stage
 from tests.test_congreso_flow import FlowTestCase
 
 
-class ProcedureActionTests(FlowTestCase):
+class ActionTestCase(FlowTestCase):
     async def ask(self, case, action):
         self.plugin.launch_token = 't' * 32
         message = self.message()
@@ -27,6 +27,8 @@ class ProcedureActionTests(FlowTestCase):
     def decision(self, message, yes=True):
         return message.reply_text.await_args.kwargs['reply_markup'].inline_keyboard[0 if yes else 1][0].callback_data
 
+
+class ProcedureActionTests(ActionTestCase):
     async def test_absence_requires_confirmation_and_decline_does_nothing(self):
         case = self.add_case(absence=Absence.SCHEDULED)
         message = await self.ask(case, 'absence')
@@ -117,7 +119,7 @@ class ProcedureActionTests(FlowTestCase):
         self.app.bot.send_document.assert_awaited_once()
         case.absence = Absence.SKIPPED
         await self.plugin.run_daily(None)
-        self.assertIsNone(self.store.get(case.id))
+        self.assertIsNotNone(self.store.get(case.id).completed_at)
         self.app.bot.send_document.assert_awaited_once()
 
     async def test_absence_error_is_shown_only_on_absence_and_cleared_after_success(self):
@@ -167,3 +169,106 @@ class ProcedureActionTests(FlowTestCase):
             release.set()
         await asyncio.gather(*self.tasks)
         self.assertEqual(len(self.generated), 1)
+
+
+class CompletedProcedureTests(ActionTestCase):
+    """A finished procedure stays listed for a day so its signature can be repeated."""
+
+    async def completed_case(self):
+        case = self.add_case(date(2026, 9, 28), date(2026, 9, 30), no_auth=True,
+                             stage=Stage.NO_AUTH, absence=Absence.SKIPPED)
+        await self.plugin.run_daily(None)
+        self.app.bot.send_document.reset_mock()
+        return case
+
+    async def open_app(self):
+        await self.plugin.open_app(SimpleNamespace(message=SimpleNamespace(reply_text=AsyncMock())), None)
+
+    async def test_finished_procedure_is_listed_for_24_hours(self):
+        case = await self.completed_case()
+        self.assertEqual(case.completed_at, self.clock.now.isoformat())
+        view = self.plugin.case_view(case)
+        self.assertTrue(view['completed'])
+        self.assertIn('Finalizado', view['status'])
+        self.assertEqual((view['steps'][-1]['state'], view['steps'][-1]['action']), ('completed', 'resign'))
+        reloaded = CaseStore(self.root / 'cases.json', self.root / 'files')
+        reloaded.load()
+        self.assertEqual(reloaded.get(case.id).completed_at, case.completed_at)
+        self.clock.now += timedelta(hours=23, minutes=59)
+        await self.open_app()
+        await self.plugin.run_daily(None)
+        self.assertIs(self.store.get(case.id), case)
+        self.app.bot.send_document.assert_not_awaited()
+        self.clock.now += timedelta(minutes=1)
+        await self.open_app()
+        self.assertIsNone(self.store.get(case.id))
+        self.assertFalse((self.root / 'files' / case.id).exists())
+
+    async def test_daily_run_removes_expired_procedures(self):
+        case = await self.completed_case()
+        self.clock.now += timedelta(days=1)
+        await self.plugin.run_daily(None)
+        self.assertIsNone(self.store.get(case.id))
+
+    async def test_signature_can_be_repeated_without_regenerating(self):
+        case = await self.completed_case()
+        signed_from = []
+
+        def sign(src, out, signing):
+            signed_from.append(src.read_bytes())
+            out.write_bytes(b'%PDF-signed-again')
+
+        self.plugin._sign_pdf = sign
+        self.clock.now += timedelta(hours=5)
+        message = await self.ask(case, 'resign')
+        self.assertIn('Repetir la firma', message.reply_text.await_args.args[0])
+        await self.press(self.decision(message))
+        self.assertEqual(len(self.generated), 1)
+        self.assertEqual(signed_from, [b'%PDF-sheet'])
+        target = self.config.output_dir / 'dieta_20260928_20260930.pdf'
+        self.assertEqual(target.read_bytes(), b'%PDF-signed-again')
+        self.app.bot.send_document.assert_awaited_once()
+        self.assertEqual((case.stage, case.document_delivered), (Stage.SIGNED, True))
+        self.assertEqual(case.completed_at, self.clock.now.isoformat())  # the day starts again
+
+    async def test_failed_repeat_keeps_the_procedure_for_retry(self):
+        case = await self.completed_case()
+
+        def fail(src, out, signing):
+            raise pdf.PdfError('certificado caducado')
+
+        self.plugin._sign_pdf = fail
+        message = await self.ask(case, 'resign')
+        await self.press(self.decision(message))
+        self.assertEqual((case.stage, case.completed_at), (Stage.GENERATED, None))
+        self.assertIn('certificado caducado', case.last_problem)
+        self.clock.now += timedelta(days=2)
+        await self.open_app()
+        self.assertIs(self.store.get(case.id), case)
+
+    async def test_repeat_runs_once_per_confirmation_and_not_after_expiry(self):
+        case = await self.completed_case()
+        first, second = await self.ask(case, 'resign'), await self.ask(case, 'resign')
+        await self.press(self.decision(first))
+        await self.press(self.decision(second))
+        self.app.bot.send_document.assert_awaited_once()
+        self.clock.now += timedelta(days=1)
+        message = await self.ask(case, 'resign')
+        self.assertNotIn('reply_markup', message.reply_text.await_args.kwargs)
+
+    async def test_unfinished_procedures_cannot_repeat_the_signature(self):
+        case = self.add_case(date(2026, 9, 28), date(2026, 9, 30), no_auth=True,
+                             stage=Stage.SIGNED, absence=Absence.ASKING, document_delivered=True)
+        message = await self.ask(case, 'resign')
+        self.assertNotIn('reply_markup', message.reply_text.await_args.kwargs)
+        self.assertIsNone(self.plugin.case_view(case)['steps'][-1]['action'])
+
+    async def test_removing_a_finished_procedure_does_not_mention_usc(self):
+        case = await self.completed_case()
+        self.plugin.launch_token = 't' * 32
+        message = SimpleNamespace(reply_text=AsyncMock())
+        await self.plugin.handle_cancel(self.update(message), None, {'token': 't' * 32, 'case': case.id})
+        self.assertIn('Quitar de la lista', message.reply_text.await_args.args[0])
+        query = await self.press(self.decision(message))
+        self.assertIsNone(self.store.get(case.id))
+        self.assertNotIn('USC', query.edit_message_text.await_args.args[0])

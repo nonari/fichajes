@@ -63,6 +63,7 @@ class Case:
     no_auth: bool = False  # special procedure: no congress authorization
     absence_problem: Optional[str] = None
     document_delivered: bool = False
+    completed_at: Optional[str] = None  # ISO datetime; finished cases stay listed for a while
 
     def __post_init__(self) -> None:
         # The cases file stores the plain values; an unknown one raises ValueError.

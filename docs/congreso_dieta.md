@@ -33,9 +33,14 @@ an already signed document is never signed again. A signing failure retries the 
 Error details appear beneath the status rows and remain associated with the failed step. Successful retries clear
 that step's error. Manual and daily document operations cannot run on the same procedure simultaneously.
 
-After delivery, the procedure is removed once absence handling is settled. If you manually sign while the absence
-question is still open, the procedure remains visible with ✅ Firma and the absence action available. The PDF is
-not delivered again on subsequent daily checks.
+After delivery, once absence handling is settled, the procedure is marked as finished and stays in the list for
+24 hours before it is removed. While it is listed, click its **Firma** row to repeat the signature: after
+confirmation the already generated document is signed again (it is not regenerated), the saved PDF is replaced and
+sent again, and the 24 hours start over. If the repeated signature fails, the procedure stays until it succeeds.
+**Quitar de la lista** removes a finished procedure straight away.
+
+If you manually sign while the absence question is still open, the procedure remains visible with ✅ Firma and the
+absence action available. The PDF is not delivered again on subsequent daily checks.
 
 ## Requirements (host installation only)
 
