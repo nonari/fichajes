@@ -22,17 +22,17 @@ def application(*commands, plugin_descriptions=None):
 
 class HelpTests(unittest.IsolatedAsyncioTestCase):
     def test_lists_registered_commands_in_order_with_core_and_plugin_descriptions(self):
-        app = application("start", "ayuda", "marcar", "congreso_dieta", "sin_texto",
+        app = application("start", "ayuda", "marcajes", "congreso_dieta", "sin_texto",
                           plugin_descriptions={"congreso_dieta": "Congreso y dieta"})
         commands = registered_commands(app)
-        self.assertEqual([name for name, _ in commands], ["start", "ayuda", "marcar", "congreso_dieta", "sin_texto"])
+        self.assertEqual([name for name, _ in commands], ["start", "ayuda", "marcajes", "congreso_dieta", "sin_texto"])
         described = dict(commands)
-        self.assertIn("entrada", described["marcar"])
+        self.assertEqual(described["marcajes"], "Marcajes de hoy")
         self.assertEqual(described["congreso_dieta"], "Congreso y dieta")
         self.assertEqual(described["sin_texto"], "")
 
     async def test_ayuda_replies_with_every_command(self):
-        app = application("marcar", "congreso_dieta", "sin_texto", plugin_descriptions={"congreso_dieta": "Congreso y dieta"})
+        app = application("marcajes", "congreso_dieta", "sin_texto", plugin_descriptions={"congreso_dieta": "Congreso y dieta"})
         reply = AsyncMock()
         await show_help(SimpleNamespace(message=SimpleNamespace(reply_text=reply)), SimpleNamespace(application=app))
         text = reply.await_args.args[0]
@@ -41,10 +41,10 @@ class HelpTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("\n/sin_texto", text)
 
     async def test_menu_is_published_with_a_description_for_every_command(self):
-        app = application("marcar", "sin_texto")
+        app = application("marcajes", "sin_texto")
         await publish_command_menu(app)
         menu = app.bot.set_my_commands.await_args.args[0]
-        self.assertEqual([command.command for command in menu], ["marcar", "sin_texto"])
+        self.assertEqual([command.command for command in menu], ["marcajes", "sin_texto"])
         self.assertTrue(all(isinstance(command, BotCommand) and command.description for command in menu))
 
     async def test_start_points_to_ayuda(self):

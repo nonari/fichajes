@@ -7,10 +7,7 @@ from fichaxebot.plugins import COMMAND_DESCRIPTIONS_KEY
 CORE_DESCRIPTIONS = {
     "start": "Presentación del bot",
     "ayuda": "Lista de comandos disponibles",
-    "marcar": "Fichar entrada o salida, ahora o a una hora: /marcar entrada|salida [HH:MM]",
     "marcajes": "Marcajes de hoy",
-    "pendientes": "Marcajes programados",
-    "cancelar": "Cancelar los marcajes programados",
     "calendario": "Abrir el calendario",
     "vacaciones": "Solicitar vacaciones",
     "vacaciones_info": "Consultar los saldos de vacaciones",

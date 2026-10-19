@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import keyword
 from dataclasses import dataclass, field
-from datetime import time as dtime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -13,6 +12,16 @@ logger = get_logger(__name__)
 
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
+# Top-level settings from before marking became the marcaje plugin. Rejected rather than ignored,
+# so an upgrade cannot silently stop the daily question and scheduled marks.
+MOVED_TO_MARCAJE = (
+    "daily_question_time",
+    "auto_checkout_delay_minutes",
+    "auto_checkout_random_offset_minutes",
+    "max_reminders",
+    "reminder_interval_minutes",
+)
+
 
 @dataclass
 class AppConfig:
@@ -20,11 +29,6 @@ class AppConfig:
     telegram_chat_id: str
     usc_user: str
     usc_pass: str
-    daily_question_time: dtime
-    auto_checkout_delay: Optional[timedelta]
-    auto_checkout_random_offset_minutes: int
-    max_reminders: int
-    reminder_interval: timedelta
     calendar_webapp_url: str
     vacations_webapp_url: str
     vacations_info_webapp_url: str
@@ -41,37 +45,6 @@ class AppConfig:
 
 
 _config: Optional[AppConfig] = None
-
-
-def _parse_time_field(value: object, field_name: str) -> dtime:
-    if not isinstance(value, str):
-        raise ValueError(f"El valor de '{field_name}' debe ser una cadena en formato HH:MM")
-
-    parts = value.strip().split(":")
-    if len(parts) != 2:
-        raise ValueError(f"Formato inválido para '{field_name}': {value}")
-
-    try:
-        hour = int(parts[0])
-        minute = int(parts[1])
-    except ValueError as exc:  # pragma: no cover - validado al cargar
-        raise ValueError(f"Formato inválido para '{field_name}': {value}") from exc
-
-    if not (0 <= hour < 24 and 0 <= minute < 60):
-        raise ValueError(
-            f"El valor de '{field_name}' debe ser una hora válida entre 00:00 y 23:59"
-        )
-
-    return dtime(hour=hour, minute=minute)
-
-
-def _parse_int_field(value: object, field_name: str) -> int:
-    try:
-        integer = int(value)
-    except (TypeError, ValueError) as exc:  # pragma: no cover - validado al cargar
-        raise ValueError(f"El valor de '{field_name}' debe ser un número entero") from exc
-
-    return integer
 
 
 def load_config(path: Optional[Path] = None) -> AppConfig:
@@ -114,6 +87,13 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     if len(plugins) != len(set(plugins)):
         raise ValueError("'plugins' no puede contener nombres duplicados")
 
+    moved = [key for key in MOVED_TO_MARCAJE if key in data]
+    if moved:
+        raise ValueError(
+            f"{', '.join(moved)}: estos ajustes ahora están en plugin_config.marcaje. "
+            "Muévelos allí y añade \"marcaje\" a 'plugins' para seguir fichando."
+        )
+
     plugin_config = data.get("plugin_config", {})
     if not isinstance(plugin_config, dict) or any(
         not isinstance(name, str) or not isinstance(section, dict) for name, section in plugin_config.items()
@@ -130,35 +110,6 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
     if missing:
         raise KeyError(f"Faltan claves en el fichero de configuración: {', '.join(sorted(missing))}")
 
-    daily_question_raw = data.get("daily_question_time", "09:00")
-    daily_question_time = _parse_time_field(daily_question_raw, "daily_question_time")
-
-    checkout_minutes_raw = data.get("auto_checkout_delay_minutes", 7 * 60)
-    checkout_minutes = _parse_int_field(checkout_minutes_raw, "auto_checkout_delay_minutes")
-    if checkout_minutes < 0:
-        raise ValueError("El valor de 'auto_checkout_delay_minutes' no puede ser negativo")
-    auto_checkout_delay = timedelta(minutes=checkout_minutes) if checkout_minutes else None
-
-    random_offset_raw = data.get("auto_checkout_random_offset_minutes", 3)
-    random_offset = _parse_int_field(random_offset_raw, "auto_checkout_random_offset_minutes")
-    if random_offset < 0:
-        raise ValueError(
-            "El valor de 'auto_checkout_random_offset_minutes' no puede ser negativo"
-        )
-
-    max_reminders_raw = data.get("max_reminders", 3)
-    max_reminders = _parse_int_field(max_reminders_raw, "max_reminders")
-    if max_reminders < 0:
-        raise ValueError("El valor de 'max_reminders' no puede ser negativo")
-
-    reminder_interval_raw = data.get("reminder_interval_minutes", 5)
-    reminder_interval_minutes = _parse_int_field(
-        reminder_interval_raw, "reminder_interval_minutes"
-    )
-    if reminder_interval_minutes <= 0:
-        raise ValueError("El valor de 'reminder_interval_minutes' debe ser mayor que cero")
-    reminder_interval = timedelta(minutes=reminder_interval_minutes)
-
     calendar_webapp_url = str(data.get("calendar_webapp_url", "") or "").strip()
     vacations_webapp_url = str(data.get("vacations_webapp_url", calendar_webapp_url) or "").strip()
     vacations_info_webapp_url = str(data.get("vacations_info_webapp_url", "") or "").strip()
@@ -168,11 +119,6 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         telegram_chat_id=str(data["telegram_chat_id"]),
         usc_user=str(data["usc_user"]),
         usc_pass=str(data["usc_pass"]),
-        daily_question_time=daily_question_time,
-        auto_checkout_delay=auto_checkout_delay,
-        auto_checkout_random_offset_minutes=random_offset,
-        max_reminders=max_reminders,
-        reminder_interval=reminder_interval,
         calendar_webapp_url=calendar_webapp_url,
         vacations_webapp_url=vacations_webapp_url,
         vacations_info_webapp_url=vacations_info_webapp_url,

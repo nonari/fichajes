@@ -1,4 +1,4 @@
-"""Clock-in/out marks as an ordinary task kind of the core scheduler."""
+"""Clock-in/out marks as a task kind of the core scheduler."""
 
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ from fichaxebot.config import get_config
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import Interrupted, Misfire, ScheduledTask, TaskScheduler
 from fichaxebot.utils import MADRID_TZ, execute_check_in_async, get_madrid_now
+from plugins.marcaje.config import plugin_config
 
 logger = get_logger(__name__)
 
+# Not namespaced: the name predates the plugin, and marks saved under it must keep running.
 KIND = "mark"
 ACTIONS = ("entrada", "salida")
 
@@ -63,7 +65,7 @@ def compute_auto_checkout_time(now: datetime, delay: timedelta, random_offset_mi
 
 
 def schedule_auto_checkout(app) -> ScheduledTask:
-    config = get_config()
+    config = plugin_config(app)
     if not config.auto_checkout_delay:
         raise ValueError("La salida automática no está configurada")
     when = compute_auto_checkout_time(get_madrid_now(), config.auto_checkout_delay,
@@ -81,7 +83,7 @@ async def run_mark(context, task: ScheduledTask) -> None:
     await context.bot.send_message(chat_id=chat_id, text=f"{prefix} Marcaje programado de {action} ejecutado.")
     await context.bot.send_message(chat_id=chat_id, text=result.message)
 
-    if action == "entrada" and result.success and get_config().auto_checkout_delay:
+    if action == "entrada" and result.success and plugin_config(context.application).auto_checkout_delay:
         try:
             auto_task = schedule_auto_checkout(context.application)
         except ValueError:

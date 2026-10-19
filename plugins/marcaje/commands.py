@@ -4,21 +4,21 @@ from typing import Optional
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from fichaxebot.tasks import marks
-from fichaxebot.config import get_config
 from fichaxebot.utils import (
     MADRID_TZ,
     execute_check_in_async,
     get_madrid_now,
     parse_hour_minute,
 )
+from plugins.marcaje import marks
+from plugins.marcaje.config import plugin_config
 
 
 async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
 
-    appconfig = get_config()
+    config = plugin_config(context.application)
     if not context.args:
         await update.message.reply_text("Uso: /marcar entrada|salida [HH:MM]")
         return
@@ -61,12 +61,13 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     session = context.application.web_session
+    await update.message.reply_text(f"🔄 Intentando fichaje de {action}...")
     result = await execute_check_in_async(action, session, context)
     await update.message.reply_text(result.message)
 
     if action == "entrada":
         if result.success:
-            auto_delay = appconfig.auto_checkout_delay
+            auto_delay = config.auto_checkout_delay
             if auto_delay:
                 try:
                     auto_mark = marks.schedule_auto_checkout(context.application)
@@ -96,3 +97,32 @@ async def mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 await update.message.reply_text(
                     "🗓️ Se cancelaron {} marcajes de salida programados.".format(removed)
                 )
+
+
+async def show_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+
+    pending = marks.pending(context.application)
+    if not pending:
+        await update.message.reply_text("No hay marcajes programados en el scheduler.")
+        return
+
+    lines = []
+    for task in pending:
+        when = task.when.astimezone(MADRID_TZ)
+        lines.append(f"• {task.payload['action'].capitalize()} el {when.strftime('%d/%m a las %H:%M')}")
+
+    await update.message.reply_text("Marcajes pendientes:\n" + "\n".join(lines))
+
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+
+    if not marks.pending(context.application):
+        await update.message.reply_text("No hay marcajes programados actualmente.")
+        return
+
+    marks.cancel(context.application)
+    await update.message.reply_text("🗓️ Todos los marcajes programados han sido cancelados.")

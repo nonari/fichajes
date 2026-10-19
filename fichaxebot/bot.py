@@ -1,23 +1,13 @@
 import asyncio
 import signal
-from telegram import ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     MessageHandler,
-    ContextTypes,
     filters,
 )
 
 from fichaxebot.commands import (
-    AWAITING_RESPONSE_KEY,
-    QUESTION_DATE_KEY,
-    REMINDER_ATTEMPTS_KEY,
-    REMINDER_JOB_KEY,
-    cancel,
-    mark as mark_command,
-    process_response,
-    show_pending,
     show_records,
     show_calendar,
     show_vacations,
@@ -31,15 +21,9 @@ from fichaxebot.config import get_config
 from fichaxebot.access_control import restrict_to_chat
 from fichaxebot.plugins import plugin_warning, register_plugins
 from fichaxebot.update_log import register_update_logging
-from fichaxebot.utils import (
-    cancel_reminder,
-    get_madrid_now,
-    is_galicia_holiday,
-)
 from fichaxebot.usc_api import UscWebSession
 from fichaxebot.logging_config import get_logger
 from fichaxebot.scheduler import TaskScheduler
-from fichaxebot.tasks import marks
 from fichaxebot.webapp_controller.router import dispatch_webapp_reply
 from fichaxebot.webapp_controller.vacation_confirmation import (
     register_vacation_confirmation, stop_vacation_confirmation,
@@ -51,78 +35,10 @@ config = get_config()
 TOKEN = config.telegram_token
 CHAT_ID = config.telegram_chat_id
 
-MAX_REMINDERS = config.max_reminders
-REMINDER_INTERVAL = config.reminder_interval
-QUESTION_TIME = config.daily_question_time
-
-
-async def ask_for_check_in(context: ContextTypes.DEFAULT_TYPE) -> None:
-    today = get_madrid_now().date()
-    if marks.pending(context.application):
-        logger.info("Skipping daily question because there are already scheduled marks.")
-        cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
-        return
-
-    if today.weekday() >= 5 or is_galicia_holiday(today):
-        logger.info("Skipping question on %s (weekend or holiday)", today)
-        cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
-        return
-
-    logger.info("Sending check-in request for %s", today.isoformat())
-    context.application.bot_data[QUESTION_DATE_KEY] = today
-    context.application.bot_data[AWAITING_RESPONSE_KEY] = True
-    cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
-    await context.bot.send_message(
-        chat_id=CHAT_ID,
-        text="📅 Buenos días! ¿Quieres fichar hoy?",
-        reply_markup=ReplyKeyboardMarkup(
-            [["Sí", "No"]], one_time_keyboard=True, resize_keyboard=True
-        ),
-    )
-
-    context.application.bot_data[REMINDER_ATTEMPTS_KEY] = 0
-    if MAX_REMINDERS > 0:
-        reminder_job = context.job_queue.run_repeating(
-            send_check_in_reminder,
-            interval=REMINDER_INTERVAL.total_seconds(),
-            first=REMINDER_INTERVAL.total_seconds(),
-            name="recordatorio_pregunta",
-        )
-        context.application.bot_data[REMINDER_JOB_KEY] = reminder_job
-
-
-async def send_check_in_reminder(context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not context.application.bot_data.get(AWAITING_RESPONSE_KEY):
-        cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
-        return
-
-    attempts = context.application.bot_data.get(REMINDER_ATTEMPTS_KEY, 0) + 1
-
-    if attempts > MAX_REMINDERS:
-        logger.info("Maximum number of reminders reached. Stopping notifications.")
-        cancel_reminder(context.application, REMINDER_JOB_KEY, REMINDER_ATTEMPTS_KEY)
-        context.application.bot_data[AWAITING_RESPONSE_KEY] = False
-        return
-
-    context.application.bot_data[REMINDER_ATTEMPTS_KEY] = attempts
-    logger.info("Sending check-in reminder %s/%s", attempts, MAX_REMINDERS)
-    await context.bot.send_message(
-        chat_id=CHAT_ID,
-        text="⏰ Recordatorio: ¿Quieres fichar hoy? Responde 'Sí' o 'No'.",
-        reply_markup=ReplyKeyboardMarkup(
-            [["Sí", "No"]], one_time_keyboard=True, resize_keyboard=True
-        ),
-    )
-
 
 async def _run_bot() -> None:
     appconfig = get_config()
     scheduler = TaskScheduler(appconfig.telegram_chat_id)
-    marks.register(scheduler)
-    scheduler.register_daily(
-        "daily_question", ask_for_check_in,
-        at=QUESTION_TIME, weekdays=range(5), catch_up=True,
-    )
     app = ApplicationBuilder().token(TOKEN).build()
     register_update_logging(app)
     restrict_to_chat(app, appconfig.telegram_chat_id)
@@ -132,10 +48,7 @@ async def _run_bot() -> None:
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ayuda", show_help))
-    app.add_handler(CommandHandler("marcar", mark_command))
-    app.add_handler(CommandHandler("cancelar", cancel))
     app.add_handler(CommandHandler("marcajes", show_records))
-    app.add_handler(CommandHandler("pendientes", show_pending))
     app.add_handler(CommandHandler("calendario", show_calendar))
     app.add_handler(CommandHandler("vacaciones", show_vacations))
     app.add_handler(CommandHandler("ausencias", show_absences))
@@ -146,7 +59,6 @@ async def _run_bot() -> None:
     app.web_session = web_session
 
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, dispatch_webapp_reply))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_response))
 
     stop_event = asyncio.Event()
 

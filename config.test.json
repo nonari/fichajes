@@ -7,13 +7,17 @@
   "vacations_webapp_url": "https://nonrevertible-alene-sciential.ngrok-free.dev/vacaciones.html",
   "vacations_info_webapp_url": "https://nonrevertible-alene-sciential.ngrok-free.dev/vacations_info.html",
   "absences_webapp_url": "https://nonrevertible-alene-sciential.ngrok-free.dev/ausencias.html",
-  "daily_question_time": "09:00",
-  "auto_checkout_delay_minutes": 420,
-  "auto_checkout_random_offset_minutes": 3,
-  "max_reminders": 3,
-  "reminder_interval_minutes": 5,
   "read_only": true,
-  "plugins": [],
+  "plugins": ["marcaje"],
+  "plugin_config": {
+    "marcaje": {
+      "daily_question_time": "09:00",
+      "auto_checkout_delay_minutes": 420,
+      "auto_checkout_random_offset_minutes": 3,
+      "max_reminders": 3,
+      "reminder_interval_minutes": 5
+    }
+  },
   "vacation_confirmation_enabled": false,
   "vacation_confirmation_timeout_seconds": 60,
   "absence_confirmation_enabled": true,

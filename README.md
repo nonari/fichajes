@@ -46,19 +46,34 @@ If `result` is empty, send another message and refresh. Stop any running instanc
 | `vacation_confirmation_timeout_seconds` | `60`: positive integer seconds to decide, starting after the screenshot is delivered. |
 | `congress_confirmation_enabled` | `true`: the `congreso_dieta` plugin sends USC's congress request PDF to Telegram and submits only after you confirm. `false` submits directly. |
 | `congress_confirmation_timeout_seconds` | `60`: positive integer seconds to decide, starting after the PDF is delivered. |
+
+Read-only mode runs each procedure up to the final USC action and then stops: clock-ins check the current state, and vacation, absence, and congress requests are filled, reviewed, and confirmed, but not submitted. Vacation and absence requests may leave a draft (*borrador*) in USC, because USC creates it when the form moves to the summary. Daily questions and scheduled-job handling still run.
+
+The [congress permission API](docs/congress_api.md) supports optional PDF confirmation through a caller callback. It is not connected to chat; receipt verification remains pending.
+
+The optional [`congreso_dieta` plugin](docs/congreso_dieta.md) automates congress authorization, absence and the signed per-diem document (host installation only).
+
+### Clocking in and out (`marcaje` plugin)
+
+`/marcar`, `/pendientes`, `/cancelar`, the daily question and automatic checkout come from the `marcaje` plugin.
+The example configuration enables it with `"plugins": ["marcaje"]`; remove it from the list to run the bot without
+marking (`/marcajes` and the startup summary of today's records are part of the core and stay available). Its
+settings go in `plugin_config.marcaje`; the section and every setting in it are optional:
+
+| Setting | Default behaviour |
+| --- | --- |
 | `daily_question_time` | `09:00`, in Europe/Madrid time. |
 | `auto_checkout_delay_minutes` | `420` minutes after clock-in; `0` disables automatic checkout. |
 | `auto_checkout_random_offset_minutes` | Random offset of up to `3` minutes either way; `0` disables it. |
 | `max_reminders` | Up to `3` reminders; `0` disables reminders. |
 | `reminder_interval_minutes` | `5` minutes between reminders. |
 
-Read-only mode runs each procedure up to the final USC action and then stops: clock-ins check the current state, and vacation, absence, and congress requests are filled, reviewed, and confirmed, but not submitted. Vacation and absence requests may leave a draft (*borrador*) in USC, because USC creates it when the form moves to the summary. Daily questions and scheduled-job handling still run.
-
 Scheduled marks survive restarts. Marks whose time passed while the bot was off are not executed; the startup message lists them, together with any mark that was interrupted mid-run (check USC before repeating it). The daily question is asked at most once per day, also after a restart. **Upgrading from a version before the task scheduler:** pending marks are not carried over — the old `.schedule.data` is moved to `.schedule.data.corrupt`; note and re-create them after deploying.
 
-The [congress permission API](docs/congress_api.md) supports optional PDF confirmation through a caller callback. It is not connected to chat; receipt verification remains pending.
-
-The optional [`congreso_dieta` plugin](docs/congreso_dieta.md) automates congress authorization, absence and the signed per-diem document (host installation only).
+**Upgrading from a version where marking was built in:** move `daily_question_time`, `auto_checkout_delay_minutes`,
+`auto_checkout_random_offset_minutes`, `max_reminders` and `reminder_interval_minutes` from the top level of
+`config.json` into `plugin_config.marcaje`, and add `"marcaje"` to `plugins`. The bot refuses to start while any of
+them is still at the top level. Pending marks and the daily question's last-run date carry over.
 
 With vacation confirmation enabled, the Mini App shows **Revisar solicitud**. Telegram sends the screenshot as a document with **Confirmar y enviar** and **Cancelar** buttons. Only the person who started the request can decide. Cancellation, timeout, or failure to capture/deliver the image leaves the request unsubmitted; USC does not save a reusable draft. Open `/vacaciones` again to start over.
 
@@ -138,6 +153,8 @@ Send commands in your private chat:
 | `/pendientes` | List scheduled marks. |
 | `/cancelar` | Cancel scheduled marks. |
 
+`/marcar`, `/pendientes` and `/cancelar` are available while the `marcaje` plugin is enabled.
+
 Restart the app after changing configuration. Run only one instance per bot token. If commands do not respond, check the process logs, token, and chat ID. If Telegram reports an existing webhook, remove it with its [deleteWebhook method](https://core.telegram.org/bots/api#deletewebhook); this app uses polling.
 
 ## 4. Add command plugins
@@ -170,7 +187,7 @@ configured chat.
 
 Callbacks use the usual Telegram `(update, context)` signature. Command arguments
 are available in `context.args`; existing services are available as
-`context.application.web_session` and `context.application.scheduler_manager`.
+`context.application.web_session` and `context.application.scheduler`.
 Use `asyncio.to_thread(...)` for blocking browser calls, as the built-in commands
 do. Keep supporting code and resources in the plugin folder and use relative
 imports such as `from .commands import COMMANDS`. Access app services inside

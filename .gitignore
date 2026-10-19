@@ -1,5 +1,6 @@
 # Local credentials and runtime files
 config.json
+config.json.bak
 .env
 .env.*
 !.env.example

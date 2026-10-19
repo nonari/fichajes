@@ -47,10 +47,3 @@ def parse_hour_minute(value: str) -> Optional[dtime]:
         return None
 
     return dtime(hour=hour, minute=minute)
-
-
-def cancel_reminder(app, job_key: str, attempts_key: str) -> None:
-    job = app.bot_data.pop(job_key, None)
-    if job:
-        job.schedule_removal()
-    app.bot_data.pop(attempts_key, None)

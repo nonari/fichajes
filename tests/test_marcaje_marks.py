@@ -7,8 +7,9 @@ from unittest.mock import AsyncMock, patch
 
 from fichaxebot.scheduler import Misfire, TaskScheduler
 from fichaxebot.scrap_functions.mark import CheckInResult
-from fichaxebot.tasks import marks
 from fichaxebot.utils import MADRID_TZ
+from plugins.marcaje import marks
+from plugins.marcaje.config import NAME, parse_config
 from tests.scheduler_fakes import Clock, fake_app, fire
 
 NOW = datetime(2026, 10, 1, 8, 0, tzinfo=MADRID_TZ)
@@ -28,11 +29,10 @@ def started_app(test):
     app = fake_app()
     app.scheduler = scheduler
     app.web_session = object()
+    app.bot_data[NAME] = parse_config({"auto_checkout_random_offset_minutes": 0})
     scheduler.start(app)
-    test.config = SimpleNamespace(telegram_chat_id="123", auto_checkout_delay=timedelta(hours=7),
-                                  auto_checkout_random_offset_minutes=0)
-    for target, value in (("fichaxebot.tasks.marks.get_config", test.config),
-                          ("fichaxebot.tasks.marks.get_madrid_now", NOW)):
+    for target, value in (("plugins.marcaje.marks.get_config", SimpleNamespace(telegram_chat_id="123")),
+                          ("plugins.marcaje.marks.get_madrid_now", NOW)):
         patcher = patch(target, return_value=value)
         patcher.start()
         test.addCleanup(patcher.stop)
@@ -72,7 +72,7 @@ class MarksTests(unittest.IsolatedAsyncioTestCase):
     def test_schedule_auto_checkout_requires_configuration(self):
         task = marks.schedule_auto_checkout(self.app)
         self.assertEqual((task.payload["action"], task.when), ("salida", NOW + timedelta(hours=7)))
-        self.config.auto_checkout_delay = None
+        self.app.bot_data[NAME] = parse_config({"auto_checkout_delay_minutes": 0})
         with self.assertRaises(ValueError):
             marks.schedule_auto_checkout(self.app)
 
@@ -83,7 +83,7 @@ class MarksTests(unittest.IsolatedAsyncioTestCase):
     async def test_successful_scheduled_entry_reports_and_schedules_checkout(self):
         marks.schedule(self.app, "entrada", NOW + timedelta(hours=1))
         result = CheckInResult(True, "entrada", "✅ ok")
-        with patch("fichaxebot.tasks.marks.execute_check_in_async", AsyncMock(return_value=result)) as check_in:
+        with patch("plugins.marcaje.marks.execute_check_in_async", AsyncMock(return_value=result)) as check_in:
             await fire(self.app, self.app.job_queue.of("once")[0])
         check_in.assert_awaited_once()
         texts = [call.kwargs["text"] for call in self.app.bot.send_message.await_args_list]
@@ -94,6 +94,6 @@ class MarksTests(unittest.IsolatedAsyncioTestCase):
     async def test_failed_scheduled_entry_does_not_schedule_checkout(self):
         marks.schedule(self.app, "entrada", NOW + timedelta(hours=1))
         result = CheckInResult(False, "entrada", "⚠️ no")
-        with patch("fichaxebot.tasks.marks.execute_check_in_async", AsyncMock(return_value=result)):
+        with patch("plugins.marcaje.marks.execute_check_in_async", AsyncMock(return_value=result)):
             await fire(self.app, self.app.job_queue.of("once")[0])
         self.assertEqual(marks.pending(self.app), [])

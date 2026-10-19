@@ -1,12 +1,12 @@
 import unittest
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
-from fichaxebot.commands.cancel import cancel
-from fichaxebot.commands.pending import show_pending
-from fichaxebot.tasks import marks
-from tests.test_marks import NOW, started_app
+from fichaxebot.scrap_functions.mark import CheckInResult
+from plugins.marcaje import marks
+from plugins.marcaje.commands import cancel, mark, show_pending
+from tests.test_marcaje_marks import NOW, started_app
 
 
 class MarkCommandTests(unittest.IsolatedAsyncioTestCase):
@@ -39,3 +39,19 @@ class MarkCommandTests(unittest.IsolatedAsyncioTestCase):
         await cancel(self.update, self.context)
         self.assertEqual(self.reply.await_args.args[0], "No hay marcajes programados actualmente.")
         self.assertEqual(self.scheduler.pending(), [other])
+
+    async def test_immediate_mark_says_it_is_trying_before_checking_in(self):
+        events = []
+        self.reply.side_effect = events.append
+
+        async def check_in(action, session, context):
+            events.append(f"check-in {action}")
+            return CheckInResult(True, action, "✅ ok")
+
+        for action in ("entrada", "salida"):
+            with self.subTest(action=action), \
+                    patch("plugins.marcaje.commands.execute_check_in_async", check_in):
+                events.clear()
+                self.context.args = [action]
+                await mark(self.update, self.context)
+                self.assertEqual(events[:3], [f"🔄 Intentando fichaje de {action}...", f"check-in {action}", "✅ ok"])
